@@ -43,7 +43,7 @@ En el servicio **piku-324e** (o el que uses) → **Environment**:
 | `GOOGLE_CLIENT_ID` | **Sí**, si querés botón Google | El **mismo** ID Web de Google Cloud (idéntico a `webClientId` del `config.json`) |
 | `DATABASE_URL` | Sí | URL de Neon |
 | `JWT_SECRET` | Sí | Un secreto largo y aleatorio |
-| `PIKU_CODIGO_INVITACION` | No | Solo para que comercios se registren sin código en BD. Ej: `PIKU2025` |
+| `PIKU_CODIGO_INVITACION` | Recomendado | Código para registro de comercio (ej. `PIKU2025`, igual que en `config.json`). Sin esto, el alta de comercio puede fallar con «Invitación inválida». |
 | `CLOUDINARY_CLOUD_NAME` | No | Solo si comercios suben **fotos de ofertas** |
 | `CLOUDINARY_API_KEY` | No | Idem |
 | `CLOUDINARY_API_SECRET` | No | Idem |

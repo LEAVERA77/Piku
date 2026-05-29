@@ -11,7 +11,9 @@ CREATE TABLE IF NOT EXISTS piku_comercios (
     radio_metros INTEGER NOT NULL DEFAULT 100,
     activo BOOLEAN NOT NULL DEFAULT TRUE,
     logo_url TEXT,
-    owner_usuario_id UUID,
+    usuario_id UUID,
+    suscripcion_activa BOOLEAN NOT NULL DEFAULT TRUE,
+    categoria VARCHAR(50),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -32,8 +34,8 @@ CREATE TABLE IF NOT EXISTS piku_usuarios (
 );
 
 ALTER TABLE piku_comercios
-    ADD CONSTRAINT fk_piku_comercios_owner
-    FOREIGN KEY (owner_usuario_id) REFERENCES piku_usuarios(id) ON DELETE SET NULL;
+    ADD CONSTRAINT fk_piku_comercios_usuario
+    FOREIGN KEY (usuario_id) REFERENCES piku_usuarios(id) ON DELETE SET NULL;
 
 CREATE TABLE IF NOT EXISTS piku_invitaciones_comercio (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

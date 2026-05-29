@@ -7,6 +7,7 @@ const usuarioRoutes = require('./routes/usuario.routes');
 const qrRoutes = require('./routes/qr.routes');
 const comercioRoutes = require('./routes/comercio.routes');
 const publicRoutes = require('./routes/public.routes');
+const { runStartupMigrations } = require('./services/migrate.service');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -51,8 +52,18 @@ app.use((err, req, res, _next) => {
   res.status(500).json({ error: 'Error interno del servidor' });
 });
 
-app.listen(PORT, () => {
-  console.log(`✅ Servidor Piku corriendo en puerto ${PORT}`);
-  console.log(`📡 Health: http://localhost:${PORT}/health`);
-  console.log(`🔐 Auth:   http://localhost:${PORT}/api/auth/login`);
-});
+async function start() {
+  try {
+    await runStartupMigrations();
+  } catch (error) {
+    console.error('⚠️ Migraciones al inicio:', error.message);
+  }
+
+  app.listen(PORT, () => {
+    console.log(`✅ Servidor Piku corriendo en puerto ${PORT}`);
+    console.log(`📡 Health: http://localhost:${PORT}/health`);
+    console.log(`🔐 Auth:   http://localhost:${PORT}/api/auth/login`);
+  });
+}
+
+start();
