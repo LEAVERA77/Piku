@@ -18,6 +18,7 @@ osmdroid = "6.1.18"
 biometric = "1.1.0"
 datastore = "1.1.1"
 playServicesLocation = "21.3.0"
+playServicesAuth = "21.3.0"
 coil = "2.7.0"
 coroutinesPlayServices = "1.9.0"
 credentials = "1.3.0"
@@ -54,6 +55,7 @@ osmdroid-android = { group = "org.osmdroid", name = "osmdroid-android", version.
 androidx-biometric = { group = "androidx.biometric", name = "biometric", version.ref = "biometric" }
 androidx-datastore-preferences = { group = "androidx.datastore", name = "datastore-preferences", version.ref = "datastore" }
 play-services-location = { group = "com.google.android.gms", name = "play-services-location", version.ref = "playServicesLocation" }
+play-services-auth = { group = "com.google.android.gms", name = "play-services-auth", version.ref = "playServicesAuth" }
 coil-compose = { group = "io.coil-kt", name = "coil-compose", version.ref = "coil" }
 kotlinx-coroutines-play-services = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-play-services", version.ref = "coroutinesPlayServices" }
 androidx-credentials = { group = "androidx.credentials", name = "credentials", version.ref = "credentials" }

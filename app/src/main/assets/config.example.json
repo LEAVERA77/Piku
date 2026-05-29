@@ -14,7 +14,8 @@
     "templateId": "tu_template_id"
   },
   "google": {
-    "webClientId": "TU_WEB_CLIENT_ID.apps.googleusercontent.com"
+    "webClientId": "TU_WEB_CLIENT_ID.apps.googleusercontent.com",
+    "_nota": "Debe ser el ID del cliente OAuth tipo Aplicación web (no el de Android). Mismo valor que GOOGLE_CLIENT_ID en Render."
   },
   "comercio": {
     "codigoInvitacion": "PIKU2025"

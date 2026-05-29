@@ -100,6 +100,20 @@ El backend acepta tokens cuyo `aud` coincida con cualquiera de esos IDs configur
 
 App Expo en `piku-mobile/` — ver `piku-mobile/README.md`. Misma API Render.
 
+## Error «Developer console is not set up correctly» (28444) o código 10
+
+La app ya usa el ID **Web** en `config.json`. Si el error persiste, falta el **cliente Android** en Google Cloud:
+
+| Campo | Valor |
+|--------|--------|
+| Tipo de credencial | Android |
+| Nombre del paquete | `com.piku.app` |
+| SHA-1 (debug, este repo) | `A4:C6:C8:CD:AA:20:4B:F6:B2:32:FF:97:A7:16:13:FC:EB:0E:40:82` |
+
+Comprobá que `google.webClientId` sea el ID del cliente **Aplicación web**, no el del cliente Android. Tras guardar en Google Cloud, esperá unos minutos, desinstalá la app e instalá de nuevo.
+
+SHA-1 de release: `gradlew :app:signingReport` (variante release si firmás para Play Store).
+
 ## Resumen rápido
 
 - **Render `GOOGLE_CLIENT_ID`** = ID OAuth **Web** (fijo, no por usuario).

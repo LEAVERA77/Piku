@@ -17,6 +17,10 @@
         android:name="android.permission.USE_FINGERPRINT"
         android:maxSdkVersion="28" />
 
+    <queries>
+        <package android:name="com.google.android.gms" />
+    </queries>
+
     <application
         android:name=".PikuApplication"
         android:allowBackup="true"

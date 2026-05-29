@@ -29,6 +29,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -50,7 +52,7 @@ import com.piku.app.ui.theme.CelestePiku
 import com.piku.app.ui.theme.NaranjaPiku
 import com.piku.app.ui.theme.VerdePiku
 import com.piku.app.utils.BiometricHelper
-import com.piku.app.utils.GoogleAuthHelper
+import com.piku.app.utils.GoogleSignInHelper
 import kotlinx.coroutines.launch
 
 private enum class ModoAuth { INGRESAR, REGISTRAR }
@@ -124,6 +126,19 @@ fun AuthScreen(
                 cargando = false
             }
         }
+    }
+
+    val googleSignInLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        GoogleSignInHelper.idTokenFromResult(result.data)
+            .onSuccess { token ->
+                ejecutar { AuthRepository(context).loginGoogle(token) }
+            }
+            .onFailure { e ->
+                error = e.message
+                cargando = false
+            }
     }
 
     Column(
@@ -389,18 +404,20 @@ fun AuthScreen(
                         error = "El registro de comercio es con email y contraseña"
                         return@BotonGoogle
                     }
-                    scope.launch {
-                        cargando = true
-                        error = null
-                        GoogleAuthHelper.obtenerIdToken(context)
-                            .onSuccess { token ->
-                                ejecutar { AuthRepository(context).loginGoogle(token) }
-                            }
-                            .onFailure { e ->
-                                error = e.message
-                                cargando = false
-                            }
+                    val act = activity
+                    if (act == null) {
+                        error = "No se puede abrir el inicio de sesión con Google"
+                        return@BotonGoogle
                     }
+                    GoogleSignInHelper.signInIntent(act)
+                        .onSuccess { intent ->
+                            cargando = true
+                            error = null
+                            googleSignInLauncher.launch(intent)
+                        }
+                        .onFailure { e ->
+                            error = e.message
+                        }
                 }
             )
 
