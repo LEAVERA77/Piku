@@ -114,6 +114,8 @@ Comprobá que `google.webClientId` sea el ID del cliente **Aplicación web**, no
 
 SHA-1 de release: `gradlew :app:signingReport` (variante release si firmás para Play Store).
 
+Guía detallada con enlaces: **`docs/CREAR_CLIENTE_ANDROID_GOOGLE.md`**.
+
 ## Resumen rápido
 
 - **Render `GOOGLE_CLIENT_ID`** = ID OAuth **Web** (fijo, no por usuario).

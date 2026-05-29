@@ -49,14 +49,17 @@ object GoogleSignInHelper {
         }
     }
 
+    private const val URL_CREDENCIALES =
+        "https://console.cloud.google.com/apis/credentials?project=334957416226"
+
     private fun mensajeParaApiException(e: ApiException): String = when (e.statusCode) {
         10 -> """
-            Google Cloud no está enlazado a esta app (código 10).
-            En Google Cloud → Credenciales:
-            1) Cliente Android: paquete $PACKAGE_NAME y SHA-1 $SHA1_DEBUG_REFERENCIA
-            2) Cliente Web: ese ID va en config.json (no copies el ID del cliente Android)
-            3) Pantalla de consentimiento OAuth completada
-            Esperá 5–10 min tras guardar y reinstalá la app.
+            Google Cloud no reconoce esta app (código 10).
+            Creá un cliente OAuth tipo Android en el proyecto 334957416226:
+            paquete $PACKAGE_NAME, SHA-1 $SHA1_DEBUG_REFERENCIA.
+            Guía: docs/CREAR_CLIENTE_ANDROID_GOOGLE.md
+            Consola: $URL_CREDENCIALES
+            Luego esperá 5–10 min, desinstalá e instalá Piku.
         """.trimIndent()
         12501 -> "Inicio de sesión cancelado"
         else -> "Error Google (${e.statusCode}): ${e.message}"
