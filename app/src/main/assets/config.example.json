@@ -16,6 +16,9 @@
   "google": {
     "webClientId": "TU_WEB_CLIENT_ID.apps.googleusercontent.com"
   },
+  "comercio": {
+    "codigoInvitacion": "PIKU2025"
+  },
   "app": {
     "version": "1.0.0",
     "tagline": "Tus puntos, tus descuentos"

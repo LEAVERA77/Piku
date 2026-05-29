@@ -1,5 +1,13 @@
 const { query } = require('../services/neon.service');
+const { uploadImage, configurado: cloudinaryOk } = require('../services/cloudinary.service');
 const { sanitizarInput, responderError } = require('../utils/helpers');
+const {
+  parseFecha,
+  parseIntOrNull,
+  parseFloatOrNull,
+  normalizarTipo,
+  TIPOS_VALIDOS,
+} = require('../utils/recompensa.helpers');
 
 function getComercioId(req) {
   return req.user.comercio_id;
@@ -91,17 +99,65 @@ async function getRecompensas(req, res) {
 /**
  * Crea una recompensa.
  */
+async function getRecompensa(req, res) {
+  try {
+    const comercioId = getComercioId(req);
+    const { id } = req.params;
+    const result = await query(
+      'SELECT * FROM piku_recompensas WHERE id = $1 AND comercio_id = $2',
+      [id, comercioId]
+    );
+    if (!result.rows.length) return responderError(res, 404, 'Recompensa no encontrada');
+    return res.json({ recompensa: result.rows[0] });
+  } catch (error) {
+    console.error('getRecompensa:', error);
+    return responderError(res, 500, 'Error al obtener recompensa');
+  }
+}
+
+async function getRecompensaStats(req, res) {
+  try {
+    const comercioId = getComercioId(req);
+    const { id } = req.params;
+    const existe = await query(
+      'SELECT id, usos_actuales FROM piku_recompensas WHERE id = $1 AND comercio_id = $2',
+      [id, comercioId]
+    );
+    if (!existe.rows.length) return responderError(res, 404, 'Recompensa no encontrada');
+
+    const stats = await query(
+      `SELECT COUNT(*)::int AS canjes, COUNT(DISTINCT usuario_id)::int AS usuarios_unicos
+       FROM piku_canjes WHERE recompensa_id = $1`,
+      [id]
+    );
+
+    return res.json({
+      canjes: stats.rows[0].canjes,
+      usuariosUnicos: stats.rows[0].usuarios_unicos,
+      usosActuales: existe.rows[0].usos_actuales,
+    });
+  } catch (error) {
+    console.error('getRecompensaStats:', error);
+    return responderError(res, 500, 'Error al obtener estadísticas');
+  }
+}
+
 async function createRecompensa(req, res) {
   try {
     const comercioId = getComercioId(req);
     if (!comercioId) return responderError(res, 403, 'Sin comercio asociado');
 
-    const nombre = sanitizarInput(req.body.nombre, 255);
+    const nombre = sanitizarInput(req.body.nombre ?? req.body.titulo, 255);
     const descripcion = sanitizarInput(req.body.descripcion, 1000);
     const puntos = parseInt(req.body.puntosRequeridos ?? req.body.puntos_requeridos, 10);
-    const icono = sanitizarInput(req.body.icono, 16) || '🎁';
+    const icono = sanitizarInput(req.body.icono, 16) || 'oferta';
     const stock = req.body.stock != null ? parseInt(req.body.stock, 10) : null;
     const imagenUrl = sanitizarInput(req.body.imagenUrl ?? req.body.imagen_url, 500);
+    const tipo = normalizarTipo(req.body.tipo);
+    const fechaInicio = parseFecha(req.body.fechaInicio ?? req.body.fecha_inicio) || new Date().toISOString();
+    const fechaFin =
+      parseFecha(req.body.fechaFin ?? req.body.fecha_fin) ||
+      new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString();
 
     if (!nombre || !puntos || puntos <= 0) {
       return responderError(res, 400, 'Nombre y puntos requeridos válidos');
@@ -109,16 +165,37 @@ async function createRecompensa(req, res) {
 
     const insert = await query(
       `INSERT INTO piku_recompensas
-       (comercio_id, nombre, descripcion, puntos_requeridos, icono, stock, imagen_url)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       (comercio_id, nombre, descripcion, puntos_requeridos, icono, stock, imagen_url,
+        tipo, porcentaje_descuento, monto_maximo_descuento, producto_nombre,
+        fecha_inicio, fecha_fin, horarios_validos, max_usos_por_usuario, max_usos_totales, usos_actuales, activo)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,0,TRUE)
        RETURNING *`,
-      [comercioId, nombre, descripcion, puntos, icono, stock, imagenUrl || null]
+      [
+        comercioId,
+        nombre,
+        descripcion,
+        puntos,
+        icono,
+        stock,
+        imagenUrl || null,
+        tipo,
+        parseIntOrNull(req.body.porcentajeDescuento ?? req.body.porcentaje_descuento),
+        parseFloatOrNull(req.body.montoMaximoDescuento ?? req.body.monto_maximo_descuento),
+        sanitizarInput(req.body.productoNombre ?? req.body.producto_nombre, 100),
+        fechaInicio,
+        fechaFin,
+        req.body.horariosValidos ?? req.body.horarios_validos
+          ? JSON.stringify(req.body.horariosValidos ?? req.body.horarios_validos)
+          : null,
+        parseIntOrNull(req.body.maxUsosPorUsuario ?? req.body.max_usos_por_usuario) ?? 1,
+        parseIntOrNull(req.body.maxUsosTotales ?? req.body.max_usos_totales) ?? 0,
+      ]
     );
 
     return res.status(201).json({ mensaje: 'Recompensa creada', recompensa: insert.rows[0] });
   } catch (error) {
     console.error('createRecompensa:', error);
-    return responderError(res, 500, 'Error al crear recompensa');
+    return responderError(res, 500, 'Error al crear recompensa', { detail: error.message });
   }
 }
 
@@ -135,12 +212,26 @@ async function updateRecompensa(req, res) {
     let idx = 1;
 
     const mapa = {
-      nombre: sanitizarInput(req.body.nombre, 255),
+      nombre: sanitizarInput(req.body.nombre ?? req.body.titulo, 255),
       descripcion: sanitizarInput(req.body.descripcion, 1000),
       icono: sanitizarInput(req.body.icono, 16),
       imagen_url: sanitizarInput(req.body.imagenUrl ?? req.body.imagen_url, 500),
       activo: req.body.activo,
       stock: req.body.stock != null ? parseInt(req.body.stock, 10) : undefined,
+      tipo: req.body.tipo != null ? normalizarTipo(req.body.tipo) : undefined,
+      porcentaje_descuento: parseIntOrNull(
+        req.body.porcentajeDescuento ?? req.body.porcentaje_descuento
+      ),
+      monto_maximo_descuento: parseFloatOrNull(
+        req.body.montoMaximoDescuento ?? req.body.monto_maximo_descuento
+      ),
+      producto_nombre: sanitizarInput(req.body.productoNombre ?? req.body.producto_nombre, 100),
+      fecha_inicio: parseFecha(req.body.fechaInicio ?? req.body.fecha_inicio),
+      fecha_fin: parseFecha(req.body.fechaFin ?? req.body.fecha_fin),
+      max_usos_por_usuario: parseIntOrNull(
+        req.body.maxUsosPorUsuario ?? req.body.max_usos_por_usuario
+      ),
+      max_usos_totales: parseIntOrNull(req.body.maxUsosTotales ?? req.body.max_usos_totales),
       puntos_requeridos:
         req.body.puntosRequeridos != null
           ? parseInt(req.body.puntosRequeridos, 10)
@@ -148,6 +239,12 @@ async function updateRecompensa(req, res) {
             ? parseInt(req.body.puntos_requeridos, 10)
             : undefined,
     };
+
+    if (req.body.horariosValidos != null || req.body.horarios_validos != null) {
+      mapa.horarios_validos = JSON.stringify(
+        req.body.horariosValidos ?? req.body.horarios_validos
+      );
+    }
 
     for (const [col, val] of Object.entries(mapa)) {
       if (val !== undefined && val !== '') {
@@ -191,6 +288,79 @@ async function deleteRecompensa(req, res) {
   } catch (error) {
     console.error('deleteRecompensa:', error);
     return responderError(res, 500, 'Error al eliminar recompensa');
+  }
+}
+
+async function duplicateRecompensa(req, res) {
+  try {
+    const comercioId = getComercioId(req);
+    const { id } = req.params;
+    const orig = await query(
+      'SELECT * FROM piku_recompensas WHERE id = $1 AND comercio_id = $2',
+      [id, comercioId]
+    );
+    if (!orig.rows.length) return responderError(res, 404, 'Recompensa no encontrada');
+    const r = orig.rows[0];
+
+    const insert = await query(
+      `INSERT INTO piku_recompensas
+       (comercio_id, nombre, descripcion, puntos_requeridos, icono, stock, imagen_url,
+        tipo, porcentaje_descuento, monto_maximo_descuento, producto_nombre,
+        fecha_inicio, fecha_fin, horarios_validos, max_usos_por_usuario, max_usos_totales, usos_actuales, activo)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,0,TRUE)
+       RETURNING *`,
+      [
+        comercioId,
+        `${r.nombre} (copia)`,
+        r.descripcion,
+        r.puntos_requeridos,
+        r.icono,
+        r.stock,
+        r.imagen_url,
+        r.tipo,
+        r.porcentaje_descuento,
+        r.monto_maximo_descuento,
+        r.producto_nombre,
+        r.fecha_inicio,
+        r.fecha_fin,
+        r.horarios_validos,
+        r.max_usos_por_usuario,
+        r.max_usos_totales,
+      ]
+    );
+
+    return res.status(201).json({ mensaje: 'Oferta duplicada', recompensa: insert.rows[0] });
+  } catch (error) {
+    console.error('duplicateRecompensa:', error);
+    return responderError(res, 500, 'Error al duplicar recompensa');
+  }
+}
+
+async function uploadImagenRecompensa(req, res) {
+  try {
+    const comercioId = getComercioId(req);
+    const { id } = req.params;
+    if (!req.file) return responderError(res, 400, 'Archivo de imagen requerido');
+    if (!cloudinaryOk) return responderError(res, 503, 'Cloudinary no configurado en el servidor');
+
+    const existe = await query(
+      'SELECT id FROM piku_recompensas WHERE id = $1 AND comercio_id = $2',
+      [id, comercioId]
+    );
+    if (!existe.rows.length) return responderError(res, 404, 'Recompensa no encontrada');
+
+    const dataUri = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
+    const { url } = await uploadImage(dataUri, 'ofertas');
+
+    const updated = await query(
+      'UPDATE piku_recompensas SET imagen_url = $1, updated_at = NOW() WHERE id = $2 RETURNING *',
+      [url, id]
+    );
+
+    return res.json({ mensaje: 'Imagen actualizada', imagen_url: url, recompensa: updated.rows[0] });
+  } catch (error) {
+    console.error('uploadImagenRecompensa:', error);
+    return responderError(res, 500, 'Error al subir imagen', { detail: error.message });
   }
 }
 
@@ -262,9 +432,13 @@ module.exports = {
   getReglasPuntos,
   updateReglasPuntos,
   getRecompensas,
+  getRecompensa,
+  getRecompensaStats,
   createRecompensa,
+  duplicateRecompensa,
   updateRecompensa,
   deleteRecompensa,
+  uploadImagenRecompensa,
   generarQR: generarQRComercio,
   getEstadisticas,
 };

@@ -41,6 +41,12 @@ async function detalleComercio(req, res) {
       `SELECT id, nombre, descripcion, puntos_requeridos, icono, imagen_url
        FROM piku_recompensas WHERE comercio_id = $1 AND activo = TRUE
          AND (stock IS NULL OR stock > 0)
+         AND (fecha_inicio IS NULL OR fecha_inicio <= NOW())
+         AND (fecha_fin IS NULL OR fecha_fin >= NOW())
+         AND (
+           max_usos_totales IS NULL OR max_usos_totales = 0
+           OR usos_actuales < max_usos_totales
+         )
        ORDER BY puntos_requeridos`,
       [id]
     );

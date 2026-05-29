@@ -44,6 +44,10 @@ object ConfigLoader {
         load(context)?.optJSONObject("google")
             ?.optString("webClientId", "")?.trim()?.ifEmpty { null }
 
+    fun codigoInvitacionComercio(context: Context): String? =
+        load(context)?.optJSONObject("comercio")
+            ?.optString("codigoInvitacion", "")?.trim()?.ifEmpty { null }
+
     fun appTagline(context: Context): String =
         load(context)?.optJSONObject("app")
             ?.optString("tagline", "Tus puntos, tus descuentos")

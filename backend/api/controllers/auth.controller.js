@@ -58,6 +58,7 @@ async function registroComercio(req, res) {
     const codigoInvitacion = sanitizarInput(req.body.codigoInvitacion || req.body.codigo_invitacion, 64);
     const lat = req.body.lat != null ? parseFloat(req.body.lat) : null;
     const lon = req.body.lon != null ? parseFloat(req.body.lon) : null;
+    const categoria = sanitizarInput(req.body.categoria, 50);
 
     if (!validarEmail(email)) return responderError(res, 400, 'Email inválido');
     if (password.length < 6) return responderError(res, 400, 'La contraseña debe tener al menos 6 caracteres');
@@ -72,28 +73,33 @@ async function registroComercio(req, res) {
       // Validar invitación si no es admin autenticado
       const esAdmin = req.user?.rol === 'admin';
       if (!esAdmin) {
-        if (!codigoInvitacion) {
-          throw new Error('Código de invitación requerido');
-        }
-        const inv = await client.query(
-          `SELECT id, usado, expires_at FROM piku_invitaciones_comercio
-           WHERE UPPER(codigo) = UPPER($1) LIMIT 1`,
-          [codigoInvitacion]
-        );
-        if (!inv.rows.length) throw new Error('Invitación inválida');
-        if (inv.rows[0].usado) throw new Error('Invitación ya utilizada');
-        if (inv.rows[0].expires_at && new Date(inv.rows[0].expires_at) < new Date()) {
-          throw new Error('Invitación expirada');
+        const codigoEnv = process.env.PIKU_CODIGO_INVITACION || '';
+        const codigoValido =
+          codigoInvitacion &&
+          (codigoEnv && codigoInvitacion.toUpperCase() === codigoEnv.toUpperCase());
+
+        if (!codigoValido) {
+          if (!codigoInvitacion) throw new Error('Código de invitación requerido');
+          const inv = await client.query(
+            `SELECT id, usado, expires_at FROM piku_invitaciones_comercio
+             WHERE UPPER(codigo) = UPPER($1) LIMIT 1`,
+            [codigoInvitacion]
+          );
+          if (!inv.rows.length) throw new Error('Invitación inválida');
+          if (inv.rows[0].usado) throw new Error('Invitación ya utilizada');
+          if (inv.rows[0].expires_at && new Date(inv.rows[0].expires_at) < new Date()) {
+            throw new Error('Invitación expirada');
+          }
         }
       }
 
       const hash = await bcrypt.hash(password, 10);
 
       const comercioInsert = await client.query(
-        `INSERT INTO piku_comercios (nombre, direccion, lat, lon, suscripcion_activa)
-         VALUES ($1, $2, $3, $4, TRUE)
-         RETURNING id, nombre, direccion, lat, lon`,
-        [nombreComercio, direccion || null, lat, lon]
+        `INSERT INTO piku_comercios (nombre, direccion, lat, lon, suscripcion_activa, categoria)
+         VALUES ($1, $2, $3, $4, TRUE, $5)
+         RETURNING id, nombre, direccion, lat, lon, categoria`,
+        [nombreComercio, direccion || null, lat, lon, categoria || null]
       );
       const comercio = comercioInsert.rows[0];
 

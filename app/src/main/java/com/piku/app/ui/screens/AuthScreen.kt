@@ -54,6 +54,7 @@ import com.piku.app.utils.GoogleAuthHelper
 import kotlinx.coroutines.launch
 
 private enum class ModoAuth { INGRESAR, REGISTRAR }
+private enum class RolRegistro { CLIENTE, COMERCIO }
 
 @Composable
 fun AuthScreen(
@@ -71,6 +72,13 @@ fun AuthScreen(
     var password by remember { mutableStateOf("") }
     var confirmar by remember { mutableStateOf("") }
     var telefono by remember { mutableStateOf("") }
+    var rolRegistro by remember { mutableStateOf(RolRegistro.CLIENTE) }
+    var nombreComercio by remember { mutableStateOf("") }
+    var direccionComercio by remember { mutableStateOf("") }
+    var categoriaComercio by remember { mutableStateOf("cafeteria") }
+    var codigoInvitacion by remember {
+        mutableStateOf(ConfigLoader.codigoInvitacionComercio(context).orEmpty())
+    }
     var error by remember { mutableStateOf<String?>(null) }
     var cargando by remember { mutableStateOf(false) }
     var puedeHuella by remember { mutableStateOf(false) }
@@ -192,14 +200,70 @@ fun AuthScreen(
             Spacer(modifier = Modifier.height(20.dp))
 
             if (modo == ModoAuth.REGISTRAR) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    FilterChip(
+                        selected = rolRegistro == RolRegistro.CLIENTE,
+                        onClick = { rolRegistro = RolRegistro.CLIENTE },
+                        label = { Text("Cliente") },
+                        modifier = Modifier.weight(1f)
+                    )
+                    FilterChip(
+                        selected = rolRegistro == RolRegistro.COMERCIO,
+                        onClick = { rolRegistro = RolRegistro.COMERCIO },
+                        label = { Text("Comerciante") },
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+                Spacer(modifier = Modifier.height(10.dp))
                 OutlinedTextField(
                     value = nombre,
                     onValueChange = { nombre = it },
-                    label = { Text("Nombre completo") },
+                    label = {
+                        Text(
+                            if (rolRegistro == RolRegistro.COMERCIO) "Tu nombre" else "Nombre completo"
+                        )
+                    },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true
                 )
                 Spacer(modifier = Modifier.height(10.dp))
+                if (rolRegistro == RolRegistro.COMERCIO) {
+                    OutlinedTextField(
+                        value = nombreComercio,
+                        onValueChange = { nombreComercio = it },
+                        label = { Text("Nombre del comercio") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
+                    )
+                    Spacer(modifier = Modifier.height(10.dp))
+                    OutlinedTextField(
+                        value = direccionComercio,
+                        onValueChange = { direccionComercio = it },
+                        label = { Text("Dirección") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
+                    )
+                    Spacer(modifier = Modifier.height(10.dp))
+                    OutlinedTextField(
+                        value = categoriaComercio,
+                        onValueChange = { categoriaComercio = it },
+                        label = { Text("Categoría (ej. cafeteria, restaurante)") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
+                    )
+                    Spacer(modifier = Modifier.height(10.dp))
+                    OutlinedTextField(
+                        value = codigoInvitacion,
+                        onValueChange = { codigoInvitacion = it },
+                        label = { Text("Código de invitación") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
+                    )
+                    Spacer(modifier = Modifier.height(10.dp))
+                }
             }
 
             OutlinedTextField(
@@ -265,8 +329,25 @@ fun AuthScreen(
                             email.isBlank() -> error = "Ingresá tu email"
                             password.length < 6 -> error = "La contraseña debe tener al menos 6 caracteres"
                             password != confirmar -> error = "Las contraseñas no coinciden"
+                            rolRegistro == RolRegistro.COMERCIO && nombreComercio.isBlank() ->
+                                error = "Ingresá el nombre del comercio"
+                            rolRegistro == RolRegistro.COMERCIO && codigoInvitacion.isBlank() ->
+                                error = "Ingresá el código de invitación del comercio"
                             else -> ejecutar {
-                                AuthRepository(context).registro(nombre, email, password, telefono)
+                                if (rolRegistro == RolRegistro.COMERCIO) {
+                                    AuthRepository(context).registroComercio(
+                                        nombre = nombre,
+                                        email = email,
+                                        password = password,
+                                        nombreComercio = nombreComercio,
+                                        telefono = telefono,
+                                        direccion = direccionComercio,
+                                        categoria = categoriaComercio,
+                                        codigoInvitacion = codigoInvitacion
+                                    )
+                                } else {
+                                    AuthRepository(context).registro(nombre, email, password, telefono)
+                                }
                             }
                         }
                     } else {
@@ -301,8 +382,13 @@ fun AuthScreen(
 
             BotonGoogle(
                 texto = if (modo == ModoAuth.REGISTRAR) "Registrarse con Google" else "Continuar con Google",
-                habilitado = !cargando,
+                habilitado = !cargando &&
+                    !(modo == ModoAuth.REGISTRAR && rolRegistro == RolRegistro.COMERCIO),
                 onClick = {
+                    if (modo == ModoAuth.REGISTRAR && rolRegistro == RolRegistro.COMERCIO) {
+                        error = "El registro de comercio es con email y contraseña"
+                        return@BotonGoogle
+                    }
                     scope.launch {
                         cargando = true
                         error = null
