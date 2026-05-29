@@ -87,10 +87,10 @@ async function registroComercio(req, res) {
       const hash = await bcrypt.hash(password, 10);
 
       const comercioInsert = await client.query(
-        `INSERT INTO piku_comercios (nombre, descripcion, direccion, lat, lon, activo)
-         VALUES ($1, $2, $3, $4, $5, TRUE)
+        `INSERT INTO piku_comercios (nombre, direccion, lat, lon, suscripcion_activa)
+         VALUES ($1, $2, $3, $4, TRUE)
          RETURNING id, nombre, direccion, lat, lon`,
-        [nombreComercio, sanitizarInput(req.body.descripcion, 1000), direccion || null, lat, lon]
+        [nombreComercio, direccion || null, lat, lon]
       );
       const comercio = comercioInsert.rows[0];
 
@@ -194,7 +194,7 @@ async function perfil(req, res) {
 
     if (usuario.comercio_id) {
       const c = await query(
-        'SELECT id, nombre, direccion, lat, lon, activo, logo_url FROM piku_comercios WHERE id = $1',
+        'SELECT id, usuario_id, nombre, direccion, lat, lon, logo_url, suscripcion_activa, created_at FROM piku_comercios WHERE id = $1',
         [usuario.comercio_id]
       );
       comercio = c.rows[0] || null;

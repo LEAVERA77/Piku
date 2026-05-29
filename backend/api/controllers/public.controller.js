@@ -1,14 +1,18 @@
 const { query } = require('../services/neon.service');
 const { responderError } = require('../utils/helpers');
 
+const COLUMNAS_COMERCIO = `
+  id, usuario_id, nombre, direccion, lat, lon, logo_url, suscripcion_activa, created_at
+`.trim();
+
 /**
  * Lista comercios activos (público).
  */
 async function listarComercios(req, res) {
   try {
     const result = await query(
-      `SELECT id, nombre, descripcion, direccion, lat, lon, logo_url
-       FROM piku_comercios WHERE activo = TRUE ORDER BY nombre ASC`
+      `SELECT ${COLUMNAS_COMERCIO}
+       FROM piku_comercios WHERE suscripcion_activa = TRUE ORDER BY nombre ASC`
     );
     return res.json({ comercios: result.rows });
   } catch (error) {
@@ -24,8 +28,8 @@ async function detalleComercio(req, res) {
   try {
     const { id } = req.params;
     const result = await query(
-      `SELECT id, nombre, descripcion, direccion, lat, lon, logo_url, radio_metros
-       FROM piku_comercios WHERE id = $1 AND activo = TRUE`,
+      `SELECT ${COLUMNAS_COMERCIO}
+       FROM piku_comercios WHERE id = $1 AND suscripcion_activa = TRUE`,
       [id]
     );
     if (!result.rows.length) return responderError(res, 404, 'Comercio no encontrado');
@@ -58,7 +62,7 @@ async function listarRecompensasPublicas(req, res) {
       SELECT r.id, r.nombre, r.descripcion, r.puntos_requeridos, r.icono, r.imagen_url,
              c.id AS comercio_id, c.nombre AS comercio_nombre
       FROM piku_recompensas r
-      INNER JOIN piku_comercios c ON c.id = r.comercio_id AND c.activo = TRUE
+      INNER JOIN piku_comercios c ON c.id = r.comercio_id AND c.suscripcion_activa = TRUE
       WHERE r.activo = TRUE AND (r.stock IS NULL OR r.stock > 0)`;
     const params = [];
 
