@@ -1,0 +1,12 @@
+<resources>
+    <string name="app_name">Piku</string>
+    <string name="app_tagline">Tus puntos, tus descuentos</string>
+    <string name="nav_inicio">Inicio</string>
+    <string name="nav_escanear">Escanear</string>
+    <string name="nav_canjes">Canjes</string>
+    <string name="nav_perfil">Perfil</string>
+    <string name="escanear_qr">Escanear QR</string>
+    <string name="canjear_puntos">Canjear puntos</string>
+    <string name="permiso_camara">Necesitamos acceso a la cámara para escanear códigos QR</string>
+    <string name="conceder_permiso">Conceder permiso</string>
+</resources>
