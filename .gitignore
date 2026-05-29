@@ -33,3 +33,6 @@ google-services.json
 
 # Profiling
 *.hprof
+
+# Configuración local con claves reales (copiar desde config.example.json)
+/app/src/main/assets/config.json
