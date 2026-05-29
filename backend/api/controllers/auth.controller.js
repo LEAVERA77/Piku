@@ -3,6 +3,24 @@ const axios = require('axios');
 const { query, withTransaction } = require('../services/neon.service');
 const { signToken } = require('../middleware/auth.middleware');
 const { validarEmail, sanitizarInput, responderError } = require('../utils/helpers');
+const { columnasTabla, tiene } = require('../utils/schema.util');
+
+async function camposUsuario(permitePassword = false) {
+  const cols = await columnasTabla('piku_usuarios');
+  const lista = ['id', 'email', 'nombre', 'telefono', 'rol'];
+  if (permitePassword && tiene(cols, 'password_hash')) lista.push('password_hash');
+  for (const c of ['activo', 'puntos_saldo', 'comercio_id', 'avatar_url', 'google_id', 'created_at', 'updated_at']) {
+    if (tiene(cols, c)) lista.push(c);
+  }
+  return lista;
+}
+
+function normalizarUsuario(row) {
+  if (!row) return row;
+  if (row.puntos_saldo == null) row.puntos_saldo = 0;
+  if (row.activo == null) row.activo = true;
+  return row;
+}
 
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '';
 const GOOGLE_AUDIENCES = [
@@ -29,14 +47,15 @@ async function registroCliente(req, res) {
     if (existe.rows.length) return responderError(res, 409, 'El email ya está registrado');
 
     const hash = await bcrypt.hash(password, 10);
+    const returning = (await camposUsuario()).join(', ');
     const insert = await query(
       `INSERT INTO piku_usuarios (email, password_hash, nombre, telefono, rol)
        VALUES ($1, $2, $3, $4, 'cliente')
-       RETURNING id, email, nombre, telefono, rol, puntos_saldo, created_at`,
+       RETURNING ${returning}`,
       [email, hash, nombre, telefono || null]
     );
 
-    const usuario = insert.rows[0];
+    const usuario = normalizarUsuario(insert.rows[0]);
     const token = signToken({ userId: usuario.id, rol: usuario.rol });
 
     return res.status(201).json({
@@ -74,8 +93,11 @@ async function registroComercio(req, res) {
     const existe = await query('SELECT id FROM piku_usuarios WHERE LOWER(email) = $1', [email]);
     if (existe.rows.length) return responderError(res, 409, 'El email ya está registrado');
 
+    const colsComercio = await columnasTabla('piku_comercios');
+    const colsInv = await columnasTabla('piku_invitaciones_comercio');
+    const colsUsuario = await columnasTabla('piku_usuarios');
+
     const resultado = await withTransaction(async (client) => {
-      // Validar invitación si no es admin autenticado
       const esAdmin = req.user?.rol === 'admin';
       if (!esAdmin) {
         const codigoEnv = process.env.PIKU_CODIGO_INVITACION || '';
@@ -85,8 +107,11 @@ async function registroComercio(req, res) {
 
         if (!codigoValido) {
           if (!codigoInvitacion) throw new Error('Código de invitación requerido');
+          const invCols = ['id'];
+          if (tiene(colsInv, 'usado')) invCols.push('usado');
+          if (tiene(colsInv, 'expires_at')) invCols.push('expires_at');
           const inv = await client.query(
-            `SELECT id, usado, expires_at FROM piku_invitaciones_comercio
+            `SELECT ${invCols.join(', ')} FROM piku_invitaciones_comercio
              WHERE UPPER(codigo) = UPPER($1) LIMIT 1`,
             [codigoInvitacion]
           );
@@ -100,38 +125,85 @@ async function registroComercio(req, res) {
 
       const hash = await bcrypt.hash(password, 10);
 
+      const comercioCampos = ['nombre'];
+      const comercioVals = [nombreComercio];
+      const addComercio = (col, val) => {
+        if (tiene(colsComercio, col)) {
+          comercioCampos.push(col);
+          comercioVals.push(val);
+        }
+      };
+      addComercio('direccion', direccion || null);
+      addComercio('lat', lat);
+      addComercio('lon', lon);
+      addComercio('suscripcion_activa', true);
+      addComercio('categoria', categoria || null);
+
+      const comercioPlaceholders = comercioVals.map((_, i) => `$${i + 1}`).join(', ');
+      const comercioReturning = ['id', 'nombre'];
+      for (const c of ['direccion', 'lat', 'lon', 'categoria']) {
+        if (tiene(colsComercio, c)) comercioReturning.push(c);
+      }
+
       const comercioInsert = await client.query(
-        `INSERT INTO piku_comercios (nombre, direccion, lat, lon, suscripcion_activa, categoria)
-         VALUES ($1, $2, $3, $4, TRUE, $5)
-         RETURNING id, nombre, direccion, lat, lon, categoria`,
-        [nombreComercio, direccion || null, lat, lon, categoria || null]
+        `INSERT INTO piku_comercios (${comercioCampos.join(', ')})
+         VALUES (${comercioPlaceholders})
+         RETURNING ${comercioReturning.join(', ')}`,
+        comercioVals
       );
       const comercio = comercioInsert.rows[0];
 
+      const usuarioCampos = ['email', 'password_hash', 'nombre', 'rol'];
+      const usuarioVals = [email, hash, nombre, 'comercio'];
+      if (tiene(colsUsuario, 'telefono')) {
+        usuarioCampos.push('telefono');
+        usuarioVals.push(sanitizarInput(req.body.telefono, 50) || null);
+      }
+      if (tiene(colsUsuario, 'comercio_id')) {
+        usuarioCampos.push('comercio_id');
+        usuarioVals.push(comercio.id);
+      }
+
+      const usuarioReturning = ['id', 'email', 'nombre', 'rol'];
+      if (tiene(colsUsuario, 'comercio_id')) usuarioReturning.push('comercio_id');
+
       const usuarioInsert = await client.query(
-        `INSERT INTO piku_usuarios (email, password_hash, nombre, telefono, rol, comercio_id)
-         VALUES ($1, $2, $3, $4, 'comercio', $5)
-         RETURNING id, email, nombre, rol, comercio_id`,
-        [email, hash, nombre, sanitizarInput(req.body.telefono, 50) || null, comercio.id]
+        `INSERT INTO piku_usuarios (${usuarioCampos.join(', ')})
+         VALUES (${usuarioVals.map((_, i) => `$${i + 1}`).join(', ')})
+         RETURNING ${usuarioReturning.join(', ')}`,
+        usuarioVals
       );
-      const usuario = usuarioInsert.rows[0];
+      const usuario = normalizarUsuario(usuarioInsert.rows[0]);
 
-      await client.query(
-        'UPDATE piku_comercios SET usuario_id = $1 WHERE id = $2',
-        [usuario.id, comercio.id]
-      );
+      const linkCol = tiene(colsComercio, 'usuario_id')
+        ? 'usuario_id'
+        : tiene(colsComercio, 'owner_usuario_id')
+          ? 'owner_usuario_id'
+          : null;
+      if (linkCol) {
+        await client.query(`UPDATE piku_comercios SET ${linkCol} = $1 WHERE id = $2`, [
+          usuario.id,
+          comercio.id,
+        ]);
+      }
 
-      await client.query(
-        `INSERT INTO piku_reglas_puntos (comercio_id, puntos_por_peso, monto_minimo, puntos_fijos, max_puntos_por_dia)
-         VALUES ($1, 1, 0, 10, 500)
-         ON CONFLICT (comercio_id) DO NOTHING`,
-        [comercio.id]
-      );
-
-      if (!esAdmin && codigoInvitacion) {
+      try {
         await client.query(
-          `UPDATE piku_invitaciones_comercio SET usado = TRUE, comercio_id = $1 WHERE UPPER(codigo) = UPPER($2)`,
-          [comercio.id, codigoInvitacion]
+          `INSERT INTO piku_reglas_puntos (comercio_id, puntos_por_peso, monto_minimo, puntos_fijos, max_puntos_por_dia)
+           VALUES ($1, 1, 0, 10, 500)
+           ON CONFLICT (comercio_id) DO NOTHING`,
+          [comercio.id]
+        );
+      } catch (_e) {
+        /* tabla opcional en instalaciones viejas */
+      }
+
+      if (!esAdmin && codigoInvitacion && tiene(colsInv, 'usado')) {
+        const sets = ['usado = TRUE'];
+        if (tiene(colsInv, 'comercio_id')) sets.push('comercio_id = $1');
+        await client.query(
+          `UPDATE piku_invitaciones_comercio SET ${sets.join(', ')} WHERE UPPER(codigo) = UPPER($${tiene(colsInv, 'comercio_id') ? '2' : '1'})`,
+          tiene(colsInv, 'comercio_id') ? [comercio.id, codigoInvitacion] : [codigoInvitacion]
         );
       }
 
@@ -169,18 +241,21 @@ async function login(req, res) {
       return responderError(res, 400, 'Email y contraseña requeridos');
     }
 
+    const selectCols = (await camposUsuario(true)).join(', ');
     const result = await query(
-      `SELECT id, email, nombre, telefono, rol, password_hash, activo,
-              puntos_saldo, comercio_id, avatar_url
-       FROM piku_usuarios WHERE LOWER(email) = $1 LIMIT 1`,
+      `SELECT ${selectCols} FROM piku_usuarios WHERE LOWER(email) = $1 LIMIT 1`,
       [email]
     );
 
-    if (!result.rows.length || !result.rows[0].activo) {
+    if (!result.rows.length) {
       return responderError(res, 401, 'Credenciales inválidas');
     }
 
-    const usuario = result.rows[0];
+    const usuario = normalizarUsuario(result.rows[0]);
+    if (usuario.activo === false) {
+      return responderError(res, 401, 'Credenciales inválidas');
+    }
+
     const ok = await bcrypt.compare(password, usuario.password_hash);
     if (!ok) return responderError(res, 401, 'Credenciales inválidas');
 
@@ -223,24 +298,38 @@ async function loginGoogle(req, res) {
       return responderError(res, 401, 'No se pudo verificar la cuenta de Google');
     }
 
+    const cols = await columnasTabla('piku_usuarios');
+    const selectCols = (await camposUsuario()).join(', ');
+
     let result = await query(
-      `SELECT id, email, nombre, telefono, rol, activo, puntos_saldo, comercio_id, avatar_url, google_id
-       FROM piku_usuarios WHERE google_id = $1 OR LOWER(email) = $2 LIMIT 1`,
-      [googleId, email]
+      `SELECT ${selectCols} FROM piku_usuarios
+       WHERE ${tiene(cols, 'google_id') ? 'google_id = $1 OR ' : ''}LOWER(email) = $${tiene(cols, 'google_id') ? '2' : '1'} LIMIT 1`,
+      tiene(cols, 'google_id') ? [googleId, email] : [email]
     );
 
     let usuario;
     if (!result.rows.length) {
       const hash = await bcrypt.hash(`google:${googleId}:${Date.now()}`, 10);
+      const insertCampos = ['email', 'password_hash', 'nombre', 'rol'];
+      const insertVals = [email, hash, nombre, 'cliente'];
+      if (tiene(cols, 'google_id')) {
+        insertCampos.push('google_id');
+        insertVals.push(googleId);
+      }
+      if (tiene(cols, 'avatar_url')) {
+        insertCampos.push('avatar_url');
+        insertVals.push(data.picture || null);
+      }
+      const returning = selectCols;
       const insert = await query(
-        `INSERT INTO piku_usuarios (email, password_hash, nombre, rol, google_id, avatar_url)
-         VALUES ($1, $2, $3, 'cliente', $4, $5)
-         RETURNING id, email, nombre, telefono, rol, puntos_saldo, comercio_id, avatar_url, google_id`,
-        [email, hash, nombre, googleId, data.picture || null]
+        `INSERT INTO piku_usuarios (${insertCampos.join(', ')})
+         VALUES (${insertVals.map((_, i) => `$${i + 1}`).join(', ')})
+         RETURNING ${returning}`,
+        insertVals
       );
-      usuario = insert.rows[0];
+      usuario = normalizarUsuario(insert.rows[0]);
     } else {
-      usuario = result.rows[0];
+      usuario = normalizarUsuario(result.rows[0]);
       if (!usuario.activo) return responderError(res, 403, 'Cuenta desactivada');
       if (!usuario.google_id) {
         await query('UPDATE piku_usuarios SET google_id = $1, updated_at = NOW() WHERE id = $2', [

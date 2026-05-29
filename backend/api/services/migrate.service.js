@@ -69,6 +69,9 @@ async function runStartupMigrations() {
   } finally {
     client.release();
   }
+
+  const { refrescarCache } = require('../utils/schema.util');
+  await refrescarCache();
 }
 
 module.exports = { runStartupMigrations };
