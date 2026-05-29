@@ -50,6 +50,7 @@ import com.piku.app.ui.components.CampoContrasena
 import com.piku.app.ui.components.EstiloBotonPiku
 import com.piku.app.ui.components.PikuLogo
 import com.piku.app.utils.BiometricHelper
+import com.piku.app.utils.GoogleAuthHelper
 import com.piku.app.utils.GoogleSignInHelper
 import kotlinx.coroutines.launch
 
@@ -157,7 +158,7 @@ fun AuthScreen(
     val googleSignInLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
     ) { result ->
-        GoogleSignInHelper.idTokenFromResult(result.data)
+        GoogleSignInHelper.idTokenFromResult(context, result.data)
             .onSuccess { token ->
                 ejecutar { AuthRepository(context).loginGoogle(token) }
             }
@@ -458,15 +459,25 @@ fun AuthScreen(
                         error = "No se puede abrir el inicio de sesión con Google"
                         return@BotonGoogle
                     }
-                    GoogleSignInHelper.signInIntent(act)
-                        .onSuccess { intent ->
-                            cargando = true
-                            error = null
-                            googleSignInLauncher.launch(intent)
+                    scope.launch {
+                        cargando = true
+                        error = null
+                        val cm = GoogleAuthHelper.obtenerIdToken(act)
+                        if (cm.isSuccess) {
+                            ejecutar {
+                                AuthRepository(context).loginGoogle(cm.getOrThrow())
+                            }
+                            return@launch
                         }
-                        .onFailure { e ->
-                            error = e.message
-                        }
+                        GoogleSignInHelper.signInIntent(act)
+                            .onSuccess { intent ->
+                                googleSignInLauncher.launch(intent)
+                            }
+                            .onFailure { e ->
+                                error = e.message
+                                cargando = false
+                            }
+                    }
                 }
             )
 

@@ -33,9 +33,10 @@ Comprobar SHA-1 local: `gradlew :app:signingReport` (variante **debug**).
 ## Errores frecuentes
 
 - Cliente Android creado en **otro** proyecto de Google Cloud.
-- SHA-1 de otro PC (otro `debug.keystore`) — volvé a ejecutar `signingReport` en esa máquina.
+- SHA-1 de otro PC (otro `debug.keystore`) — la app muestra **SHA-1 de ESTE teléfono** en el error; copiá ese valor en Google Cloud.
 - Copiar el ID del cliente **Android** en `webClientId` (debe ser el **Web**).
 - Pantalla de consentimiento sin publicar / usuario no agregado en modo Prueba.
+- Necesitás **dos** credenciales: una **Android** (paquete + SHA-1) y una **Aplicación web** (ID en Render y en la app).
 
 ## Render
 

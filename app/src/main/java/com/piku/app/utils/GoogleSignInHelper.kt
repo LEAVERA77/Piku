@@ -1,6 +1,7 @@
 package com.piku.app.utils
 
 import android.app.Activity
+import android.content.Context
 import android.content.Intent
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInClient
@@ -10,11 +11,11 @@ import com.piku.app.data.config.ConfigLoader
 
 object GoogleSignInHelper {
 
-    /** SHA-1 debug de este proyecto (gradlew :app:signingReport). Registrar en Google Cloud → cliente Android. */
-    const val SHA1_DEBUG_REFERENCIA = "A4:C6:C8:CD:AA:20:4B:F6:B2:32:FF:97:A7:16:13:FC:EB:0E:40:82"
     const val PACKAGE_NAME = "com.piku.app"
+    private const val URL_CREDENCIALES =
+        "https://console.cloud.google.com/apis/credentials?project=334957416226"
 
-    fun webClientId(context: android.content.Context): String? =
+    fun webClientId(context: Context): String? =
         ConfigLoader.googleWebClientId(context)?.trim()?.takeIf { it.isNotBlank() }
 
     fun createClient(activity: Activity, webClientId: String): GoogleSignInClient {
@@ -29,13 +30,13 @@ object GoogleSignInHelper {
         val webClientId = webClientId(activity)
             ?: return Result.failure(
                 IllegalStateException(
-                    "Falta google.webClientId en assets/config.json"
+                    "Falta el ID de cliente OAuth Web (config.json o default_web_client_id)"
                 )
             )
         return Result.success(createClient(activity, webClientId).signInIntent)
     }
 
-    fun idTokenFromResult(data: Intent?): Result<String> {
+    fun idTokenFromResult(context: Context, data: Intent?): Result<String> {
         return try {
             val account = GoogleSignIn.getSignedInAccountFromIntent(data)
                 .getResult(ApiException::class.java)
@@ -43,40 +44,48 @@ object GoogleSignInHelper {
                 ?: return Result.failure(IllegalStateException("Google no devolvió idToken"))
             Result.success(token)
         } catch (e: ApiException) {
-            Result.failure(IllegalStateException(mensajeParaApiException(e), e))
+            Result.failure(IllegalStateException(mensajeParaApiException(context, e), e))
         } catch (e: Exception) {
-            Result.failure(IllegalStateException(mensajeConsolaGoogle(e), e))
+            Result.failure(IllegalStateException(mensajeErrorGoogle(context, e), e))
         }
     }
 
-    private const val URL_CREDENCIALES =
-        "https://console.cloud.google.com/apis/credentials?project=334957416226"
+    fun mensajeErrorGoogle(context: Context, e: Throwable): String {
+        val raw = e.message ?: e.toString()
+        if (raw.contains("Developer console", ignoreCase = true) ||
+            raw.contains("28444") ||
+            raw.contains("code 10", ignoreCase = true) ||
+            raw.contains("código 10", ignoreCase = true)
+        ) {
+            return mensajeConfiguracionCloud(context)
+        }
+        return raw
+    }
 
-    private fun mensajeParaApiException(e: ApiException): String = when (e.statusCode) {
-        10 -> """
-            Google Cloud no reconoce esta app (código 10).
-            Creá un cliente OAuth tipo Android en el proyecto 334957416226:
-            paquete $PACKAGE_NAME, SHA-1 $SHA1_DEBUG_REFERENCIA.
-            Guía: docs/CREAR_CLIENTE_ANDROID_GOOGLE.md
-            Consola: $URL_CREDENCIALES
-            Luego esperá 5–10 min, desinstalá e instalá Piku.
-        """.trimIndent()
+    private fun mensajeParaApiException(context: Context, e: ApiException): String = when (e.statusCode) {
+        10 -> mensajeConfiguracionCloud(context)
         12501 -> "Inicio de sesión cancelado"
         else -> "Error Google (${e.statusCode}): ${e.message}"
     }
 
-    fun mensajeConsolaGoogle(e: Throwable): String {
-        val raw = e.message ?: e.toString()
-        return if (raw.contains("Developer console", ignoreCase = true) ||
-            raw.contains("28444")
-        ) {
-            """
-                Consola de desarrollador de Google mal configurada.
-                Cliente Android: paquete $PACKAGE_NAME, SHA-1 $SHA1_DEBUG_REFERENCIA.
-                config.json → google.webClientId = ID de cliente tipo «Aplicación web» (mismo que GOOGLE_CLIENT_ID en Render).
-            """.trimIndent()
-        } else {
-            raw
-        }
+    private fun mensajeConfiguracionCloud(context: Context): String {
+        val sha1Dispositivo = AppSigningHelper.sha1Instalada(context) ?: "no detectado"
+        val webId = webClientId(context)?.takeLast(24) ?: "no configurado"
+        return """
+            Google no reconoce esta instalación (código 10).
+
+            En Google Cloud → Credenciales (proyecto 334957416226):
+            1) Cliente OAuth tipo Android (no Web):
+               paquete $PACKAGE_NAME
+               SHA-1 de ESTE teléfono: $sha1Dispositivo
+            2) Cliente OAuth tipo Aplicación web (en config): …$webId
+               No uses el ID del cliente Android en la app.
+
+            Si el SHA-1 no coincide con el que registraste, agregá este en la consola.
+            Pantalla de consentimiento: agregá tu Gmail si está en modo Prueba.
+            $URL_CREDENCIALES
+
+            Después: esperá 10 min, desinstalá Piku e instalá de nuevo.
+        """.trimIndent()
     }
 }

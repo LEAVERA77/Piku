@@ -2,6 +2,7 @@ package com.piku.app.data.config
 
 import android.content.Context
 import android.util.Log
+import com.piku.app.R
 import org.json.JSONObject
 
 /**
@@ -40,9 +41,13 @@ object ConfigLoader {
         load(context)?.optJSONObject("nominatim")
             ?.optString("baseUrl", "")?.trim()?.trimEnd('/')?.ifEmpty { null }
 
-    fun googleWebClientId(context: Context): String? =
-        load(context)?.optJSONObject("google")
+    fun googleWebClientId(context: Context): String? {
+        val fromJson = load(context)?.optJSONObject("google")
             ?.optString("webClientId", "")?.trim()?.ifEmpty { null }
+        if (!fromJson.isNullOrBlank()) return fromJson
+        val fallback = context.getString(R.string.default_web_client_id).trim()
+        return fallback.ifEmpty { null }
+    }
 
     fun codigoInvitacionComercio(context: Context): String? =
         load(context)?.optJSONObject("comercio")
