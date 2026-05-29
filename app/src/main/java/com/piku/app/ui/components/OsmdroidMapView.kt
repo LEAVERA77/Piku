@@ -2,15 +2,20 @@ package com.piku.app.ui.components
 
 import android.graphics.drawable.BitmapDrawable
 import androidx.compose.runtime.Composable
-import androidx.core.content.ContextCompat
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.content.ContextCompat
 import androidx.core.graphics.drawable.toBitmap
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import com.piku.app.R
 import com.piku.app.data.model.Comercio
+import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
@@ -25,6 +30,7 @@ fun OsmdroidMapView(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
     val pinIcon = remember {
         ContextCompat.getDrawable(context, R.drawable.ic_map_pin)?.let { drawable ->
             BitmapDrawable(context.resources, drawable.toBitmap(64, 80))
@@ -32,8 +38,26 @@ fun OsmdroidMapView(
     }
     val mapView = remember {
         MapView(context).apply {
+            setTileSource(TileSourceFactory.MAPNIK)
             setMultiTouchControls(true)
             controller.setZoom(14.0)
+            controller.setCenter(GeoPoint(centerLat, centerLon))
+        }
+    }
+
+    DisposableEffect(lifecycleOwner, mapView) {
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_RESUME -> mapView.onResume()
+                Lifecycle.Event.ON_PAUSE -> mapView.onPause()
+                else -> Unit
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        mapView.onResume()
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+            mapView.onPause()
         }
     }
 

@@ -3,11 +3,17 @@ package com.piku.app
 import android.app.Application
 import com.piku.app.data.network.RetrofitInstance
 import org.osmdroid.config.Configuration
+import java.io.File
 
 class PikuApplication : Application() {
     override fun onCreate() {
         super.onCreate()
-        Configuration.getInstance().userAgentValue = packageName
+        val osmdroidBase = File(cacheDir, "osmdroid").apply { mkdirs() }
+        Configuration.getInstance().apply {
+            userAgentValue = packageName
+            osmdroidBasePath = osmdroidBase
+            osmdroidTileCache = File(osmdroidBase, "tiles").apply { mkdirs() }
+        }
         RetrofitInstance.init(this)
     }
 }

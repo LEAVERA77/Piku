@@ -39,25 +39,29 @@ class MapaViewModel(application: Application) : AndroidViewModel(application) {
     val uiState: StateFlow<MapaUiState> = _uiState.asStateFlow()
 
     init {
-        cargarUbicacionYComercios()
+        cargarUbicacionYComercios(conUbicacion = false)
     }
 
     @SuppressLint("MissingPermission")
-    fun cargarUbicacionYComercios() {
+    fun cargarUbicacionYComercios(conUbicacion: Boolean = false) {
         viewModelScope.launch {
             _uiState.update { it.copy(cargando = true, error = null) }
             try {
                 val fused = LocationServices.getFusedLocationProviderClient(getApplication())
-                val location: Location? = try {
-                    fused.getCurrentLocation(
-                        Priority.PRIORITY_BALANCED_POWER_ACCURACY,
-                        CancellationTokenSource().token
-                    ).await()
-                } catch (_: Exception) {
+                val location: Location? = if (conUbicacion) {
+                    try {
+                        fused.getCurrentLocation(
+                            Priority.PRIORITY_BALANCED_POWER_ACCURACY,
+                            CancellationTokenSource().token
+                        ).await()
+                    } catch (_: Exception) {
+                        null
+                    }
+                } else {
                     null
                 }
-                val lat = location?.latitude ?: -34.6037
-                val lon = location?.longitude ?: -58.3816
+                val lat = location?.latitude ?: _uiState.value.userLat
+                val lon = location?.longitude ?: _uiState.value.userLon
                 val comercios = repo.listarComercios(lat, lon)
                 _uiState.update {
                     it.copy(
