@@ -1,6 +1,6 @@
 const fs = require('fs');
 const path = require('path');
-const { query, pool } = require('./neon.service');
+const { pool } = require('./neon.service');
 
 const MIGRATION_FILES = [
   'migration_neon_production_sync.sql',
@@ -18,33 +18,24 @@ async function runStartupMigrations() {
   }
 
   const sqlDir = path.join(__dirname, '..', 'sql');
+  const client = await pool.connect();
 
-  for (const file of MIGRATION_FILES) {
-    const filePath = path.join(sqlDir, file);
-    if (!fs.existsSync(filePath)) continue;
+  try {
+    for (const file of MIGRATION_FILES) {
+      const filePath = path.join(sqlDir, file);
+      if (!fs.existsSync(filePath)) continue;
 
-    const raw = fs.readFileSync(filePath, 'utf8');
-    const statements = raw
-      .split(';')
-      .map((s) => s.replace(/--[^\n]*/g, '').trim())
-      .filter((s) => s.length > 0);
-
-    for (const statement of statements) {
+      const sql = fs.readFileSync(filePath, 'utf8');
       try {
-        await query(statement);
+        await client.query(sql);
+        console.log(`✅ Migración aplicada: ${file}`);
       } catch (error) {
-        // Ignorar errores benignos (tabla/columna ya existe con otro tipo, etc.)
-        const benign =
-          /already exists/i.test(error.message) ||
-          /duplicate column/i.test(error.message);
-        if (!benign) {
-          console.warn(`⚠️ Migración ${file}:`, error.message);
-        }
+        console.error(`❌ Migración ${file}:`, error.message);
       }
     }
+  } finally {
+    client.release();
   }
-
-  console.log('✅ Migraciones SQL verificadas');
 }
 
 module.exports = { runStartupMigrations };
