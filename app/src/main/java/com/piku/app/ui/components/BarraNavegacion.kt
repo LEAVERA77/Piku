@@ -20,7 +20,7 @@ import com.piku.app.ui.theme.VerdePiku
 
 @Composable
 fun BarraNavegacion(navController: NavController) {
-    val destinos = PikuDestino.entries
+    val destinos = PikuDestino.barraInferior
     val backStack = navController.currentBackStackEntryAsState()
     val rutaActual = backStack.value?.destination?.route
 

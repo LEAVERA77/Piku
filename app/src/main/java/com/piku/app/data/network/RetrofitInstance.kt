@@ -3,6 +3,9 @@ package com.piku.app.data.network
 import android.content.Context
 import com.piku.app.BuildConfig
 import com.piku.app.data.config.ConfigLoader
+import com.piku.app.data.datastore.AuthDataStore
+import kotlinx.coroutines.runBlocking
+import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
@@ -16,8 +19,23 @@ object RetrofitInstance {
     @Volatile
     private var apiService: PikuApiService? = null
 
+    private lateinit var appContext: Context
+
     fun init(context: Context) {
         if (apiService != null) return
+        appContext = context.applicationContext
+
+        val authInterceptor = Interceptor { chain ->
+            val token = runBlocking { AuthDataStore.token(appContext) }
+            val request = if (!token.isNullOrBlank()) {
+                chain.request().newBuilder()
+                    .header("Authorization", "Bearer $token")
+                    .build()
+            } else {
+                chain.request()
+            }
+            chain.proceed(request)
+        }
 
         val loggingInterceptor = HttpLoggingInterceptor().apply {
             level = if (BuildConfig.DEBUG) {
@@ -28,12 +46,13 @@ object RetrofitInstance {
         }
 
         val client = OkHttpClient.Builder()
+            .addInterceptor(authInterceptor)
             .addInterceptor(loggingInterceptor)
             .connectTimeout(30, TimeUnit.SECONDS)
             .readTimeout(30, TimeUnit.SECONDS)
             .build()
 
-        val base = ConfigLoader.apiBaseUrl(context).let { url ->
+        val base = ConfigLoader.apiBaseUrl(appContext).let { url ->
             if (url.endsWith("/")) url else "$url/"
         }
 
@@ -47,6 +66,6 @@ object RetrofitInstance {
 
     val api: PikuApiService
         get() = apiService ?: throw IllegalStateException(
-            "RetrofitInstance no inicializado. Verificá PikuApplication en el Manifest."
+            "RetrofitInstance no inicializado. Verificá PikuApplication."
         )
 }

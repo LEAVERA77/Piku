@@ -41,6 +41,7 @@ import com.piku.app.ui.viewmodel.PerfilViewModel
 
 @Composable
 fun PerfilScreen(
+    onCerrarSesion: () -> Unit = {},
     modifier: Modifier = Modifier,
     viewModel: PerfilViewModel = viewModel()
 ) {
@@ -146,7 +147,10 @@ fun PerfilScreen(
         Spacer(modifier = Modifier.weight(1f))
 
         OutlinedButton(
-            onClick = { viewModel.cerrarSesion() },
+            onClick = {
+                viewModel.cerrarSesion()
+                onCerrarSesion()
+            },
             modifier = Modifier
                 .fillMaxWidth()
                 .height(48.dp),
