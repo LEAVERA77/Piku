@@ -5,6 +5,11 @@ const { signToken } = require('../middleware/auth.middleware');
 const { validarEmail, sanitizarInput, responderError } = require('../utils/helpers');
 
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '';
+const GOOGLE_AUDIENCES = [
+  process.env.GOOGLE_CLIENT_ID,
+  process.env.GOOGLE_IOS_CLIENT_ID,
+  process.env.GOOGLE_ANDROID_CLIENT_ID,
+].filter(Boolean);
 
 /**
  * Registro de cliente (rol cliente).
@@ -206,7 +211,7 @@ async function loginGoogle(req, res) {
       timeout: 10000,
     });
 
-    if (GOOGLE_CLIENT_ID && data.aud !== GOOGLE_CLIENT_ID) {
+    if (GOOGLE_AUDIENCES.length && !GOOGLE_AUDIENCES.includes(data.aud)) {
       return responderError(res, 401, 'Token de Google no válido para esta app');
     }
 

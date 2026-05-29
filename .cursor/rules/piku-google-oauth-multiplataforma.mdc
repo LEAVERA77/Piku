@@ -1,0 +1,35 @@
+---
+description: Google OAuth (un solo ID) y apps Android + iOS compartiendo backend Piku
+alwaysApply: true
+---
+
+# Piku — Google OAuth y multiplataforma
+
+## GOOGLE_CLIENT_ID en Render (una sola vez, para todos)
+
+- **Un solo valor** en Render: `GOOGLE_CLIENT_ID` = ID de cliente OAuth tipo **Aplicación web** de Google Cloud (ej. `123456-xxxxx.apps.googleusercontent.com`).
+- **No varía** por usuario, dispositivo, iPhone ni Android. Cada persona usa su cuenta Google en el teléfono; el servidor solo verifica el token con ese ID fijo.
+- El mismo ID va en:
+  - Render → `GOOGLE_CLIENT_ID`
+  - Android → `app/src/main/assets/config.json` → `google.webClientId`
+  - iOS/Expo → `piku-mobile/app.config.ts` o `config.json` → `googleWebClientId`
+- En Google Cloud: además del cliente **Web**, crear cliente **Android** (SHA-1) y **iOS** (Bundle ID `com.piku.app`). Opcional en Render: `GOOGLE_IOS_CLIENT_ID`, `GOOGLE_ANDROID_CLIENT_ID` (el backend acepta varios `aud`).
+
+## Login con cuenta Google del dispositivo
+
+- Flujo: botón Google → cuenta guardada en el sistema → `idToken` → `POST /api/auth/google` con body `{ "idToken": "..." }`.
+- **Nunca** guardar contraseñas de Google en Render ni en el repo.
+
+## Compatibilidad móvil
+
+| Cliente | Ruta en repo | Estado |
+|---------|--------------|--------|
+| Android | `app/` (Kotlin Compose) | App principal |
+| iPhone / iOS | `piku-mobile/` (Expo React Native) | Mismo API Render; builds iOS con EAS/Xcode en Mac |
+
+Nuevas features de API deben funcionar en **ambos** clientes o documentar diferencia temporal.
+
+## Backend
+
+- API única en `backend/api/` (Render). No duplicar lógica de auth por plataforma.
+- Migraciones SQL en `backend/api/sql/`.

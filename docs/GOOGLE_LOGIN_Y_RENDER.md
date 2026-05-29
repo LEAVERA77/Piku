@@ -85,9 +85,25 @@ La app **no es automáticamente** compatible con iPhone: el código actual es so
 
 ---
 
+## ¿El ID cambia por usuario o por iPhone?
+
+**No.** Ponés **un solo** `GOOGLE_CLIENT_ID` en Render (cliente OAuth **Web**). Todos los usuarios (María, Juan, iPhone, Android) usan la misma app; cada uno elige **su** cuenta Google en el teléfono.
+
+Opcional en Render si usás clientes nativos distintos en Google Cloud:
+
+- `GOOGLE_IOS_CLIENT_ID` — cliente iOS (Expo / iPhone)
+- `GOOGLE_ANDROID_CLIENT_ID` — cliente Android (SHA-1)
+
+El backend acepta tokens cuyo `aud` coincida con cualquiera de esos IDs configurados.
+
+## iPhone
+
+App Expo en `piku-mobile/` — ver `piku-mobile/README.md`. Misma API Render.
+
 ## Resumen rápido
 
-- **Render `GOOGLE_CLIENT_ID`** = ID OAuth **Web** de Google Cloud (verificación del token, no la contraseña del usuario).
-- **`config.json` → `google.webClientId`** = el **mismo** valor.
-- El usuario inicia sesión con la **cuenta Google del teléfono**, no con datos que vos pegás en Render.
-- **Cloudinary** y **PIKU_CODIGO_INVITACION** son opcionales según si usás fotos de ofertas y registro de comercios.
+- **Render `GOOGLE_CLIENT_ID`** = ID OAuth **Web** (fijo, no por usuario).
+- **`config.json` → `google.webClientId`** = el **mismo** valor Web.
+- **iPhone** → `piku-mobile` + opcional `GOOGLE_IOS_CLIENT_ID` en Render.
+- El usuario inicia sesión con la **cuenta Google del teléfono**.
+- **Cloudinary** y **PIKU_CODIGO_INVITACION** son opcionales.
