@@ -1,6 +1,6 @@
 {
   "api": {
-    "baseUrl": "https://piku-api.onrender.com"
+    "baseUrl": "https://piku-324e.onrender.com"
   },
   "cloudinary": {
     "cloudName": "tu_cloud_name"
