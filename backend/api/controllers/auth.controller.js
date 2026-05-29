@@ -17,12 +17,12 @@ async function registroCliente(req, res) {
     if (password.length < 6) return responderError(res, 400, 'La contraseña debe tener al menos 6 caracteres');
     if (!nombre) return responderError(res, 400, 'Nombre requerido');
 
-    const existe = await query('SELECT id FROM usuarios WHERE LOWER(email) = $1', [email]);
+    const existe = await query('SELECT id FROM piku_usuarios WHERE LOWER(email) = $1', [email]);
     if (existe.rows.length) return responderError(res, 409, 'El email ya está registrado');
 
     const hash = await bcrypt.hash(password, 10);
     const insert = await query(
-      `INSERT INTO usuarios (email, password_hash, nombre, telefono, rol)
+      `INSERT INTO piku_usuarios (email, password_hash, nombre, telefono, rol)
        VALUES ($1, $2, $3, $4, 'cliente')
        RETURNING id, email, nombre, telefono, rol, puntos_saldo, created_at`,
       [email, hash, nombre, telefono || null]
@@ -62,7 +62,7 @@ async function registroComercio(req, res) {
       return responderError(res, 400, 'Nombre del responsable y del comercio son requeridos');
     }
 
-    const existe = await query('SELECT id FROM usuarios WHERE LOWER(email) = $1', [email]);
+    const existe = await query('SELECT id FROM piku_usuarios WHERE LOWER(email) = $1', [email]);
     if (existe.rows.length) return responderError(res, 409, 'El email ya está registrado');
 
     const resultado = await withTransaction(async (client) => {
@@ -73,7 +73,7 @@ async function registroComercio(req, res) {
           throw new Error('Código de invitación requerido');
         }
         const inv = await client.query(
-          `SELECT id, usado, expires_at FROM invitaciones_comercio
+          `SELECT id, usado, expires_at FROM piku_invitaciones_comercio
            WHERE UPPER(codigo) = UPPER($1) LIMIT 1`,
           [codigoInvitacion]
         );
@@ -87,7 +87,7 @@ async function registroComercio(req, res) {
       const hash = await bcrypt.hash(password, 10);
 
       const comercioInsert = await client.query(
-        `INSERT INTO comercios (nombre, descripcion, direccion, lat, lon, activo)
+        `INSERT INTO piku_comercios (nombre, descripcion, direccion, lat, lon, activo)
          VALUES ($1, $2, $3, $4, $5, TRUE)
          RETURNING id, nombre, direccion, lat, lon`,
         [nombreComercio, sanitizarInput(req.body.descripcion, 1000), direccion || null, lat, lon]
@@ -95,7 +95,7 @@ async function registroComercio(req, res) {
       const comercio = comercioInsert.rows[0];
 
       const usuarioInsert = await client.query(
-        `INSERT INTO usuarios (email, password_hash, nombre, telefono, rol, comercio_id)
+        `INSERT INTO piku_usuarios (email, password_hash, nombre, telefono, rol, comercio_id)
          VALUES ($1, $2, $3, $4, 'comercio', $5)
          RETURNING id, email, nombre, rol, comercio_id`,
         [email, hash, nombre, sanitizarInput(req.body.telefono, 50) || null, comercio.id]
@@ -103,12 +103,12 @@ async function registroComercio(req, res) {
       const usuario = usuarioInsert.rows[0];
 
       await client.query(
-        'UPDATE comercios SET owner_usuario_id = $1, updated_at = NOW() WHERE id = $2',
+        'UPDATE piku_comercios SET owner_usuario_id = $1, updated_at = NOW() WHERE id = $2',
         [usuario.id, comercio.id]
       );
 
       await client.query(
-        `INSERT INTO reglas_puntos (comercio_id, puntos_por_peso, monto_minimo, puntos_fijos, max_puntos_por_dia)
+        `INSERT INTO piku_reglas_puntos (comercio_id, puntos_por_peso, monto_minimo, puntos_fijos, max_puntos_por_dia)
          VALUES ($1, 1, 0, 10, 500)
          ON CONFLICT (comercio_id) DO NOTHING`,
         [comercio.id]
@@ -116,7 +116,7 @@ async function registroComercio(req, res) {
 
       if (!esAdmin && codigoInvitacion) {
         await client.query(
-          `UPDATE invitaciones_comercio SET usado = TRUE, comercio_id = $1 WHERE UPPER(codigo) = UPPER($2)`,
+          `UPDATE piku_invitaciones_comercio SET usado = TRUE, comercio_id = $1 WHERE UPPER(codigo) = UPPER($2)`,
           [comercio.id, codigoInvitacion]
         );
       }
@@ -158,7 +158,7 @@ async function login(req, res) {
     const result = await query(
       `SELECT id, email, nombre, telefono, rol, password_hash, activo,
               puntos_saldo, comercio_id, avatar_url
-       FROM usuarios WHERE LOWER(email) = $1 LIMIT 1`,
+       FROM piku_usuarios WHERE LOWER(email) = $1 LIMIT 1`,
       [email]
     );
 
@@ -194,7 +194,7 @@ async function perfil(req, res) {
 
     if (usuario.comercio_id) {
       const c = await query(
-        'SELECT id, nombre, direccion, lat, lon, activo, logo_url FROM comercios WHERE id = $1',
+        'SELECT id, nombre, direccion, lat, lon, activo, logo_url FROM piku_comercios WHERE id = $1',
         [usuario.comercio_id]
       );
       comercio = c.rows[0] || null;
@@ -244,7 +244,7 @@ async function actualizarPerfil(req, res) {
     campos.push('updated_at = NOW()');
     valores.push(req.user.id);
 
-    const sql = `UPDATE usuarios SET ${campos.join(', ')} WHERE id = $${idx}
+    const sql = `UPDATE piku_usuarios SET ${campos.join(', ')} WHERE id = $${idx}
                  RETURNING id, email, nombre, telefono, rol, avatar_url, puntos_saldo, comercio_id`;
     const updated = await query(sql, valores);
 

@@ -8,7 +8,7 @@ async function getSaldoPuntos(req, res) {
   try {
     const usuarioId = req.user.id;
     const result = await query(
-      'SELECT puntos_saldo FROM usuarios WHERE id = $1',
+      'SELECT puntos_saldo FROM piku_usuarios WHERE id = $1',
       [usuarioId]
     );
     const puntos = result.rows[0]?.puntos_saldo ?? 0;
@@ -34,8 +34,8 @@ async function getHistorialPuntos(req, res) {
     const result = await query(
       `SELECT t.id, t.tipo, t.puntos, t.descripcion, t.created_at,
               c.nombre AS comercio_nombre
-       FROM transacciones_puntos t
-       LEFT JOIN comercios c ON c.id = t.comercio_id
+       FROM piku_transacciones_puntos t
+       LEFT JOIN piku_comercios c ON c.id = t.comercio_id
        WHERE t.usuario_id = $1
        ORDER BY t.created_at DESC
        LIMIT $2`,
@@ -57,8 +57,8 @@ async function getRecompensasDisponibles(req, res) {
     const result = await query(
       `SELECT r.id, r.comercio_id, r.nombre, r.descripcion, r.puntos_requeridos,
               r.icono, r.imagen_url, r.stock, c.nombre AS comercio_nombre
-       FROM recompensas r
-       INNER JOIN comercios c ON c.id = r.comercio_id AND c.activo = TRUE
+       FROM piku_recompensas r
+       INNER JOIN piku_comercios c ON c.id = r.comercio_id AND c.activo = TRUE
        WHERE r.activo = TRUE
          AND (r.stock IS NULL OR r.stock > 0)
        ORDER BY r.puntos_requeridos ASC`
@@ -88,8 +88,8 @@ async function canjearRecompensa(req, res) {
     const resultado = await withTransaction(async (client) => {
       const rec = await client.query(
         `SELECT r.*, c.nombre AS comercio_nombre
-         FROM recompensas r
-         INNER JOIN comercios c ON c.id = r.comercio_id
+         FROM piku_recompensas r
+         INNER JOIN piku_comercios c ON c.id = r.comercio_id
          WHERE r.id = $1 AND r.activo = TRUE
          FOR UPDATE`,
         [recompensaId]
@@ -102,7 +102,7 @@ async function canjearRecompensa(req, res) {
       }
 
       const user = await client.query(
-        'SELECT puntos_saldo FROM usuarios WHERE id = $1 FOR UPDATE',
+        'SELECT puntos_saldo FROM piku_usuarios WHERE id = $1 FOR UPDATE',
         [req.user.id]
       );
       const saldo = user.rows[0].puntos_saldo;
@@ -114,18 +114,18 @@ async function canjearRecompensa(req, res) {
       const nuevoSaldo = saldo - recompensa.puntos_requeridos;
 
       await client.query(
-        'UPDATE usuarios SET puntos_saldo = $1, updated_at = NOW() WHERE id = $2',
+        'UPDATE piku_usuarios SET puntos_saldo = $1, updated_at = NOW() WHERE id = $2',
         [nuevoSaldo, req.user.id]
       );
 
       await client.query(
-        `INSERT INTO canjes (usuario_id, recompensa_id, puntos_usados, codigo_canje)
+        `INSERT INTO piku_canjes (usuario_id, recompensa_id, puntos_usados, codigo_canje)
          VALUES ($1, $2, $3, $4)`,
         [req.user.id, recompensa.id, recompensa.puntos_requeridos, codigoCanje]
       );
 
       await client.query(
-        `INSERT INTO transacciones_puntos
+        `INSERT INTO piku_transacciones_puntos
          (usuario_id, comercio_id, tipo, puntos, descripcion, recompensa_id, codigo_canje)
          VALUES ($1, $2, 'canjeado', $3, $4, $5, $6)`,
         [
@@ -140,7 +140,7 @@ async function canjearRecompensa(req, res) {
 
       if (recompensa.stock != null) {
         await client.query(
-          'UPDATE recompensas SET stock = stock - 1, updated_at = NOW() WHERE id = $1',
+          'UPDATE piku_recompensas SET stock = stock - 1, updated_at = NOW() WHERE id = $1',
           [recompensa.id]
         );
       }

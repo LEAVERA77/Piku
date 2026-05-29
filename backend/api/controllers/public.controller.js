@@ -8,7 +8,7 @@ async function listarComercios(req, res) {
   try {
     const result = await query(
       `SELECT id, nombre, descripcion, direccion, lat, lon, logo_url
-       FROM comercios WHERE activo = TRUE ORDER BY nombre ASC`
+       FROM piku_comercios WHERE activo = TRUE ORDER BY nombre ASC`
     );
     return res.json({ comercios: result.rows });
   } catch (error) {
@@ -25,14 +25,14 @@ async function detalleComercio(req, res) {
     const { id } = req.params;
     const result = await query(
       `SELECT id, nombre, descripcion, direccion, lat, lon, logo_url, radio_metros
-       FROM comercios WHERE id = $1 AND activo = TRUE`,
+       FROM piku_comercios WHERE id = $1 AND activo = TRUE`,
       [id]
     );
     if (!result.rows.length) return responderError(res, 404, 'Comercio no encontrado');
 
     const recompensas = await query(
       `SELECT id, nombre, descripcion, puntos_requeridos, icono, imagen_url
-       FROM recompensas WHERE comercio_id = $1 AND activo = TRUE
+       FROM piku_recompensas WHERE comercio_id = $1 AND activo = TRUE
          AND (stock IS NULL OR stock > 0)
        ORDER BY puntos_requeridos`,
       [id]
@@ -57,8 +57,8 @@ async function listarRecompensasPublicas(req, res) {
     let sql = `
       SELECT r.id, r.nombre, r.descripcion, r.puntos_requeridos, r.icono, r.imagen_url,
              c.id AS comercio_id, c.nombre AS comercio_nombre
-      FROM recompensas r
-      INNER JOIN comercios c ON c.id = r.comercio_id AND c.activo = TRUE
+      FROM piku_recompensas r
+      INNER JOIN piku_comercios c ON c.id = r.comercio_id AND c.activo = TRUE
       WHERE r.activo = TRUE AND (r.stock IS NULL OR r.stock > 0)`;
     const params = [];
 

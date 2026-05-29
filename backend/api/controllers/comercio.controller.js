@@ -13,7 +13,7 @@ async function getReglasPuntos(req, res) {
     const comercioId = getComercioId(req);
     if (!comercioId) return responderError(res, 403, 'Sin comercio asociado');
 
-    const result = await query('SELECT * FROM reglas_puntos WHERE comercio_id = $1', [comercioId]);
+    const result = await query('SELECT * FROM piku_reglas_puntos WHERE comercio_id = $1', [comercioId]);
     if (!result.rows.length) {
       return res.json({
         reglas: {
@@ -48,7 +48,7 @@ async function updateReglasPuntos(req, res) {
     const activo = req.body.activo !== false;
 
     const result = await query(
-      `INSERT INTO reglas_puntos
+      `INSERT INTO piku_reglas_puntos
        (comercio_id, puntos_por_peso, monto_minimo, puntos_fijos, max_puntos_por_dia, activo, updated_at)
        VALUES ($1, $2, $3, $4, $5, $6, NOW())
        ON CONFLICT (comercio_id) DO UPDATE SET
@@ -78,7 +78,7 @@ async function getRecompensas(req, res) {
     if (!comercioId) return responderError(res, 403, 'Sin comercio asociado');
 
     const result = await query(
-      'SELECT * FROM recompensas WHERE comercio_id = $1 ORDER BY created_at DESC',
+      'SELECT * FROM piku_recompensas WHERE comercio_id = $1 ORDER BY created_at DESC',
       [comercioId]
     );
     return res.json({ recompensas: result.rows });
@@ -108,7 +108,7 @@ async function createRecompensa(req, res) {
     }
 
     const insert = await query(
-      `INSERT INTO recompensas
+      `INSERT INTO piku_recompensas
        (comercio_id, nombre, descripcion, puntos_requeridos, icono, stock, imagen_url)
        VALUES ($1, $2, $3, $4, $5, $6, $7)
        RETURNING *`,
@@ -161,7 +161,7 @@ async function updateRecompensa(req, res) {
     campos.push('updated_at = NOW()');
     valores.push(id, comercioId);
 
-    const sql = `UPDATE recompensas SET ${campos.join(', ')}
+    const sql = `UPDATE piku_recompensas SET ${campos.join(', ')}
                  WHERE id = $${idx++} AND comercio_id = $${idx} RETURNING *`;
     const updated = await query(sql, valores);
 
@@ -182,7 +182,7 @@ async function deleteRecompensa(req, res) {
     const { id } = req.params;
 
     const result = await query(
-      `UPDATE recompensas SET activo = FALSE, updated_at = NOW()
+      `UPDATE piku_recompensas SET activo = FALSE, updated_at = NOW()
        WHERE id = $1 AND comercio_id = $2 RETURNING id`,
       [id, comercioId]
     );
@@ -212,23 +212,23 @@ async function getEstadisticas(req, res) {
 
     const [escaneos, puntos, canjes, clientes] = await Promise.all([
       query(
-        `SELECT COUNT(*)::int AS total FROM qr_codigos
+        `SELECT COUNT(*)::int AS total FROM piku_qr_dinamicos
          WHERE comercio_id = $1 AND usado = TRUE`,
         [comercioId]
       ),
       query(
-        `SELECT COALESCE(SUM(puntos), 0)::int AS total FROM transacciones_puntos
+        `SELECT COALESCE(SUM(puntos), 0)::int AS total FROM piku_transacciones_puntos
          WHERE comercio_id = $1 AND tipo = 'ganado'`,
         [comercioId]
       ),
       query(
-        `SELECT COUNT(*)::int AS total FROM canjes c
-         INNER JOIN recompensas r ON r.id = c.recompensa_id
+        `SELECT COUNT(*)::int AS total FROM piku_canjes c
+         INNER JOIN piku_recompensas r ON r.id = c.recompensa_id
          WHERE r.comercio_id = $1`,
         [comercioId]
       ),
       query(
-        `SELECT COUNT(DISTINCT usuario_id)::int AS total FROM transacciones_puntos
+        `SELECT COUNT(DISTINCT usuario_id)::int AS total FROM piku_transacciones_puntos
          WHERE comercio_id = $1`,
         [comercioId]
       ),
@@ -236,8 +236,8 @@ async function getEstadisticas(req, res) {
 
     const ultimos = await query(
       `SELECT t.puntos, t.tipo, t.descripcion, t.created_at, u.nombre AS cliente
-       FROM transacciones_puntos t
-       LEFT JOIN usuarios u ON u.id = t.usuario_id
+       FROM piku_transacciones_puntos t
+       LEFT JOIN piku_usuarios u ON u.id = t.usuario_id
        WHERE t.comercio_id = $1
        ORDER BY t.created_at DESC LIMIT 10`,
       [comercioId]

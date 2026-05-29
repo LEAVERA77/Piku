@@ -50,7 +50,7 @@ function verificarGPS(comercio, latCliente, lonCliente) {
 async function verificarQRUnico(client, codigo) {
   const r = await client.query(
     `SELECT id, usado, expira_at, comercio_id, monto_transaccion, puntos_calculados
-     FROM qr_codigos WHERE codigo = $1 FOR UPDATE`,
+     FROM piku_qr_dinamicos WHERE codigo = $1 FOR UPDATE`,
     [codigo]
   );
   if (!r.rows.length) return { valido: false, motivo: 'Código QR no encontrado' };
@@ -80,7 +80,7 @@ async function validarEscaneo(req, res) {
       const qr = verificacion.qr;
 
       const comercioRes = await client.query(
-        'SELECT id, nombre, lat, lon, radio_metros, activo FROM comercios WHERE id = $1',
+        'SELECT id, nombre, lat, lon, radio_metros, activo FROM piku_comercios WHERE id = $1',
         [qr.comercio_id]
       );
       if (!comercioRes.rows.length || !comercioRes.rows[0].activo) {
@@ -92,7 +92,7 @@ async function validarEscaneo(req, res) {
       if (!gps.ok) throw new Error(gps.motivo);
 
       const reglasRes = await client.query(
-        'SELECT * FROM reglas_puntos WHERE comercio_id = $1 AND activo = TRUE',
+        'SELECT * FROM piku_reglas_puntos WHERE comercio_id = $1 AND activo = TRUE',
         [comercio.id]
       );
       const reglas = reglasRes.rows[0] || {
@@ -110,7 +110,7 @@ async function validarEscaneo(req, res) {
       // Límite diario por comercio
       const hoy = await client.query(
         `SELECT COALESCE(SUM(puntos), 0)::int AS total
-         FROM transacciones_puntos
+         FROM piku_transacciones_puntos
          WHERE usuario_id = $1 AND comercio_id = $2 AND tipo = 'ganado'
            AND created_at >= CURRENT_DATE`,
         [req.user.id, comercio.id]
@@ -123,23 +123,23 @@ async function validarEscaneo(req, res) {
       if (puntos <= 0) throw new Error('Alcanzaste el límite de puntos diarios en este comercio');
 
       const user = await client.query(
-        'SELECT puntos_saldo FROM usuarios WHERE id = $1 FOR UPDATE',
+        'SELECT puntos_saldo FROM piku_usuarios WHERE id = $1 FOR UPDATE',
         [req.user.id]
       );
       const nuevoSaldo = user.rows[0].puntos_saldo + puntos;
 
       await client.query(
-        'UPDATE usuarios SET puntos_saldo = $1, updated_at = NOW() WHERE id = $2',
+        'UPDATE piku_usuarios SET puntos_saldo = $1, updated_at = NOW() WHERE id = $2',
         [nuevoSaldo, req.user.id]
       );
 
       await client.query(
-        `UPDATE qr_codigos SET usado = TRUE, usado_por = $1, usado_at = NOW() WHERE id = $2`,
+        `UPDATE piku_qr_dinamicos SET usado = TRUE, usado_por = $1, usado_at = NOW() WHERE id = $2`,
         [req.user.id, qr.id]
       );
 
       await client.query(
-        `INSERT INTO transacciones_puntos
+        `INSERT INTO piku_transacciones_puntos
          (usuario_id, comercio_id, tipo, puntos, descripcion, qr_codigo_id)
          VALUES ($1, $2, 'ganado', $3, $4, $5)`,
         [
@@ -181,7 +181,7 @@ async function generarQR(req, res) {
     const lon = req.body.lon != null ? parseFloat(req.body.lon) : null;
 
     const reglasRes = await query(
-      'SELECT * FROM reglas_puntos WHERE comercio_id = $1',
+      'SELECT * FROM piku_reglas_puntos WHERE comercio_id = $1',
       [comercioId]
     );
     const reglas = reglasRes.rows[0] || {
@@ -194,7 +194,7 @@ async function generarQR(req, res) {
     const expiraAt = new Date(Date.now() + MINUTOS_EXPIRACION_QR * 60 * 1000);
 
     const insert = await query(
-      `INSERT INTO qr_codigos
+      `INSERT INTO piku_qr_dinamicos
        (comercio_id, codigo, monto_transaccion, puntos_calculados, expira_at, lat_generacion, lon_generacion)
        VALUES ($1, $2, $3, $4, $5, $6, $7)
        RETURNING id, codigo, monto_transaccion, puntos_calculados, expira_at`,
