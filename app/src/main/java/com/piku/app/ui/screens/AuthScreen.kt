@@ -1,5 +1,6 @@
 package com.piku.app.ui.screens
 
+import android.app.Activity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -81,11 +82,15 @@ private fun validarNombreApellido(nombre: String, apellido: String): String? {
 private fun nombreCompleto(nombre: String, apellido: String): String =
     "${nombre.trim()} ${apellido.trim()}"
 
-private fun validarComercioParaGoogle(nombre: String, apellido: String, nombreComercio: String, codigoInvitacion: String): String? {
-    validarNombreApellido(nombre, apellido)?.let { return it }
-    if (nombreComercio.trim().length < 2) return "Ingresá el nombre del comercio"
+private fun validarComercioParaGoogle(nombreComercio: String, codigoInvitacion: String): String? {
+    if (nombreComercio.trim().length < 2) return "Ingresá el nombre del comercio (mínimo 2 caracteres)"
     if (codigoInvitacion.isBlank()) return "Ingresá el código de invitación"
     return null
+}
+
+private fun nombreResponsableComercio(nombre: String, apellido: String): String? {
+    val completo = nombreCompleto(nombre, apellido).trim()
+    return completo.ifBlank { null }
 }
 
 @Composable
@@ -170,7 +175,7 @@ fun AuthScreen(
             if (modo == ModoAuth.REGISTRAR && rolRegistro == RolRegistro.COMERCIO) {
                 repo.registroComercioGoogle(
                     idToken = idToken,
-                    nombre = nombreCompleto(nombre, apellido),
+                    nombre = nombreResponsableComercio(nombre, apellido),
                     nombreComercio = nombreComercio,
                     telefono = telefono,
                     direccion = direccionComercio,
@@ -186,8 +191,28 @@ fun AuthScreen(
     val googleSignInLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
     ) { result ->
+        if (result.resultCode != Activity.RESULT_OK) {
+            cargando = false
+            return@rememberLauncherForActivityResult
+        }
         GoogleSignInHelper.idTokenFromResult(context, result.data)
             .onSuccess { token -> ejecutarGoogle(token) }
+            .onFailure { e ->
+                error = e.message
+                cargando = false
+            }
+    }
+
+    fun abrirSelectorGoogle() {
+        val act = activity
+        if (act == null) {
+            error = "No se puede abrir el inicio de sesión con Google"
+            return
+        }
+        cargando = true
+        error = null
+        GoogleSignInHelper.signInIntent(act)
+            .onSuccess { intent -> googleSignInLauncher.launch(intent) }
             .onFailure { e ->
                 error = e.message
                 cargando = false
@@ -201,10 +226,12 @@ fun AuthScreen(
             return
         }
         if (modo == ModoAuth.REGISTRAR && rolRegistro == RolRegistro.COMERCIO) {
-            validarComercioParaGoogle(nombre, apellido, nombreComercio, codigoInvitacion)?.let {
+            validarComercioParaGoogle(nombreComercio, codigoInvitacion)?.let {
                 error = it
                 return
             }
+            abrirSelectorGoogle()
+            return
         }
         scope.launch {
             cargando = true
@@ -214,12 +241,7 @@ fun AuthScreen(
                 ejecutarGoogle(cm.getOrThrow())
                 return@launch
             }
-            GoogleSignInHelper.signInIntent(act)
-                .onSuccess { intent -> googleSignInLauncher.launch(intent) }
-                .onFailure { e ->
-                    error = e.message
-                    cargando = false
-                }
+            abrirSelectorGoogle()
         }
     }
 
@@ -360,17 +382,25 @@ fun AuthScreen(
                 }
 
                 BotonGoogle(
-                    texto = if (rolRegistro == RolRegistro.COMERCIO) {
-                        "Registrar comercio con Google"
-                    } else {
-                        "Registrarse con Google"
+                    texto = when {
+                        cargando && rolRegistro == RolRegistro.COMERCIO -> "Conectando con Google…"
+                        rolRegistro == RolRegistro.COMERCIO -> "Registrar comercio con Google"
+                        else -> "Registrarse con Google"
                     },
                     habilitado = !cargando,
                     onClick = { iniciarGoogle() }
                 )
+                error?.let { mensaje ->
+                    Text(
+                        mensaje,
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.padding(top = 8.dp)
+                    )
+                }
                 Text(
                     if (rolRegistro == RolRegistro.COMERCIO) {
-                        "Completá nombre del comercio y código antes de usar Google."
+                        "Completá nombre del comercio y código. Tu nombre puede venir de Google."
                     } else {
                         "Registro rápido con tu cuenta de Google."
                     },
@@ -455,13 +485,15 @@ fun AuthScreen(
                 )
             }
 
-            error?.let {
-                Text(
-                    it,
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodySmall,
-                    modifier = Modifier.padding(top = 10.dp)
-                )
+            if (modo != ModoAuth.REGISTRAR) {
+                error?.let {
+                    Text(
+                        it,
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.padding(top = 10.dp)
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(20.dp))

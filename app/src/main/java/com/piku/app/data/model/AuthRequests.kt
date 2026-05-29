@@ -26,7 +26,7 @@ data class RegistroComercioRequest(
 
 data class RegistroComercioGoogleRequest(
     val idToken: String,
-    val nombre: String,
+    val nombre: String? = null,
     val nombreComercio: String,
     val telefono: String? = null,
     val direccion: String? = null,

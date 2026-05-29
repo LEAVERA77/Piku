@@ -80,7 +80,7 @@ class AuthRepository(private val context: Context) {
 
     suspend fun registroComercioGoogle(
         idToken: String,
-        nombre: String,
+        nombre: String?,
         nombreComercio: String,
         telefono: String? = null,
         direccion: String? = null,
@@ -91,7 +91,7 @@ class AuthRepository(private val context: Context) {
             api.registroComercioGoogle(
                 RegistroComercioGoogleRequest(
                     idToken = idToken,
-                    nombre = nombre.trim(),
+                    nombre = nombre?.trim()?.ifEmpty { null },
                     nombreComercio = nombreComercio.trim(),
                     telefono = telefono?.trim()?.ifEmpty { null },
                     direccion = direccion?.trim()?.ifEmpty { null },
