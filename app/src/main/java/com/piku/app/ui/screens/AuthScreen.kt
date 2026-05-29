@@ -1,5 +1,7 @@
 package com.piku.app.ui.screens
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -19,9 +21,11 @@ import androidx.compose.material.icons.filled.Fingerprint
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -29,14 +33,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.fragment.app.FragmentActivity
 import com.piku.app.data.config.ConfigLoader
@@ -45,18 +46,37 @@ import com.piku.app.data.model.LoginResponse
 import com.piku.app.data.repository.AuthRepository
 import com.piku.app.ui.components.BotonGoogle
 import com.piku.app.ui.components.BotonPiku
+import com.piku.app.ui.components.CampoContrasena
 import com.piku.app.ui.components.EstiloBotonPiku
 import com.piku.app.ui.components.PikuLogo
-import com.piku.app.ui.theme.AmarilloPiku
-import com.piku.app.ui.theme.CelestePiku
-import com.piku.app.ui.theme.NaranjaPiku
-import com.piku.app.ui.theme.VerdePiku
 import com.piku.app.utils.BiometricHelper
 import com.piku.app.utils.GoogleSignInHelper
 import kotlinx.coroutines.launch
 
 private enum class ModoAuth { INGRESAR, REGISTRAR }
 private enum class RolRegistro { CLIENTE, COMERCIO }
+
+private const val MIN_CARACTERES_NOMBRE = 2
+
+private fun esNombreApellidoValido(texto: String): Boolean {
+    val t = texto.trim()
+    if (t.length < MIN_CARACTERES_NOMBRE) return false
+    val letras = t.count { it.isLetter() }
+    return letras >= MIN_CARACTERES_NOMBRE
+}
+
+private fun validarNombreApellido(nombre: String, apellido: String): String? {
+    if (!esNombreApellidoValido(nombre)) {
+        return "El nombre debe tener al menos $MIN_CARACTERES_NOMBRE letras"
+    }
+    if (!esNombreApellidoValido(apellido)) {
+        return "El apellido debe tener al menos $MIN_CARACTERES_NOMBRE letras"
+    }
+    return null
+}
+
+private fun nombreCompleto(nombre: String, apellido: String): String =
+    "${nombre.trim()} ${apellido.trim()}"
 
 @Composable
 fun AuthScreen(
@@ -67,9 +87,15 @@ fun AuthScreen(
     val activity = context as? FragmentActivity
     val scope = rememberCoroutineScope()
     val tagline = remember { ConfigLoader.appTagline(context) }
+    val fieldShape = RoundedCornerShape(14.dp)
+    val fieldColors = OutlinedTextFieldDefaults.colors(
+        focusedBorderColor = MaterialTheme.colorScheme.primary,
+        focusedLabelColor = MaterialTheme.colorScheme.primary
+    )
 
     var modo by remember { mutableStateOf(ModoAuth.INGRESAR) }
     var nombre by remember { mutableStateOf("") }
+    var apellido by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var confirmar by remember { mutableStateOf("") }
@@ -144,24 +170,19 @@ fun AuthScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    listOf(
-                        VerdePiku.copy(alpha = 0.12f),
-                        AmarilloPiku.copy(alpha = 0.08f),
-                        MaterialTheme.colorScheme.background
-                    )
-                )
-            )
+            .background(MaterialTheme.colorScheme.background)
     ) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(
-                    Brush.linearGradient(
-                        listOf(VerdePiku, CelestePiku, NaranjaPiku.copy(alpha = 0.85f))
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            MaterialTheme.colorScheme.primary,
+                            MaterialTheme.colorScheme.primary.copy(alpha = 0.88f)
+                        )
                     ),
-                    shape = RoundedCornerShape(bottomStart = 32.dp, bottomEnd = 32.dp)
+                    shape = RoundedCornerShape(bottomStart = 28.dp, bottomEnd = 28.dp)
                 )
                 .padding(vertical = 28.dp, horizontal = 24.dp),
             contentAlignment = Alignment.Center
@@ -196,8 +217,8 @@ fun AuthScreen(
                     label = { Text("Ingresar") },
                     modifier = Modifier.weight(1f),
                     colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = VerdePiku.copy(alpha = 0.2f),
-                        selectedLabelColor = VerdePiku
+                        selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                        selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
                     )
                 )
                 FilterChip(
@@ -206,8 +227,8 @@ fun AuthScreen(
                     label = { Text("Crear cuenta") },
                     modifier = Modifier.weight(1f),
                     colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = NaranjaPiku.copy(alpha = 0.2f),
-                        selectedLabelColor = NaranjaPiku
+                        selectedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
+                        selectedLabelColor = MaterialTheme.colorScheme.onSecondaryContainer
                     )
                 )
             }
@@ -233,17 +254,29 @@ fun AuthScreen(
                     )
                 }
                 Spacer(modifier = Modifier.height(10.dp))
-                OutlinedTextField(
-                    value = nombre,
-                    onValueChange = { nombre = it },
-                    label = {
-                        Text(
-                            if (rolRegistro == RolRegistro.COMERCIO) "Tu nombre" else "Nombre completo"
-                        )
-                    },
+                Row(
                     modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
-                )
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    OutlinedTextField(
+                        value = nombre,
+                        onValueChange = { nombre = it },
+                        label = { Text("Nombre") },
+                        modifier = Modifier.weight(1f),
+                        singleLine = true,
+                        shape = fieldShape,
+                        colors = fieldColors
+                    )
+                    OutlinedTextField(
+                        value = apellido,
+                        onValueChange = { apellido = it },
+                        label = { Text("Apellido") },
+                        modifier = Modifier.weight(1f),
+                        singleLine = true,
+                        shape = fieldShape,
+                        colors = fieldColors
+                    )
+                }
                 Spacer(modifier = Modifier.height(10.dp))
                 if (rolRegistro == RolRegistro.COMERCIO) {
                     OutlinedTextField(
@@ -251,7 +284,9 @@ fun AuthScreen(
                         onValueChange = { nombreComercio = it },
                         label = { Text("Nombre del comercio") },
                         modifier = Modifier.fillMaxWidth(),
-                        singleLine = true
+                        singleLine = true,
+                        shape = fieldShape,
+                        colors = fieldColors
                     )
                     Spacer(modifier = Modifier.height(10.dp))
                     OutlinedTextField(
@@ -259,7 +294,9 @@ fun AuthScreen(
                         onValueChange = { direccionComercio = it },
                         label = { Text("Dirección") },
                         modifier = Modifier.fillMaxWidth(),
-                        singleLine = true
+                        singleLine = true,
+                        shape = fieldShape,
+                        colors = fieldColors
                     )
                     Spacer(modifier = Modifier.height(10.dp))
                     OutlinedTextField(
@@ -267,7 +304,9 @@ fun AuthScreen(
                         onValueChange = { categoriaComercio = it },
                         label = { Text("Categoría (ej. cafeteria, restaurante)") },
                         modifier = Modifier.fillMaxWidth(),
-                        singleLine = true
+                        singleLine = true,
+                        shape = fieldShape,
+                        colors = fieldColors
                     )
                     Spacer(modifier = Modifier.height(10.dp))
                     OutlinedTextField(
@@ -275,7 +314,9 @@ fun AuthScreen(
                         onValueChange = { codigoInvitacion = it },
                         label = { Text("Código de invitación") },
                         modifier = Modifier.fillMaxWidth(),
-                        singleLine = true
+                        singleLine = true,
+                        shape = fieldShape,
+                        colors = fieldColors
                     )
                     Spacer(modifier = Modifier.height(10.dp))
                 }
@@ -286,28 +327,26 @@ fun AuthScreen(
                 onValueChange = { email = it },
                 label = { Text("Email") },
                 modifier = Modifier.fillMaxWidth(),
-                singleLine = true
+                singleLine = true,
+                shape = fieldShape,
+                colors = fieldColors
             )
             Spacer(modifier = Modifier.height(10.dp))
 
-            OutlinedTextField(
+            CampoContrasena(
                 value = password,
                 onValueChange = { password = it },
-                label = { Text("Contraseña") },
-                visualTransformation = PasswordVisualTransformation(),
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true
+                label = "Contraseña",
+                modifier = Modifier.fillMaxWidth()
             )
 
             if (modo == ModoAuth.REGISTRAR) {
                 Spacer(modifier = Modifier.height(10.dp))
-                OutlinedTextField(
+                CampoContrasena(
                     value = confirmar,
                     onValueChange = { confirmar = it },
-                    label = { Text("Confirmar contraseña") },
-                    visualTransformation = PasswordVisualTransformation(),
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
+                    label = "Confirmar contraseña",
+                    modifier = Modifier.fillMaxWidth()
                 )
                 Spacer(modifier = Modifier.height(10.dp))
                 OutlinedTextField(
@@ -315,7 +354,9 @@ fun AuthScreen(
                     onValueChange = { telefono = it },
                     label = { Text("Teléfono (opcional)") },
                     modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
+                    singleLine = true,
+                    shape = fieldShape,
+                    colors = fieldColors
                 )
             }
 
@@ -340,18 +381,21 @@ fun AuthScreen(
                 onClick = {
                     if (modo == ModoAuth.REGISTRAR) {
                         when {
-                            nombre.isBlank() -> error = "Ingresá tu nombre"
+                            validarNombreApellido(nombre, apellido) != null -> {
+                                error = validarNombreApellido(nombre, apellido)
+                            }
                             email.isBlank() -> error = "Ingresá tu email"
                             password.length < 6 -> error = "La contraseña debe tener al menos 6 caracteres"
                             password != confirmar -> error = "Las contraseñas no coinciden"
-                            rolRegistro == RolRegistro.COMERCIO && nombreComercio.isBlank() ->
-                                error = "Ingresá el nombre del comercio"
+                            rolRegistro == RolRegistro.COMERCIO && nombreComercio.trim().length < 2 ->
+                                error = "El nombre del comercio es demasiado corto"
                             rolRegistro == RolRegistro.COMERCIO && codigoInvitacion.isBlank() ->
                                 error = "Ingresá el código de invitación del comercio"
                             else -> ejecutar {
+                                val nombreEnvio = nombreCompleto(nombre, apellido)
                                 if (rolRegistro == RolRegistro.COMERCIO) {
                                     AuthRepository(context).registroComercio(
-                                        nombre = nombre,
+                                        nombre = nombreEnvio,
                                         email = email,
                                         password = password,
                                         nombreComercio = nombreComercio,
@@ -361,7 +405,12 @@ fun AuthScreen(
                                         codigoInvitacion = codigoInvitacion
                                     )
                                 } else {
-                                    AuthRepository(context).registro(nombre, email, password, telefono)
+                                    AuthRepository(context).registro(
+                                        nombreEnvio,
+                                        email,
+                                        password,
+                                        telefono
+                                    )
                                 }
                             }
                         }
@@ -443,10 +492,10 @@ fun AuthScreen(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(16.dp)
                 ) {
-                    androidx.compose.material3.Icon(
+                    Icon(
                         Icons.Default.Fingerprint,
                         contentDescription = null,
-                        tint = VerdePiku
+                        tint = MaterialTheme.colorScheme.primary
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text("Ingresar con huella digital")

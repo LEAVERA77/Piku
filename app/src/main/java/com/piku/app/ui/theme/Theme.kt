@@ -9,6 +9,7 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
@@ -16,14 +17,18 @@ import androidx.core.view.WindowCompat
 private val LightColorScheme = lightColorScheme(
     primary = VerdePiku,
     onPrimary = TarjetaBlanca,
+    primaryContainer = PrimarioContainer,
+    onPrimaryContainer = Color(0xFF134E4A),
     secondary = NaranjaPiku,
     onSecondary = TarjetaBlanca,
+    secondaryContainer = SecundarioContainer,
+    onSecondaryContainer = Color(0xFF7C2D12),
     tertiary = AcentoVerdeClaro,
     background = FondoPiku,
     onBackground = TextoPrincipal,
     surface = TarjetaBlanca,
     onSurface = TextoPrincipal,
-    surfaceVariant = FondoPiku,
+    surfaceVariant = Color(0xFFE2E8F0),
     onSurfaceVariant = TextoSecundario
 )
 

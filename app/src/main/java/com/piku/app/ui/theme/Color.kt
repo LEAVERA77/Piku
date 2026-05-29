@@ -2,14 +2,16 @@ package com.piku.app.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// Colores de marca Piku
-val VerdePiku = Color(0xFF00A86B)
-val NaranjaPiku = Color(0xFFFF6B35)
-val FondoPiku = Color(0xFFF5F5F5)
-val TextoPrincipal = Color(0xFF1A1A1A)
-val AcentoVerdeClaro = Color(0xFF4CDB94)
-val TextoSecundario = Color(0xFF6B6B6B)
+// Colores de marca Piku (paleta moderna, primarios)
+val VerdePiku = Color(0xFF0D9488)
+val NaranjaPiku = Color(0xFFEA580C)
+val FondoPiku = Color(0xFFF1F5F9)
+val TextoPrincipal = Color(0xFF0F172A)
+val AcentoVerdeClaro = Color(0xFF14B8A6)
+val TextoSecundario = Color(0xFF64748B)
 val TarjetaBlanca = Color(0xFFFFFFFF)
+val PrimarioContainer = Color(0xFFCCFBF1)
+val SecundarioContainer = Color(0xFFFFEDD5)
 val SombraSuave = Color(0x1A000000)
 val AmarilloPiku = Color(0xFFFFC107)
 val CelestePiku = Color(0xFF26C6DA)
