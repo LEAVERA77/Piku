@@ -2,16 +2,6 @@
 
 El **código 10** significa que Google no reconoce tu APK: falta la credencial **Android** en el **mismo proyecto** que el cliente Web.
 
-## Render vs Google Cloud
-
-| Dónde | Qué configurar |
-|--------|----------------|
-| **Render** | `GOOGLE_CLIENT_ID` = ID cliente **Aplicación web** (no SHA-1) |
-| **Google Cloud** | Cliente **Android**: paquete + SHA-1 (no va en Render) |
-| **Google Cloud** | Cliente **Web**: mismo ID que en Render |
-
-Si el SHA-1 de `keytool` / `signingReport` coincide con el de la consola y el error 10 sigue, revisá que existan **dos** clientes (Web + Android) y tu Gmail en usuarios de prueba.
-
 ## Datos exactos de esta app
 
 | Campo | Valor |
