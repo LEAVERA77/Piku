@@ -11,6 +11,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
@@ -78,6 +80,13 @@ private fun validarNombreApellido(nombre: String, apellido: String): String? {
 
 private fun nombreCompleto(nombre: String, apellido: String): String =
     "${nombre.trim()} ${apellido.trim()}"
+
+private fun validarComercioParaGoogle(nombre: String, apellido: String, nombreComercio: String, codigoInvitacion: String): String? {
+    validarNombreApellido(nombre, apellido)?.let { return it }
+    if (nombreComercio.trim().length < 2) return "Ingresá el nombre del comercio"
+    if (codigoInvitacion.isBlank()) return "Ingresá el código de invitación"
+    return null
+}
 
 @Composable
 fun AuthScreen(
@@ -155,17 +164,63 @@ fun AuthScreen(
         }
     }
 
+    fun ejecutarGoogle(idToken: String) {
+        ejecutar {
+            val repo = AuthRepository(context)
+            if (modo == ModoAuth.REGISTRAR && rolRegistro == RolRegistro.COMERCIO) {
+                repo.registroComercioGoogle(
+                    idToken = idToken,
+                    nombre = nombreCompleto(nombre, apellido),
+                    nombreComercio = nombreComercio,
+                    telefono = telefono,
+                    direccion = direccionComercio,
+                    categoria = categoriaComercio,
+                    codigoInvitacion = codigoInvitacion
+                )
+            } else {
+                repo.loginGoogle(idToken)
+            }
+        }
+    }
+
     val googleSignInLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
     ) { result ->
         GoogleSignInHelper.idTokenFromResult(context, result.data)
-            .onSuccess { token ->
-                ejecutar { AuthRepository(context).loginGoogle(token) }
-            }
+            .onSuccess { token -> ejecutarGoogle(token) }
             .onFailure { e ->
                 error = e.message
                 cargando = false
             }
+    }
+
+    fun iniciarGoogle() {
+        val act = activity
+        if (act == null) {
+            error = "No se puede abrir el inicio de sesión con Google"
+            return
+        }
+        if (modo == ModoAuth.REGISTRAR && rolRegistro == RolRegistro.COMERCIO) {
+            validarComercioParaGoogle(nombre, apellido, nombreComercio, codigoInvitacion)?.let {
+                error = it
+                return
+            }
+        }
+        scope.launch {
+            cargando = true
+            error = null
+            val cm = GoogleAuthHelper.obtenerIdToken(act)
+            if (cm.isSuccess) {
+                ejecutarGoogle(cm.getOrThrow())
+                return@launch
+            }
+            GoogleSignInHelper.signInIntent(act)
+                .onSuccess { intent -> googleSignInLauncher.launch(intent) }
+                .onFailure { e ->
+                    error = e.message
+                    cargando = false
+                }
+        }
     }
 
     Column(
@@ -206,6 +261,8 @@ fun AuthScreen(
             modifier = Modifier
                 .weight(1f)
                 .verticalScroll(rememberScrollState())
+                .imePadding()
+                .navigationBarsPadding()
                 .padding(horizontal = 24.dp, vertical = 20.dp)
         ) {
             Row(
@@ -291,9 +348,56 @@ fun AuthScreen(
                     )
                     Spacer(modifier = Modifier.height(10.dp))
                     OutlinedTextField(
+                        value = codigoInvitacion,
+                        onValueChange = { codigoInvitacion = it },
+                        label = { Text("Código de invitación") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        shape = fieldShape,
+                        colors = fieldColors
+                    )
+                    Spacer(modifier = Modifier.height(10.dp))
+                }
+
+                BotonGoogle(
+                    texto = if (rolRegistro == RolRegistro.COMERCIO) {
+                        "Registrar comercio con Google"
+                    } else {
+                        "Registrarse con Google"
+                    },
+                    habilitado = !cargando,
+                    onClick = { iniciarGoogle() }
+                )
+                Text(
+                    if (rolRegistro == RolRegistro.COMERCIO) {
+                        "Completá nombre del comercio y código antes de usar Google."
+                    } else {
+                        "Registro rápido con tu cuenta de Google."
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 6.dp, bottom = 12.dp)
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    HorizontalDivider(modifier = Modifier.weight(1f))
+                    Text(
+                        "  o con email  ",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    HorizontalDivider(modifier = Modifier.weight(1f))
+                }
+                Spacer(modifier = Modifier.height(12.dp))
+
+                if (rolRegistro == RolRegistro.COMERCIO) {
+                    OutlinedTextField(
                         value = direccionComercio,
                         onValueChange = { direccionComercio = it },
-                        label = { Text("Dirección") },
+                        label = { Text("Dirección (opcional)") },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
                         shape = fieldShape,
@@ -303,17 +407,7 @@ fun AuthScreen(
                     OutlinedTextField(
                         value = categoriaComercio,
                         onValueChange = { categoriaComercio = it },
-                        label = { Text("Categoría (ej. cafeteria, restaurante)") },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true,
-                        shape = fieldShape,
-                        colors = fieldColors
-                    )
-                    Spacer(modifier = Modifier.height(10.dp))
-                    OutlinedTextField(
-                        value = codigoInvitacion,
-                        onValueChange = { codigoInvitacion = it },
-                        label = { Text("Código de invitación") },
+                        label = { Text("Categoría (ej. cafeteria)") },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
                         shape = fieldShape,
@@ -428,58 +522,29 @@ fun AuthScreen(
                 estilo = if (modo == ModoAuth.REGISTRAR) EstiloBotonPiku.PRIMARIO else EstiloBotonPiku.SECUNDARIO
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                HorizontalDivider(modifier = Modifier.weight(1f))
-                Text(
-                    "  o  ",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+            if (modo == ModoAuth.INGRESAR) {
+                Spacer(modifier = Modifier.height(16.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    HorizontalDivider(modifier = Modifier.weight(1f))
+                    Text(
+                        "  o  ",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    HorizontalDivider(modifier = Modifier.weight(1f))
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+                BotonGoogle(
+                    texto = "Continuar con Google",
+                    habilitado = !cargando,
+                    onClick = { iniciarGoogle() }
                 )
-                HorizontalDivider(modifier = Modifier.weight(1f))
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
-
-            BotonGoogle(
-                texto = if (modo == ModoAuth.REGISTRAR) "Registrarse con Google" else "Continuar con Google",
-                habilitado = !cargando &&
-                    !(modo == ModoAuth.REGISTRAR && rolRegistro == RolRegistro.COMERCIO),
-                onClick = {
-                    if (modo == ModoAuth.REGISTRAR && rolRegistro == RolRegistro.COMERCIO) {
-                        error = "El registro de comercio es con email y contraseña"
-                        return@BotonGoogle
-                    }
-                    val act = activity
-                    if (act == null) {
-                        error = "No se puede abrir el inicio de sesión con Google"
-                        return@BotonGoogle
-                    }
-                    scope.launch {
-                        cargando = true
-                        error = null
-                        val cm = GoogleAuthHelper.obtenerIdToken(act)
-                        if (cm.isSuccess) {
-                            ejecutar {
-                                AuthRepository(context).loginGoogle(cm.getOrThrow())
-                            }
-                            return@launch
-                        }
-                        GoogleSignInHelper.signInIntent(act)
-                            .onSuccess { intent ->
-                                googleSignInLauncher.launch(intent)
-                            }
-                            .onFailure { e ->
-                                error = e.message
-                                cargando = false
-                            }
-                    }
-                }
-            )
+            Spacer(modifier = Modifier.height(24.dp))
 
             if (puedeHuella && activity != null) {
                 Spacer(modifier = Modifier.height(12.dp))

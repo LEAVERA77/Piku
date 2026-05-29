@@ -7,6 +7,7 @@ const router = express.Router();
 
 router.post('/registro-cliente', authController.registroCliente);
 router.post('/registro-comercio', authController.registroComercio);
+router.post('/registro-comercio-google', authController.registroComercioGoogle);
 router.post('/registro-comercio-admin', authMiddleware, soloAdmin, authController.registroComercio);
 router.post('/login', authController.login);
 router.post('/google', authController.loginGoogle);

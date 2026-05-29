@@ -7,6 +7,7 @@ import com.piku.app.data.model.ImagenUploadResponse
 import com.piku.app.data.model.LoginRequest
 import com.piku.app.data.model.LoginResponse
 import com.piku.app.data.model.OfertaStatsResponse
+import com.piku.app.data.model.RegistroComercioGoogleRequest
 import com.piku.app.data.model.RegistroComercioRequest
 import com.piku.app.data.model.RegistroRequest
 import com.piku.app.data.model.RecompensaSingleResponse
@@ -34,6 +35,9 @@ interface PikuApiService {
 
     @POST("api/auth/registro-comercio")
     suspend fun registroComercio(@Body body: RegistroComercioRequest): LoginResponse
+
+    @POST("api/auth/registro-comercio-google")
+    suspend fun registroComercioGoogle(@Body body: RegistroComercioGoogleRequest): LoginResponse
 
     @GET("api/auth/perfil")
     suspend fun perfil(): Map<String, Any>

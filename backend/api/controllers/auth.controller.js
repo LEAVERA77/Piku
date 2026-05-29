@@ -29,6 +29,31 @@ const GOOGLE_AUDIENCES = [
   process.env.GOOGLE_ANDROID_CLIENT_ID,
 ].filter(Boolean);
 
+async function verificarIdTokenGoogle(idToken) {
+  const { data } = await axios.get('https://oauth2.googleapis.com/tokeninfo', {
+    params: { id_token: idToken },
+    timeout: 10000,
+  });
+
+  if (GOOGLE_AUDIENCES.length && !GOOGLE_AUDIENCES.includes(data.aud)) {
+    const err = new Error('Token de Google no válido para esta app');
+    err.status = 401;
+    throw err;
+  }
+
+  const email = String(data.email || '').toLowerCase();
+  const googleId = String(data.sub || '');
+  const nombre = sanitizarInput(data.name || email.split('@')[0], 255);
+
+  if (!email || !googleId) {
+    const err = new Error('No se pudo verificar la cuenta de Google');
+    err.status = 401;
+    throw err;
+  }
+
+  return { email, googleId, nombre, picture: data.picture || null };
+}
+
 /**
  * Registro de cliente (rol cliente).
  */
@@ -44,7 +69,13 @@ async function registroCliente(req, res) {
     if (!nombre) return responderError(res, 400, 'Nombre requerido');
 
     const existe = await query('SELECT id FROM piku_usuarios WHERE LOWER(email) = $1', [email]);
-    if (existe.rows.length) return responderError(res, 409, 'El email ya está registrado');
+    if (existe.rows.length) {
+      return responderError(
+        res,
+        409,
+        'Este email ya está registrado. Probá «Ingresar» o usá otro correo.'
+      );
+    }
 
     const hash = await bcrypt.hash(password, 10);
     const returning = (await camposUsuario()).join(', ');
@@ -91,7 +122,13 @@ async function registroComercio(req, res) {
     }
 
     const existe = await query('SELECT id FROM piku_usuarios WHERE LOWER(email) = $1', [email]);
-    if (existe.rows.length) return responderError(res, 409, 'El email ya está registrado');
+    if (existe.rows.length) {
+      return responderError(
+        res,
+        409,
+        'Este email ya está registrado. Probá «Ingresar» o usá otro correo.'
+      );
+    }
 
     const colsComercio = await columnasTabla('piku_comercios');
     const colsInv = await columnasTabla('piku_invitaciones_comercio');
@@ -274,6 +311,196 @@ async function login(req, res) {
 }
 
 /**
+ * Registro de comercio con cuenta Google.
+ */
+async function registroComercioGoogle(req, res) {
+  try {
+    const idToken = String(req.body.idToken || req.body.id_token || '').trim();
+    if (!idToken) return responderError(res, 400, 'Token de Google requerido');
+
+    const google = await verificarIdTokenGoogle(idToken);
+    const nombre = sanitizarInput(req.body.nombre, 255) || google.nombre;
+    const nombreComercio = sanitizarInput(req.body.nombreComercio || req.body.nombre_comercio, 255);
+    const direccion = sanitizarInput(req.body.direccion, 500);
+    const codigoInvitacion = sanitizarInput(req.body.codigoInvitacion || req.body.codigo_invitacion, 64);
+    const lat = req.body.lat != null ? parseFloat(req.body.lat) : null;
+    const lon = req.body.lon != null ? parseFloat(req.body.lon) : null;
+    const categoria = sanitizarInput(req.body.categoria, 50);
+
+    if (!nombre || !nombreComercio) {
+      return responderError(res, 400, 'Nombre del responsable y del comercio son requeridos');
+    }
+
+    const selectCols = (await camposUsuario()).join(', ');
+    const existente = await query(
+      `SELECT ${selectCols} FROM piku_usuarios WHERE LOWER(email) = $1 LIMIT 1`,
+      [google.email]
+    );
+
+    if (existente.rows.length) {
+      const usuario = normalizarUsuario(existente.rows[0]);
+      if (usuario.rol === 'comercio') {
+        if (!usuario.activo) return responderError(res, 403, 'Cuenta desactivada');
+        const token = signToken({
+          userId: usuario.id,
+          rol: usuario.rol,
+          comercioId: usuario.comercio_id,
+        });
+        return res.json({
+          mensaje: 'Sesión de comercio iniciada',
+          token,
+          usuario,
+        });
+      }
+      return responderError(
+        res,
+        409,
+        'Este email ya está registrado como cliente. Usá otro correo o ingresá con Google como cliente.'
+      );
+    }
+
+    const colsComercio = await columnasTabla('piku_comercios');
+    const colsInv = await columnasTabla('piku_invitaciones_comercio');
+    const colsUsuario = await columnasTabla('piku_usuarios');
+
+    const resultado = await withTransaction(async (client) => {
+      const codigoEnv = process.env.PIKU_CODIGO_INVITACION || '';
+      const codigoValido =
+        codigoInvitacion &&
+        (codigoEnv && codigoInvitacion.toUpperCase() === codigoEnv.toUpperCase());
+
+      if (!codigoValido) {
+        if (!codigoInvitacion) throw new Error('Código de invitación requerido');
+        const invCols = ['id'];
+        if (tiene(colsInv, 'usado')) invCols.push('usado');
+        if (tiene(colsInv, 'expires_at')) invCols.push('expires_at');
+        const inv = await client.query(
+          `SELECT ${invCols.join(', ')} FROM piku_invitaciones_comercio
+           WHERE UPPER(codigo) = UPPER($1) LIMIT 1`,
+          [codigoInvitacion]
+        );
+        if (!inv.rows.length) throw new Error('Invitación inválida');
+        if (inv.rows[0].usado) throw new Error('Invitación ya utilizada');
+        if (inv.rows[0].expires_at && new Date(inv.rows[0].expires_at) < new Date()) {
+          throw new Error('Invitación expirada');
+        }
+      }
+
+      const hash = await bcrypt.hash(`google:${google.googleId}:${Date.now()}`, 10);
+
+      const comercioCampos = ['nombre'];
+      const comercioVals = [nombreComercio];
+      const addComercio = (col, val) => {
+        if (tiene(colsComercio, col)) {
+          comercioCampos.push(col);
+          comercioVals.push(val);
+        }
+      };
+      addComercio('direccion', direccion || null);
+      addComercio('lat', lat);
+      addComercio('lon', lon);
+      addComercio('suscripcion_activa', true);
+      addComercio('categoria', categoria || null);
+
+      const comercioPlaceholders = comercioVals.map((_, i) => `$${i + 1}`).join(', ');
+      const comercioReturning = ['id', 'nombre'];
+      for (const c of ['direccion', 'lat', 'lon', 'categoria']) {
+        if (tiene(colsComercio, c)) comercioReturning.push(c);
+      }
+
+      const comercioInsert = await client.query(
+        `INSERT INTO piku_comercios (${comercioCampos.join(', ')})
+         VALUES (${comercioPlaceholders})
+         RETURNING ${comercioReturning.join(', ')}`,
+        comercioVals
+      );
+      const comercio = comercioInsert.rows[0];
+
+      const usuarioCampos = ['email', 'password_hash', 'nombre', 'rol'];
+      const usuarioVals = [google.email, hash, nombre, 'comercio'];
+      if (tiene(colsUsuario, 'telefono')) {
+        usuarioCampos.push('telefono');
+        usuarioVals.push(sanitizarInput(req.body.telefono, 50) || null);
+      }
+      if (tiene(colsUsuario, 'comercio_id')) {
+        usuarioCampos.push('comercio_id');
+        usuarioVals.push(comercio.id);
+      }
+      if (tiene(colsUsuario, 'google_id')) {
+        usuarioCampos.push('google_id');
+        usuarioVals.push(google.googleId);
+      }
+      if (tiene(colsUsuario, 'avatar_url') && google.picture) {
+        usuarioCampos.push('avatar_url');
+        usuarioVals.push(google.picture);
+      }
+
+      const usuarioReturning = ['id', 'email', 'nombre', 'rol'];
+      if (tiene(colsUsuario, 'comercio_id')) usuarioReturning.push('comercio_id');
+
+      const usuarioInsert = await client.query(
+        `INSERT INTO piku_usuarios (${usuarioCampos.join(', ')})
+         VALUES (${usuarioVals.map((_, i) => `$${i + 1}`).join(', ')})
+         RETURNING ${usuarioReturning.join(', ')}`,
+        usuarioVals
+      );
+      const usuario = normalizarUsuario(usuarioInsert.rows[0]);
+
+      const linkCol = tiene(colsComercio, 'usuario_id')
+        ? 'usuario_id'
+        : tiene(colsComercio, 'owner_usuario_id')
+          ? 'owner_usuario_id'
+          : null;
+      if (linkCol) {
+        await client.query(`UPDATE piku_comercios SET ${linkCol} = $1 WHERE id = $2`, [
+          usuario.id,
+          comercio.id,
+        ]);
+      }
+
+      try {
+        await client.query(
+          `INSERT INTO piku_reglas_puntos (comercio_id, puntos_por_peso, monto_minimo, puntos_fijos, max_puntos_por_dia)
+           VALUES ($1, 1, 0, 10, 500)
+           ON CONFLICT (comercio_id) DO NOTHING`,
+          [comercio.id]
+        );
+      } catch (_e) {
+        /* opcional */
+      }
+
+      if (codigoInvitacion && tiene(colsInv, 'usado')) {
+        const sets = ['usado = TRUE'];
+        if (tiene(colsInv, 'comercio_id')) sets.push('comercio_id = $1');
+        await client.query(
+          `UPDATE piku_invitaciones_comercio SET ${sets.join(', ')} WHERE UPPER(codigo) = UPPER($${tiene(colsInv, 'comercio_id') ? '2' : '1'})`,
+          tiene(colsInv, 'comercio_id') ? [comercio.id, codigoInvitacion] : [codigoInvitacion]
+        );
+      }
+
+      return { usuario, comercio };
+    });
+
+    const token = signToken({
+      userId: resultado.usuario.id,
+      rol: resultado.usuario.rol,
+      comercioId: resultado.usuario.comercio_id,
+    });
+
+    return res.status(201).json({
+      mensaje: 'Comercio registrado con Google',
+      token,
+      usuario: resultado.usuario,
+      comercio: resultado.comercio,
+    });
+  } catch (error) {
+    console.error('registroComercioGoogle:', error);
+    const status = error.status || (/invitación/i.test(error.message) ? 403 : 500);
+    return responderError(res, status, error.message || 'Error al registrar comercio con Google');
+  }
+}
+
+/**
  * Login o registro con Google (idToken de Sign-In).
  */
 async function loginGoogle(req, res) {
@@ -281,22 +508,11 @@ async function loginGoogle(req, res) {
     const idToken = String(req.body.idToken || req.body.id_token || '').trim();
     if (!idToken) return responderError(res, 400, 'Token de Google requerido');
 
-    const { data } = await axios.get('https://oauth2.googleapis.com/tokeninfo', {
-      params: { id_token: idToken },
-      timeout: 10000,
-    });
-
-    if (GOOGLE_AUDIENCES.length && !GOOGLE_AUDIENCES.includes(data.aud)) {
-      return responderError(res, 401, 'Token de Google no válido para esta app');
-    }
-
-    const email = String(data.email || '').toLowerCase();
-    const googleId = String(data.sub || '');
-    const nombre = sanitizarInput(data.name || email.split('@')[0], 255);
-
-    if (!email || !googleId) {
-      return responderError(res, 401, 'No se pudo verificar la cuenta de Google');
-    }
+    const google = await verificarIdTokenGoogle(idToken);
+    const email = google.email;
+    const googleId = google.googleId;
+    const nombre = google.nombre;
+    const picture = google.picture;
 
     const cols = await columnasTabla('piku_usuarios');
     const selectCols = (await camposUsuario()).join(', ');
@@ -318,7 +534,7 @@ async function loginGoogle(req, res) {
       }
       if (tiene(cols, 'avatar_url')) {
         insertCampos.push('avatar_url');
-        insertVals.push(data.picture || null);
+        insertVals.push(picture || null);
       }
       const returning = selectCols;
       const insert = await query(
@@ -338,12 +554,12 @@ async function loginGoogle(req, res) {
         ]);
         usuario.google_id = googleId;
       }
-      if (data.picture && !usuario.avatar_url) {
+      if (picture && !usuario.avatar_url) {
         await query('UPDATE piku_usuarios SET avatar_url = $1, updated_at = NOW() WHERE id = $2', [
-          data.picture,
+          picture,
           usuario.id,
         ]);
-        usuario.avatar_url = data.picture;
+        usuario.avatar_url = picture;
       }
     }
 
@@ -442,6 +658,7 @@ async function actualizarPerfil(req, res) {
 module.exports = {
   registroCliente,
   registroComercio,
+  registroComercioGoogle,
   login,
   loginGoogle,
   perfil,
