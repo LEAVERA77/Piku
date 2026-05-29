@@ -23,10 +23,17 @@ ALTER TABLE piku_comercios ADD COLUMN IF NOT EXISTS lon DOUBLE PRECISION;
 ALTER TABLE piku_comercios ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE piku_comercios ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
-UPDATE piku_comercios
-SET usuario_id = owner_usuario_id
-WHERE usuario_id IS NULL
-  AND owner_usuario_id IS NOT NULL;
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'piku_comercios' AND column_name = 'owner_usuario_id'
+  ) THEN
+    UPDATE piku_comercios
+    SET usuario_id = owner_usuario_id
+    WHERE usuario_id IS NULL AND owner_usuario_id IS NOT NULL;
+  END IF;
+END $$;
 
 -- Invitaciones comercio
 ALTER TABLE piku_invitaciones_comercio ADD COLUMN IF NOT EXISTS usado BOOLEAN NOT NULL DEFAULT FALSE;
