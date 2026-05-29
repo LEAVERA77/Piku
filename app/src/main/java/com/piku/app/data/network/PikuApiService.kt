@@ -2,8 +2,10 @@ package com.piku.app.data.network
 
 import com.piku.app.data.model.ComercioDetalleResponse
 import com.piku.app.data.model.ComerciosResponse
+import com.piku.app.data.model.GoogleLoginRequest
 import com.piku.app.data.model.LoginRequest
 import com.piku.app.data.model.LoginResponse
+import com.piku.app.data.model.RegistroRequest
 import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.POST
@@ -13,6 +15,12 @@ interface PikuApiService {
 
     @POST("api/auth/login")
     suspend fun login(@Body body: LoginRequest): LoginResponse
+
+    @POST("api/auth/registro-cliente")
+    suspend fun registroCliente(@Body body: RegistroRequest): LoginResponse
+
+    @POST("api/auth/google")
+    suspend fun loginGoogle(@Body body: GoogleLoginRequest): LoginResponse
 
     @GET("api/auth/perfil")
     suspend fun perfil(): Map<String, Any>

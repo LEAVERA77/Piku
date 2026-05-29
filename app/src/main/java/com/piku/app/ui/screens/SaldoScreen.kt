@@ -28,7 +28,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -38,6 +37,7 @@ import com.piku.app.data.model.TipoTransaccion
 import com.piku.app.data.model.Transaccion
 import com.piku.app.ui.components.BotonPiku
 import com.piku.app.ui.components.EstiloBotonPiku
+import com.piku.app.ui.components.PikuLogo
 import com.piku.app.ui.components.PikuPhotoImage
 import com.piku.app.ui.components.TarjetaSaldo
 import com.piku.app.ui.media.PikuImages
@@ -63,30 +63,12 @@ fun SaldoScreen(
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         item {
-            PikuPhotoImage(
-                url = PikuImages.heroApp,
-                contentDescription = "Piku",
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(140.dp),
-                cornerRadius = 20.dp,
-                contentScale = ContentScale.Crop
+            PikuLogo(
+                compact = true,
+                showTagline = true,
+                tagline = stringResource(R.string.app_tagline),
+                modifier = Modifier.fillMaxWidth()
             )
-        }
-
-        item {
-            Column {
-                Text(
-                    text = "Piku",
-                    style = MaterialTheme.typography.headlineMedium,
-                    color = VerdePiku
-                )
-                Text(
-                    text = stringResource(R.string.app_tagline),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
         }
 
         item {

@@ -13,6 +13,9 @@
     "serviceId": "tu_service_id",
     "templateId": "tu_template_id"
   },
+  "google": {
+    "webClientId": "TU_WEB_CLIENT_ID.apps.googleusercontent.com"
+  },
   "app": {
     "version": "1.0.0",
     "tagline": "Tus puntos, tus descuentos"

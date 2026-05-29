@@ -39,4 +39,13 @@ object ConfigLoader {
     fun nominatimBaseUrl(context: Context): String? =
         load(context)?.optJSONObject("nominatim")
             ?.optString("baseUrl", "")?.trim()?.trimEnd('/')?.ifEmpty { null }
+
+    fun googleWebClientId(context: Context): String? =
+        load(context)?.optJSONObject("google")
+            ?.optString("webClientId", "")?.trim()?.ifEmpty { null }
+
+    fun appTagline(context: Context): String =
+        load(context)?.optJSONObject("app")
+            ?.optString("tagline", "Tus puntos, tus descuentos")
+            ?: "Tus puntos, tus descuentos"
 }

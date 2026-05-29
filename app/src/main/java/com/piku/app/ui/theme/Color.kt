@@ -11,6 +11,8 @@ val AcentoVerdeClaro = Color(0xFF4CDB94)
 val TextoSecundario = Color(0xFF6B6B6B)
 val TarjetaBlanca = Color(0xFFFFFFFF)
 val SombraSuave = Color(0x1A000000)
+val AmarilloPiku = Color(0xFFFFC107)
+val CelestePiku = Color(0xFF26C6DA)
 
 // Paleta oscura
 val VerdePikuDark = Color(0xFF4CDB94)

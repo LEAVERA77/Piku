@@ -1,7 +1,10 @@
 const bcrypt = require('bcryptjs');
+const axios = require('axios');
 const { query, withTransaction } = require('../services/neon.service');
 const { signToken } = require('../middleware/auth.middleware');
 const { validarEmail, sanitizarInput, responderError } = require('../utils/helpers');
+
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '';
 
 /**
  * Registro de cliente (rol cliente).
@@ -185,6 +188,84 @@ async function login(req, res) {
 }
 
 /**
+ * Login o registro con Google (idToken de Sign-In).
+ */
+async function loginGoogle(req, res) {
+  try {
+    const idToken = String(req.body.idToken || req.body.id_token || '').trim();
+    if (!idToken) return responderError(res, 400, 'Token de Google requerido');
+
+    const { data } = await axios.get('https://oauth2.googleapis.com/tokeninfo', {
+      params: { id_token: idToken },
+      timeout: 10000,
+    });
+
+    if (GOOGLE_CLIENT_ID && data.aud !== GOOGLE_CLIENT_ID) {
+      return responderError(res, 401, 'Token de Google no válido para esta app');
+    }
+
+    const email = String(data.email || '').toLowerCase();
+    const googleId = String(data.sub || '');
+    const nombre = sanitizarInput(data.name || email.split('@')[0], 255);
+
+    if (!email || !googleId) {
+      return responderError(res, 401, 'No se pudo verificar la cuenta de Google');
+    }
+
+    let result = await query(
+      `SELECT id, email, nombre, telefono, rol, activo, puntos_saldo, comercio_id, avatar_url, google_id
+       FROM piku_usuarios WHERE google_id = $1 OR LOWER(email) = $2 LIMIT 1`,
+      [googleId, email]
+    );
+
+    let usuario;
+    if (!result.rows.length) {
+      const hash = await bcrypt.hash(`google:${googleId}:${Date.now()}`, 10);
+      const insert = await query(
+        `INSERT INTO piku_usuarios (email, password_hash, nombre, rol, google_id, avatar_url)
+         VALUES ($1, $2, $3, 'cliente', $4, $5)
+         RETURNING id, email, nombre, telefono, rol, puntos_saldo, comercio_id, avatar_url, google_id`,
+        [email, hash, nombre, googleId, data.picture || null]
+      );
+      usuario = insert.rows[0];
+    } else {
+      usuario = result.rows[0];
+      if (!usuario.activo) return responderError(res, 403, 'Cuenta desactivada');
+      if (!usuario.google_id) {
+        await query('UPDATE piku_usuarios SET google_id = $1, updated_at = NOW() WHERE id = $2', [
+          googleId,
+          usuario.id,
+        ]);
+        usuario.google_id = googleId;
+      }
+      if (data.picture && !usuario.avatar_url) {
+        await query('UPDATE piku_usuarios SET avatar_url = $1, updated_at = NOW() WHERE id = $2', [
+          data.picture,
+          usuario.id,
+        ]);
+        usuario.avatar_url = data.picture;
+      }
+    }
+
+    const token = signToken({
+      userId: usuario.id,
+      rol: usuario.rol,
+      comercioId: usuario.comercio_id,
+    });
+
+    return res.json({
+      mensaje: 'Sesión con Google iniciada',
+      token,
+      usuario,
+    });
+  } catch (error) {
+    console.error('loginGoogle:', error);
+    const detail = error.response?.data?.error_description || error.message;
+    return responderError(res, 401, 'No se pudo iniciar sesión con Google', { detail });
+  }
+}
+
+/**
  * Perfil del usuario autenticado.
  */
 async function perfil(req, res) {
@@ -262,6 +343,7 @@ module.exports = {
   registroCliente,
   registroComercio,
   login,
+  loginGoogle,
   perfil,
   actualizarPerfil,
 };
