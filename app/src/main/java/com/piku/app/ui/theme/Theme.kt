@@ -1,7 +1,8 @@
 package com.piku.app.ui.theme
 
 import android.app.Activity
-import android.os.Build
+import android.content.Context
+import android.content.ContextWrapper
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
@@ -40,6 +41,12 @@ private val DarkColorScheme = darkColorScheme(
     onSurfaceVariant = TextoSecundario
 )
 
+private tailrec fun Context.findActivity(): Activity? = when (this) {
+    is Activity -> this
+    is ContextWrapper -> baseContext.findActivity()
+    else -> null
+}
+
 @Composable
 fun PikuTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
@@ -50,7 +57,8 @@ fun PikuTheme(
 
     if (!view.isInEditMode) {
         SideEffect {
-            val window = (view.context as Activity).window
+            val activity = view.context.findActivity() ?: return@SideEffect
+            val window = activity.window
             window.statusBarColor = colorScheme.background.toArgb()
             WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
         }
