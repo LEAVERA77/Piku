@@ -13,9 +13,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Logout
-import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -34,6 +34,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.piku.app.data.model.NivelUsuario
+import com.piku.app.ui.components.PikuPhotoImage
+import com.piku.app.ui.media.PikuImages
 import com.piku.app.ui.theme.NaranjaPiku
 import com.piku.app.ui.theme.PikuTheme
 import com.piku.app.ui.theme.VerdePiku
@@ -66,20 +68,14 @@ fun PerfilScreen(
             return
         }
 
-        Box(
+        PikuPhotoImage(
+            url = PikuImages.avatarDefault,
+            contentDescription = "Avatar",
             modifier = Modifier
                 .size(100.dp)
-                .clip(CircleShape)
-                .background(VerdePiku.copy(alpha = 0.2f)),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = Icons.Default.Person,
-                contentDescription = "Avatar",
-                modifier = Modifier.size(56.dp),
-                tint = VerdePiku
-            )
-        }
+                .clip(CircleShape),
+            cornerRadius = 50.dp
+        )
 
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -157,7 +153,7 @@ fun PerfilScreen(
             shape = RoundedCornerShape(16.dp)
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.Logout, contentDescription = null, tint = NaranjaPiku)
+                Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = null, tint = NaranjaPiku)
                 Spacer(modifier = Modifier.size(8.dp))
                 Text("Cerrar sesión", color = NaranjaPiku)
             }

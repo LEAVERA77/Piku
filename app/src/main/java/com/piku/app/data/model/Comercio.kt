@@ -28,7 +28,9 @@ data class RecompensaPublica(
     @SerializedName("puntos_requeridos") val puntosRequeridos: Int,
     val icono: String? = null,
     @SerializedName("imagen_url") val imagenUrl: String? = null
-)
+) {
+    fun photoUrl(): String = com.piku.app.ui.media.PikuImages.resolve(imagenUrl, id, nombre)
+}
 
 data class ComerciosResponse(
     val comercios: List<Comercio>

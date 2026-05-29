@@ -7,6 +7,6 @@ data class Recompensa(
     val id: String,
     val nombre: String,
     val puntosRequeridos: Int,
-    val icono: String,
+    val imageUrl: String,
     val descripcion: String
 )

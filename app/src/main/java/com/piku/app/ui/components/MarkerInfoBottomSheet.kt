@@ -17,12 +17,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
-import coil.compose.AsyncImage
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import com.piku.app.data.config.ConfigLoader
 import com.piku.app.data.model.Comercio
+import com.piku.app.ui.media.PikuImages
 import com.piku.app.ui.theme.VerdePiku
 import com.piku.app.utils.DistanceCalculator
-import androidx.compose.ui.platform.LocalContext
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -33,7 +35,9 @@ fun MarkerInfoBottomSheet(
 ) {
     val context = LocalContext.current
     val cloud = ConfigLoader.cloudinaryCloudName(context)
-    val logoUrl = comercio.logoUrl ?: cloud?.let { "https://res.cloudinary.com/$it/image/upload/w_120,h_120,c_fill/piku/placeholder" }
+    val logoUrl = comercio.logoUrl
+        ?: cloud?.let { "https://res.cloudinary.com/$it/image/upload/w_120,h_120,c_fill/piku/placeholder" }
+        ?: PikuImages.comercioDefault
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -45,15 +49,16 @@ fun MarkerInfoBottomSheet(
                 .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            if (logoUrl != null) {
-                AsyncImage(
-                    model = logoUrl,
-                    contentDescription = comercio.nombre,
-                    modifier = Modifier.size(72.dp),
-                    contentScale = ContentScale.Crop
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-            }
+            PikuPhotoImage(
+                url = logoUrl,
+                contentDescription = comercio.nombre,
+                modifier = Modifier
+                    .size(88.dp)
+                    .clip(RoundedCornerShape(16.dp)),
+                cornerRadius = 16.dp,
+                contentScale = ContentScale.Crop
+            )
+            Spacer(modifier = Modifier.height(12.dp))
             Text(text = comercio.nombre, style = MaterialTheme.typography.headlineSmall)
             comercio.direccion?.let {
                 Text(
@@ -64,7 +69,7 @@ fun MarkerInfoBottomSheet(
             }
             comercio.distanciaMetros?.let {
                 Text(
-                    text = "📍 A ${DistanceCalculator.formatoDistancia(it)}",
+                    text = "A ${DistanceCalculator.formatoDistancia(it)}",
                     style = MaterialTheme.typography.labelLarge,
                     color = VerdePiku
                 )

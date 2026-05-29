@@ -11,14 +11,17 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.piku.app.data.network.RetrofitInstance
+import com.piku.app.ui.components.PikuPhotoImage
+import com.piku.app.ui.media.PikuImages
 
 @Composable
 fun AdminDashboardScreen(
@@ -26,7 +29,6 @@ fun AdminDashboardScreen(
     onGenerarQr: () -> Unit,
     onCerrarSesion: () -> Unit
 ) {
-    val context = LocalContext.current
     var stats by remember { mutableStateOf<Map<String, Any>?>(null) }
 
     LaunchedEffect(Unit) {
@@ -38,6 +40,16 @@ fun AdminDashboardScreen(
     }
 
     Column(Modifier.fillMaxSize().padding(24.dp)) {
+        PikuPhotoImage(
+            url = PikuImages.comercioDefault,
+            contentDescription = null,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(140.dp),
+            cornerRadius = 16.dp,
+            contentScale = ContentScale.Crop
+        )
+        Spacer(Modifier.height(16.dp))
         Text("Panel comercio", style = MaterialTheme.typography.headlineMedium)
         Spacer(Modifier.height(16.dp))
         stats?.let { s ->

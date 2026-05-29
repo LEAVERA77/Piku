@@ -32,10 +32,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.piku.app.data.model.Recompensa
-import com.piku.app.ui.components.BotonPiku
-import com.piku.app.ui.components.EstiloBotonPiku
-import com.piku.app.ui.theme.NaranjaPiku
+import com.piku.app.ui.components.PikuPhotoImage
+import com.piku.app.ui.components.TarjetaRecompensa
+import com.piku.app.ui.media.PikuImages
 import com.piku.app.ui.theme.PikuTheme
 import com.piku.app.ui.theme.VerdePiku
 import com.piku.app.ui.viewmodel.CanjesViewModel
@@ -84,12 +83,26 @@ fun CanjesScreen(
         }
 
         if (uiState.recompensas.isEmpty()) {
-            Text(
-                text = "Pronto habrá nuevas recompensas para ti 🎁",
-                style = MaterialTheme.typography.bodyLarge,
-                modifier = Modifier.padding(32.dp),
-                textAlign = TextAlign.Center
-            )
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                PikuPhotoImage(
+                    url = PikuImages.emptyRecompensas,
+                    contentDescription = null,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(180.dp)
+                        .padding(horizontal = 8.dp),
+                    cornerRadius = 20.dp
+                )
+                Text(
+                    text = "Pronto habrá nuevas recompensas para ti",
+                    style = MaterialTheme.typography.bodyLarge,
+                    modifier = Modifier.padding(24.dp),
+                    textAlign = TextAlign.Center
+                )
+            }
         } else {
             LazyVerticalGrid(
                 columns = GridCells.Fixed(2),
@@ -133,56 +146,6 @@ fun CanjesScreen(
             },
             shape = RoundedCornerShape(20.dp)
         )
-    }
-}
-
-@Composable
-private fun TarjetaRecompensa(
-    recompensa: Recompensa,
-    puedeCanjear: Boolean,
-    onCanjear: () -> Unit
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text(
-                text = recompensa.icono,
-                style = MaterialTheme.typography.displayLarge
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = recompensa.nombre,
-                style = MaterialTheme.typography.titleMedium,
-                textAlign = TextAlign.Center
-            )
-            Text(
-                text = recompensa.descripcion,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.padding(vertical = 4.dp)
-            )
-            Text(
-                text = "${recompensa.puntosRequeridos} pts",
-                style = MaterialTheme.typography.labelLarge,
-                color = NaranjaPiku
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            BotonPiku(
-                texto = "Canjear",
-                onClick = onCanjear,
-                modifier = Modifier.fillMaxWidth(),
-                estilo = EstiloBotonPiku.SECUNDARIO,
-                habilitado = puedeCanjear
-            )
-        }
     }
 }
 

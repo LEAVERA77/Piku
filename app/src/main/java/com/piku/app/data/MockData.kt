@@ -2,6 +2,7 @@ package com.piku.app.data
 
 import com.piku.app.data.model.NivelUsuario
 import com.piku.app.data.model.Recompensa
+import com.piku.app.ui.media.PikuImages
 import com.piku.app.data.model.TipoTransaccion
 import com.piku.app.data.model.Transaccion
 import com.piku.app.data.model.Usuario
@@ -29,9 +30,9 @@ object MockData {
     )
 
     val recompensas = listOf(
-        Recompensa("r1", "Café gratis", 150, "☕", "Un café de tu tamaño favorito"),
-        Recompensa("r2", "10% en panadería", 200, "🥐", "Descuento en tu próxima compra"),
-        Recompensa("r3", "$20 en restaurante", 500, "🍽️", "Vale para comidas"),
-        Recompensa("r4", "Envío gratis", 350, "📦", "Sin costo de envío en tu pedido")
+        Recompensa("r1", "Café gratis", 150, PikuImages.cafe, "Un café de tu tamaño favorito"),
+        Recompensa("r2", "10% en panadería", 200, PikuImages.panaderia, "Descuento en tu próxima compra"),
+        Recompensa("r3", "$20 en restaurante", 500, PikuImages.restaurante, "Vale para comidas"),
+        Recompensa("r4", "Envío gratis", 350, PikuImages.envio, "Sin costo de envío en tu pedido")
     )
 }

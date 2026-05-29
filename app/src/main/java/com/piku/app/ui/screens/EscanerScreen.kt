@@ -45,7 +45,9 @@ import com.google.accompanist.permissions.rememberPermissionState
 import com.piku.app.R
 import com.piku.app.ui.components.BotonPiku
 import com.piku.app.ui.components.EstiloBotonPiku
+import com.piku.app.ui.components.PikuPhotoImage
 import com.piku.app.ui.components.QrCameraPreview
+import com.piku.app.ui.media.PikuImages
 import com.piku.app.ui.theme.AcentoVerdeClaro
 import com.piku.app.ui.theme.PikuTheme
 import com.piku.app.ui.theme.VerdePiku
@@ -178,6 +180,15 @@ fun EscanerScreen(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = androidx.compose.foundation.layout.Arrangement.Center
                 ) {
+                    PikuPhotoImage(
+                        url = PikuImages.permisoCamara,
+                        contentDescription = null,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(160.dp)
+                            .padding(bottom = 16.dp),
+                        cornerRadius = 16.dp
+                    )
                     Text(
                         text = stringResource(R.string.permiso_camara),
                         style = MaterialTheme.typography.bodyLarge,

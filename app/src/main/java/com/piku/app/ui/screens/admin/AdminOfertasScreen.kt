@@ -1,6 +1,7 @@
 package com.piku.app.ui.screens.admin
 
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -27,6 +28,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.piku.app.data.network.RetrofitInstance
 import com.piku.app.ui.components.BotonPiku
+import com.piku.app.ui.components.PikuPhotoImage
+import com.piku.app.ui.media.PikuImages
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -75,7 +82,8 @@ fun AdminOfertasScreen(onBack: () -> Unit) {
                             mapOf(
                                 "nombre" to nombre,
                                 "puntosRequeridos" to (puntos.toIntOrNull() ?: 100),
-                                "icono" to "🎁"
+                                "icono" to "oferta",
+                                "imagenUrl" to PikuImages.forRecompensaNombre(nombre)
                             )
                         )
                         mensaje = "Oferta creada"
@@ -88,11 +96,28 @@ fun AdminOfertasScreen(onBack: () -> Unit) {
             mensaje?.let { Text(it, color = MaterialTheme.colorScheme.primary) }
             LazyColumn {
                 items(lista) { item ->
+                    val nombreItem = item["nombre"]?.toString() ?: "Oferta"
+                    val img = item["imagen_url"]?.toString()
+                        ?: item["imagenUrl"]?.toString()
+                        ?: PikuImages.forRecompensaNombre(nombreItem)
                     Card(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
-                        Text(
-                            "${item["nombre"]} — ${item["puntos_requeridos"] ?: item["puntosRequeridos"]} pts",
-                            Modifier.padding(12.dp)
-                        )
+                        Row(Modifier.padding(12.dp)) {
+                            PikuPhotoImage(
+                                url = img,
+                                contentDescription = null,
+                                modifier = Modifier
+                                    .size(56.dp)
+                                    .clip(RoundedCornerShape(10.dp)),
+                                cornerRadius = 10.dp
+                            )
+                            Column(Modifier.padding(start = 12.dp)) {
+                                Text(nombreItem, style = MaterialTheme.typography.titleMedium)
+                                Text(
+                                    "${item["puntos_requeridos"] ?: item["puntosRequeridos"]} pts",
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                            }
+                        }
                     }
                 }
             }
