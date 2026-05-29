@@ -12,12 +12,14 @@ async function listarComercios(req, res) {
   try {
     const result = await query(
       `SELECT ${COLUMNAS_COMERCIO}
-       FROM piku_comercios WHERE suscripcion_activa = TRUE ORDER BY nombre ASC`
+       FROM piku_comercios
+       WHERE COALESCE(suscripcion_activa, TRUE) = TRUE
+       ORDER BY nombre ASC`
     );
     return res.json({ comercios: result.rows });
   } catch (error) {
     console.error('listarComercios:', error);
-    return responderError(res, 500, 'Error al listar comercios');
+    return responderError(res, 500, 'Error al listar comercios', { detail: error.message });
   }
 }
 
@@ -29,7 +31,8 @@ async function detalleComercio(req, res) {
     const { id } = req.params;
     const result = await query(
       `SELECT ${COLUMNAS_COMERCIO}
-       FROM piku_comercios WHERE id = $1 AND suscripcion_activa = TRUE`,
+       FROM piku_comercios
+       WHERE id = $1 AND COALESCE(suscripcion_activa, TRUE) = TRUE`,
       [id]
     );
     if (!result.rows.length) return responderError(res, 404, 'Comercio no encontrado');
@@ -48,7 +51,7 @@ async function detalleComercio(req, res) {
     });
   } catch (error) {
     console.error('detalleComercio:', error);
-    return responderError(res, 500, 'Error al obtener comercio');
+    return responderError(res, 500, 'Error al obtener comercio', { detail: error.message });
   }
 }
 
@@ -62,7 +65,7 @@ async function listarRecompensasPublicas(req, res) {
       SELECT r.id, r.nombre, r.descripcion, r.puntos_requeridos, r.icono, r.imagen_url,
              c.id AS comercio_id, c.nombre AS comercio_nombre
       FROM piku_recompensas r
-      INNER JOIN piku_comercios c ON c.id = r.comercio_id AND c.suscripcion_activa = TRUE
+      INNER JOIN piku_comercios c ON c.id = r.comercio_id AND COALESCE(c.suscripcion_activa, TRUE) = TRUE
       WHERE r.activo = TRUE AND (r.stock IS NULL OR r.stock > 0)`;
     const params = [];
 

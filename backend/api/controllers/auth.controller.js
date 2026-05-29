@@ -103,7 +103,7 @@ async function registroComercio(req, res) {
       const usuario = usuarioInsert.rows[0];
 
       await client.query(
-        'UPDATE piku_comercios SET owner_usuario_id = $1, updated_at = NOW() WHERE id = $2',
+        'UPDATE piku_comercios SET usuario_id = $1 WHERE id = $2',
         [usuario.id, comercio.id]
       );
 

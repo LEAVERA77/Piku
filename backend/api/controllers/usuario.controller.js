@@ -58,7 +58,7 @@ async function getRecompensasDisponibles(req, res) {
       `SELECT r.id, r.comercio_id, r.nombre, r.descripcion, r.puntos_requeridos,
               r.icono, r.imagen_url, r.stock, c.nombre AS comercio_nombre
        FROM piku_recompensas r
-       INNER JOIN piku_comercios c ON c.id = r.comercio_id AND c.activo = TRUE
+       INNER JOIN piku_comercios c ON c.id = r.comercio_id AND COALESCE(c.suscripcion_activa, TRUE) = TRUE
        WHERE r.activo = TRUE
          AND (r.stock IS NULL OR r.stock > 0)
        ORDER BY r.puntos_requeridos ASC`

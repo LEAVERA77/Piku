@@ -80,13 +80,15 @@ async function validarEscaneo(req, res) {
       const qr = verificacion.qr;
 
       const comercioRes = await client.query(
-        'SELECT id, nombre, lat, lon, radio_metros, activo FROM piku_comercios WHERE id = $1',
+        `SELECT id, nombre, lat, lon, suscripcion_activa
+         FROM piku_comercios WHERE id = $1`,
         [qr.comercio_id]
       );
-      if (!comercioRes.rows.length || !comercioRes.rows[0].activo) {
+      const fila = comercioRes.rows[0];
+      if (!fila || fila.suscripcion_activa === false) {
         throw new Error('Comercio no disponible');
       }
-      const comercio = comercioRes.rows[0];
+      const comercio = { ...fila, radio_metros: 100 };
 
       const gps = verificarGPS(comercio, lat, lon);
       if (!gps.ok) throw new Error(gps.motivo);
