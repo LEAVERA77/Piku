@@ -30,6 +30,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -127,7 +128,10 @@ fun AuthScreen(
     var puedeHuella by remember { mutableStateOf(false) }
 
     androidx.compose.runtime.LaunchedEffect(Unit) {
+        val repo = AuthRepository(context)
         puedeHuella = AuthDataStore.hasSession(context) &&
+            AuthDataStore.isBiometricEnabled(context) &&
+            repo.validarSesionRemota() &&
             activity != null &&
             BiometricHelper.puedeUsarBiometrico(activity)
     }
@@ -607,6 +611,17 @@ fun AuthScreen(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text("Ingresar con huella digital")
+                }
+                TextButton(
+                    onClick = {
+                        scope.launch {
+                            AuthDataStore.clear(context)
+                            puedeHuella = false
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Usar otra cuenta (email o Google)")
                 }
             }
 

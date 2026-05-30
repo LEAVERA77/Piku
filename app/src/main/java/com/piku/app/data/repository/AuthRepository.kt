@@ -124,5 +124,26 @@ class AuthRepository(private val context: Context) {
 
     suspend fun hasSession(): Boolean = AuthDataStore.hasSession(context)
 
+    /**
+     * Comprueba que el token guardado siga siendo válido en el servidor.
+     * Si expiró o la app se reinstaló con datos de backup obsoletos, limpia la sesión.
+     */
+    suspend fun validarSesionRemota(): Boolean {
+        if (!hasSession()) return false
+        return try {
+            api.perfil()
+            true
+        } catch (e: HttpException) {
+            if (e.code() == 401 || e.code() == 403) {
+                AuthDataStore.clear(context)
+                false
+            } else {
+                true
+            }
+        } catch (_: Exception) {
+            true
+        }
+    }
+
     suspend fun isComercio(): Boolean = AuthDataStore.rol(context) == "comercio"
 }
