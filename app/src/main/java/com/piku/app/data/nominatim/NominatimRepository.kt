@@ -1,6 +1,10 @@
 package com.piku.app.data.nominatim
 
 import android.content.Context
+import com.piku.app.data.model.Comercio
+import com.piku.app.data.nominatim.OsmComercioMapper.esComercioOsm
+import com.piku.app.data.nominatim.OsmComercioMapper.nombreComercio
+import com.piku.app.data.nominatim.OsmComercioMapper.toComercioOsm
 
 class NominatimRepository(context: Context) {
 
@@ -59,5 +63,31 @@ class NominatimRepository(context: Context) {
             // sin reverse
         }
         return sugerencias
+    }
+
+    /**
+     * Comercios/POIs de OpenStreetMap en la zona del usuario que coinciden con [consulta].
+     */
+    suspend fun buscarComerciosEnZona(
+        lat: Double,
+        lon: Double,
+        consulta: String,
+        limite: Int = 15
+    ): List<Comercio> {
+        val q = consulta.trim()
+        if (q.length < 2) return emptyList()
+        val resultados = buscarCerca(lat, lon, q, limite = limite)
+        return resultados
+            .filter { it.esComercioOsm() }
+            .filter { coincideConsulta(it, q) }
+            .mapNotNull { it.toComercioOsm(lat, lon) }
+            .distinctBy { it.id }
+    }
+
+    private fun coincideConsulta(result: NominatimResult, consulta: String): Boolean {
+        val q = consulta.lowercase()
+        val nombre = result.nombreComercio().lowercase()
+        if (nombre.contains(q)) return true
+        return result.displayName.lowercase().contains(q)
     }
 }

@@ -73,12 +73,20 @@ fun MarkerInfoBottomSheet(
                     color = MaterialTheme.colorScheme.primary
                 )
             }
-            comercio.puntosMinCanje?.let { pts ->
+            if (comercio.esOpenStreetMap()) {
                 Text(
-                    text = "Canje desde $pts puntos",
-                    style = MaterialTheme.typography.bodyMedium,
+                    text = "En OpenStreetMap · Aún no está en Piku",
+                    style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+            } else {
+                comercio.puntosMinCanje?.let { pts ->
+                    Text(
+                        text = "Canje desde $pts puntos",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
             comercio.direccion?.let {
                 Text(
@@ -95,8 +103,10 @@ fun MarkerInfoBottomSheet(
                 )
             }
             Spacer(modifier = Modifier.height(16.dp))
-            Button(onClick = onVerOfertas, modifier = Modifier.fillMaxWidth()) {
-                Text("Ver ofertas")
+            if (!comercio.esOpenStreetMap()) {
+                Button(onClick = onVerOfertas, modifier = Modifier.fillMaxWidth()) {
+                    Text("Ver ofertas")
+                }
             }
             Spacer(modifier = Modifier.height(24.dp))
         }

@@ -30,6 +30,8 @@ data class MapaUiState(
     val cargando: Boolean = true,
     val cargandoViewport: Boolean = false,
     val comercios: List<Comercio> = emptyList(),
+    val comerciosOsmBusqueda: List<Comercio> = emptyList(),
+    val buscandoComerciosOsm: Boolean = false,
     val rubros: List<Rubro> = emptyList(),
     val rubrosSeleccionados: Set<String> = emptySet(),
     val busquedaNombre: String = "",
@@ -59,7 +61,11 @@ data class MapaUiState(
             }
             val q = busquedaNombre.trim()
             if (q.length >= 2) {
-                lista = lista.filter { it.nombre.contains(q, ignoreCase = true) }
+                val piku = lista.filter { it.nombre.contains(q, ignoreCase = true) }
+                val osm = comerciosOsmBusqueda.filter { osm ->
+                    piku.none { it.nombre.equals(osm.nombre, ignoreCase = true) }
+                }
+                lista = (piku + osm).sortedBy { it.distanciaMetros ?: Int.MAX_VALUE }
             }
             return lista
         }
@@ -88,6 +94,7 @@ class MapaViewModel(application: Application) : AndroidViewModel(application) {
         private const val ZOOM_DEFAULT = 13.0
     }
     private var viewportJob: Job? = null
+    private var busquedaComercioJob: Job? = null
     private var ultimoViewport: Viewport? = null
 
     private val _uiState = MutableStateFlow(MapaUiState())
@@ -222,8 +229,25 @@ class MapaViewModel(application: Application) : AndroidViewModel(application) {
 
     fun setBusquedaNombre(q: String) {
         _uiState.update { it.copy(busquedaNombre = q) }
-        if (q.length >= 2) {
-            viewModelScope.launch { repo.registrarEvento("busqueda") }
+        busquedaComercioJob?.cancel()
+        val texto = q.trim()
+        if (texto.length < 2) {
+            _uiState.update { it.copy(comerciosOsmBusqueda = emptyList(), buscandoComerciosOsm = false) }
+            return
+        }
+        viewModelScope.launch { repo.registrarEvento("busqueda") }
+        busquedaComercioJob = viewModelScope.launch {
+            delay(400)
+            val s = _uiState.value
+            _uiState.update { it.copy(buscandoComerciosOsm = true) }
+            try {
+                val osm = nominatim.buscarComerciosEnZona(s.userLat, s.userLon, texto)
+                _uiState.update {
+                    it.copy(comerciosOsmBusqueda = osm, buscandoComerciosOsm = false)
+                }
+            } catch (_: Exception) {
+                _uiState.update { it.copy(comerciosOsmBusqueda = emptyList(), buscandoComerciosOsm = false) }
+            }
         }
     }
 

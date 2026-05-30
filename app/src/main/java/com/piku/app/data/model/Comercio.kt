@@ -16,7 +16,9 @@ data class Comercio(
     @SerializedName("created_at") val createdAt: String? = null,
     /** Distancia en metros desde el usuario (calculada en app). */
     val distanciaMetros: Int? = null
-)
+) {
+    fun esOpenStreetMap(): Boolean = id.startsWith("osm:")
+}
 
 data class ComercioDetalleResponse(
     val comercio: Comercio,

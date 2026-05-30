@@ -39,6 +39,7 @@ fun MapaPanelCompacto(
     busquedaNombre: String,
     busquedaDireccion: String,
     contadorVisibles: Int,
+    buscandoOsm: Boolean = false,
     rubros: List<Rubro>,
     rubrosSeleccionados: Set<String>,
     expandido: Boolean,
@@ -69,7 +70,7 @@ fun MapaPanelCompacto(
                     value = busquedaNombre,
                     onValueChange = onBusquedaNombreChange,
                     modifier = Modifier.weight(1f),
-                    placeholder = { Text("Buscar comercio") },
+                    placeholder = { Text("Comercio (Piku u OSM)") },
                     leadingIcon = {
                         Icon(Icons.Default.Search, null, Modifier.size(20.dp))
                     },
@@ -115,7 +116,8 @@ fun MapaPanelCompacto(
                 }
             }
             Text(
-                "$contadorVisibles comercios",
+                if (buscandoOsm) "$contadorVisibles comercios · buscando en OSM…"
+                else "$contadorVisibles comercios",
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.padding(top = 4.dp)

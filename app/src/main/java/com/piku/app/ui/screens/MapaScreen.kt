@@ -104,6 +104,7 @@ fun MapaScreen(
                 busquedaNombre = uiState.busquedaNombre,
                 busquedaDireccion = uiState.busquedaDireccion,
                 contadorVisibles = uiState.contadorVisibles,
+                buscandoOsm = uiState.buscandoComerciosOsm,
                 rubros = uiState.rubros,
                 rubrosSeleccionados = uiState.rubrosSeleccionados,
                 expandido = uiState.panelExpandido,
@@ -187,8 +188,10 @@ fun MapaScreen(
             rubros = uiState.rubros,
             onDismiss = { viewModel.seleccionarComercio(null) },
             onVerOfertas = {
-                viewModel.seleccionarComercio(null)
-                onVerDetalleComercio(comercio.id)
+                if (!comercio.esOpenStreetMap()) {
+                    viewModel.seleccionarComercio(null)
+                    onVerDetalleComercio(comercio.id)
+                }
             }
         )
     }
