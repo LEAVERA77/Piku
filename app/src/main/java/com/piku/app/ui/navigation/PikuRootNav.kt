@@ -8,6 +8,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.piku.app.data.repository.AuthRepository
+import com.piku.app.ui.screens.ElegirTipoUsuarioScreen
 import com.piku.app.ui.screens.LoginScreen
 import com.piku.app.ui.screens.SplashScreen
 import com.piku.app.ui.screens.admin.AdminDashboardScreen
@@ -26,6 +27,11 @@ fun PikuRootNav() {
     NavHost(navController = navController, startDestination = PikuRutasRoot.Splash) {
         composable(PikuRutasRoot.Splash) {
             SplashScreen(
+                onIrElegirTipo = {
+                    navController.navigate(PikuRutasRoot.ElegirTipo) {
+                        popUpTo(PikuRutasRoot.Splash) { inclusive = true }
+                    }
+                },
                 onIrLogin = {
                     navController.navigate(PikuRutasRoot.Login) {
                         popUpTo(PikuRutasRoot.Splash) { inclusive = true }
@@ -39,6 +45,15 @@ fun PikuRootNav() {
                 onIrComercio = {
                     navController.navigate(PikuRutasRoot.Admin) {
                         popUpTo(PikuRutasRoot.Splash) { inclusive = true }
+                    }
+                }
+            )
+        }
+        composable(PikuRutasRoot.ElegirTipo) {
+            ElegirTipoUsuarioScreen(
+                onContinuar = {
+                    navController.navigate(PikuRutasRoot.Login) {
+                        popUpTo(PikuRutasRoot.ElegirTipo) { inclusive = true }
                     }
                 }
             )

@@ -10,13 +10,15 @@ interface NominatimApi {
         @Query("format") format: String = "json",
         @Query("limit") limit: Int = 5,
         @Query("viewbox") viewbox: String? = null,
-        @Query("bounded") bounded: Int? = null
+        @Query("bounded") bounded: Int? = null,
+        @Query("addressdetails") addressdetails: Int = 1
     ): List<NominatimResult>
 
     @GET("reverse")
     suspend fun reverseGeocode(
         @Query("lat") lat: Double,
         @Query("lon") lon: Double,
-        @Query("format") format: String = "json"
+        @Query("format") format: String = "json",
+        @Query("addressdetails") addressdetails: Int = 1
     ): NominatimReverseResult
 }

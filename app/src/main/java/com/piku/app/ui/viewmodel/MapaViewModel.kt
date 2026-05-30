@@ -10,6 +10,8 @@ import com.google.android.gms.location.Priority
 import com.google.android.gms.tasks.CancellationTokenSource
 import com.piku.app.data.model.Comercio
 import com.piku.app.data.model.Rubro
+import com.piku.app.data.nominatim.NominatimAddress
+import com.piku.app.data.nominatim.NominatimAddressFormatter
 import com.piku.app.data.nominatim.NominatimRepository
 import com.piku.app.data.nominatim.NominatimResult
 import com.piku.app.data.repository.MapaRepository
@@ -37,6 +39,8 @@ data class MapaUiState(
     val zoomMapa: Double = 13.0,
     val panelExpandido: Boolean = false,
     val busquedaDireccion: String = "",
+    val direccionEditadaPorUsuario: Boolean = false,
+    val contextoDireccion: NominatimAddress? = null,
     val resultadosBusqueda: List<NominatimResult> = emptyList(),
     val sugerenciasDireccion: List<NominatimResult> = emptyList(),
     val comercioSeleccionado: Comercio? = null,
@@ -135,7 +139,7 @@ class MapaViewModel(application: Application) : AndroidViewModel(application) {
                         zoomMapa = if (conGps) ZOOM_UBICACION else ZOOM_DEFAULT
                     )
                 }
-                if (conGps) cargarSugerenciasCercanas(lat, lon)
+                if (conGps) aplicarCalleInferida(lat, lon)
                 val comercios = repo.listarComerciosInicial(lat, lon)
                 _uiState.update {
                     it.copy(cargando = false, comercios = comercios, error = null)
@@ -184,11 +188,24 @@ class MapaViewModel(application: Application) : AndroidViewModel(application) {
         _uiState.update { it.copy(panelExpandido = !it.panelExpandido) }
     }
 
-    private fun cargarSugerenciasCercanas(lat: Double, lon: Double) {
+    private fun aplicarCalleInferida(lat: Double, lon: Double) {
         viewModelScope.launch {
             try {
                 val lista = nominatim.sugerenciasPorUbicacion(lat, lon)
-                _uiState.update { it.copy(sugerenciasDireccion = lista) }
+                val calle = nominatim.inferirCalle(lat, lon)
+                val contexto = lista.firstOrNull()?.address
+                _uiState.update { state ->
+                    val nuevoTexto = if (!state.direccionEditadaPorUsuario && !calle.isNullOrBlank()) {
+                        calle
+                    } else {
+                        state.busquedaDireccion
+                    }
+                    state.copy(
+                        sugerenciasDireccion = lista,
+                        contextoDireccion = contexto ?: state.contextoDireccion,
+                        busquedaDireccion = nuevoTexto
+                    )
+                }
             } catch (_: Exception) {
                 // sin sugerencias
             }
@@ -211,24 +228,61 @@ class MapaViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun buscarDireccion(query: String) {
-        _uiState.update { it.copy(busquedaDireccion = query) }
+        _uiState.update { it.copy(busquedaDireccion = query, direccionEditadaPorUsuario = true) }
         val s = _uiState.value
         if (query.length < 2) {
             _uiState.update { it.copy(resultadosBusqueda = emptyList()) }
             if (s.tieneUbicacionReal) {
-                cargarSugerenciasCercanas(s.userLat, s.userLon)
+                aplicarCalleInferida(s.userLat, s.userLon)
             }
             return
         }
         viewModelScope.launch {
             try {
-                val resultados = nominatim.buscarCerca(s.userLat, s.userLon, query)
-                _uiState.update { it.copy(resultadosBusqueda = resultados) }
+                val consulta = NominatimAddressFormatter.consultaGeocode(query, s.contextoDireccion)
+                val resultados = nominatim.buscarCerca(s.userLat, s.userLon, consulta)
+                _uiState.update { it.copy(resultadosBusqueda = resultados, error = null) }
             } catch (_: Exception) {
                 _uiState.update { it.copy(error = "Error en búsqueda de dirección") }
             }
         }
     }
+
+    fun irADireccion() {
+        val s = _uiState.value
+        val texto = s.busquedaDireccion.trim()
+        if (texto.length < 2) {
+            _uiState.update { it.copy(error = "Escribí calle y número") }
+            return
+        }
+        viewModelScope.launch {
+            _uiState.update { it.copy(cargandoViewport = true, error = null) }
+            try {
+                val resultado = nominatim.resolverDireccion(s.userLat, s.userLon, texto)
+                if (resultado == null) {
+                    _uiState.update {
+                        it.copy(
+                            cargandoViewport = false,
+                            error = "No encontramos esa dirección cerca"
+                        )
+                    }
+                    return@launch
+                }
+                centrarEnResultado(resultado, actualizarTexto = false)
+                _uiState.update { it.copy(cargandoViewport = false) }
+            } catch (_: Exception) {
+                _uiState.update {
+                    it.copy(
+                        cargandoViewport = false,
+                        error = "No pudimos ubicar la dirección"
+                    )
+                }
+            }
+        }
+    }
+
+    fun etiquetaDireccion(resultado: NominatimResult): String =
+        NominatimAddressFormatter.etiquetaSugerencia(resultado)
 
     fun seleccionarComercio(comercio: Comercio?) {
         _uiState.update { it.copy(comercioSeleccionado = comercio) }
@@ -237,9 +291,16 @@ class MapaViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun centrarEnResultado(resultado: NominatimResult) {
+    fun centrarEnResultado(resultado: NominatimResult, actualizarTexto: Boolean = true) {
         val lat = resultado.lat.toDoubleOrNull() ?: return
         val lon = resultado.lon.toDoubleOrNull() ?: return
+        val textoCampo = if (actualizarTexto) {
+            NominatimAddressFormatter.textoParaCampo(resultado).ifBlank {
+                NominatimAddressFormatter.calleDesde(resultado.address, resultado.displayName).orEmpty()
+            }
+        } else {
+            _uiState.value.busquedaDireccion
+        }
         _uiState.update {
             it.copy(
                 userLat = lat,
@@ -247,7 +308,9 @@ class MapaViewModel(application: Application) : AndroidViewModel(application) {
                 zoomMapa = ZOOM_UBICACION,
                 resultadosBusqueda = emptyList(),
                 sugerenciasDireccion = emptyList(),
-                busquedaDireccion = resultado.displayName.take(80)
+                busquedaDireccion = textoCampo,
+                contextoDireccion = resultado.address ?: it.contextoDireccion,
+                error = null
             )
         }
     }

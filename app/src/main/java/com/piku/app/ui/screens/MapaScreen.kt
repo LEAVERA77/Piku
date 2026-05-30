@@ -110,6 +110,7 @@ fun MapaScreen(
                 onToggleExpandido = viewModel::togglePanelExpandido,
                 onBusquedaNombreChange = viewModel::setBusquedaNombre,
                 onBusquedaDireccionChange = viewModel::buscarDireccion,
+                onIrDireccion = viewModel::irADireccion,
                 onToggleRubro = viewModel::toggleRubro
             )
             if (direccionesMostrar.isNotEmpty()) {
@@ -123,7 +124,7 @@ fun MapaScreen(
                     Column(Modifier.verticalScroll(rememberScrollState())) {
                         direccionesMostrar.forEach { r ->
                             Text(
-                                r.displayName,
+                                viewModel.etiquetaDireccion(r),
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .clickable { viewModel.centrarEnResultado(r) }

@@ -20,13 +20,17 @@ import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import com.piku.app.data.model.Rubro
 
@@ -41,6 +45,7 @@ fun MapaPanelCompacto(
     onToggleExpandido: () -> Unit,
     onBusquedaNombreChange: (String) -> Unit,
     onBusquedaDireccionChange: (String) -> Unit,
+    onIrDireccion: () -> Unit,
     onToggleRubro: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -80,18 +85,35 @@ fun MapaPanelCompacto(
                     )
                 }
             }
-            OutlinedTextField(
-                value = busquedaDireccion,
-                onValueChange = onBusquedaDireccionChange,
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 4.dp),
-                placeholder = { Text("Dirección cerca tuyo") },
-                singleLine = true,
-                shape = RoundedCornerShape(12.dp),
-                colors = fieldColors,
-                textStyle = MaterialTheme.typography.bodySmall
-            )
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                OutlinedTextField(
+                    value = busquedaDireccion,
+                    onValueChange = onBusquedaDireccionChange,
+                    modifier = Modifier.weight(1f),
+                    placeholder = { Text("Calle y número") },
+                    singleLine = true,
+                    shape = RoundedCornerShape(12.dp),
+                    colors = fieldColors,
+                    textStyle = MaterialTheme.typography.bodySmall,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go),
+                    keyboardActions = KeyboardActions(onGo = { onIrDireccion() })
+                )
+                TextButton(
+                    onClick = onIrDireccion,
+                    modifier = Modifier.padding(start = 4.dp)
+                ) {
+                    Text(
+                        "Ir",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
             Text(
                 "$contadorVisibles comercios",
                 style = MaterialTheme.typography.labelSmall,

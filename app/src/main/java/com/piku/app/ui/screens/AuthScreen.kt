@@ -45,7 +45,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.fragment.app.FragmentActivity
 import com.piku.app.data.config.ConfigLoader
+import com.piku.app.data.datastore.AppPreferences
 import com.piku.app.data.datastore.AuthDataStore
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import com.piku.app.data.model.LoginResponse
 import com.piku.app.data.repository.AuthRepository
 import com.piku.app.ui.components.BotonGoogle
@@ -134,6 +137,12 @@ fun AuthScreen(
             repo.validarSesionRemota() &&
             activity != null &&
             BiometricHelper.puedeUsarBiometrico(activity)
+        val rolPref = withContext(Dispatchers.IO) { AppPreferences.rolPreferidoInicio(context) }
+        if (rolPref == AppPreferences.ROL_COMERCIO) {
+            rolRegistro = RolRegistro.COMERCIO
+        } else if (rolPref == AppPreferences.ROL_CLIENTE) {
+            rolRegistro = RolRegistro.CLIENTE
+        }
     }
 
     fun navegarTrasLogin(res: LoginResponse) {

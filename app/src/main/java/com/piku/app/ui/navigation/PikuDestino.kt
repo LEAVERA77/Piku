@@ -37,6 +37,7 @@ fun PikuDestino.icono(): ImageVector = when (this) {
 
 object PikuRutasRoot {
     const val Splash = "splash"
+    const val ElegirTipo = "elegir_tipo"
     const val Login = "login"
     const val Cliente = "cliente"
     const val Admin = "admin"

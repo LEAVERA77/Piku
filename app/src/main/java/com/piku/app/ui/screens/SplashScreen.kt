@@ -28,7 +28,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.fragment.app.FragmentActivity
 import com.piku.app.data.config.ConfigLoader
+import com.piku.app.data.datastore.AppPreferences
 import com.piku.app.data.datastore.AuthDataStore
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import com.piku.app.data.repository.AuthRepository
 import com.piku.app.ui.components.PikuLogo
 import com.piku.app.ui.theme.AmarilloPiku
@@ -42,6 +45,7 @@ private enum class PasoSplash { CARGANDO, HUELLA, ERROR_HUELLA }
 
 @Composable
 fun SplashScreen(
+    onIrElegirTipo: () -> Unit,
     onIrLogin: () -> Unit,
     onIrCliente: () -> Unit,
     onIrComercio: () -> Unit
@@ -77,7 +81,10 @@ fun SplashScreen(
 
     LaunchedEffect(Unit) {
         if (!AuthDataStore.hasSession(context)) {
-            onIrLogin()
+            val elegirTipo = withContext(Dispatchers.IO) {
+                AppPreferences.necesitaElegirTipoUsuario(context)
+            }
+            if (elegirTipo) onIrElegirTipo() else onIrLogin()
             return@LaunchedEffect
         }
         val sesionValida = repo.validarSesionRemota()

@@ -28,6 +28,7 @@ object InstallSessionGuard {
             if (marcadorGuardado != installId) {
                 guardarMarcador(context, installId)
                 AppPreferences.reiniciarPromptUbicacion(context)
+                AppPreferences.reiniciarOnboarding(context)
             }
         }
     }
