@@ -17,7 +17,7 @@ class PerfilRepository(private val context: Context) {
 
     suspend fun obtenerPerfil(): PerfilUsuarioDto {
         try {
-            val res = api.perfilTyped()
+            val res = api.perfil()
             return res.usuario
         } catch (e: HttpException) {
             throw Exception(ApiErrorParser.mensaje(e), e)

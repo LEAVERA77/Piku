@@ -11,7 +11,7 @@ class NominatimRepository(context: Context) {
         if (q.length < 2) return emptyList()
         val delta = 0.12
         val viewbox = "${lon - delta},${lat + delta},${lon + delta},${lat - delta}"
-        return api.geocode(q = q, viewbox = viewbox, bounded = 1, limit = limite)
+        return api.geocode(query = q, viewbox = viewbox, bounded = 1, limit = limite)
     }
 
     suspend fun sugerenciasPorUbicacion(lat: Double, lon: Double): List<NominatimResult> {
@@ -31,7 +31,7 @@ class NominatimRepository(context: Context) {
             try {
                 val delta = 0.08
                 val viewbox = "${lon - delta},${lat + delta},${lon + delta},${lat - delta}"
-                val res = api.geocode(q = prefijo, viewbox = viewbox, bounded = 1, limit = 2)
+                val res = api.geocode(query = prefijo, viewbox = viewbox, bounded = 1, limit = 2)
                 res.forEach { r ->
                     if (sugerencias.none { it.displayName == r.displayName }) {
                         sugerencias.add(r)
