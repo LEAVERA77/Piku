@@ -80,6 +80,7 @@ fun MapaScreen(
                 userLon = if (uiState.tieneUbicacionReal) uiState.userLon else null,
                 onComercioClick = { viewModel.seleccionarComercio(it) },
                 onViewportChanged = viewModel::onViewportChanged,
+                zoomLevel = uiState.zoomMapa,
                 modifier = Modifier
                     .fillMaxSize()
                     .clip(RoundedCornerShape(0.dp))

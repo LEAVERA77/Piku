@@ -34,6 +34,7 @@ data class MapaUiState(
     val userLat: Double = -34.6037,
     val userLon: Double = -58.3816,
     val tieneUbicacionReal: Boolean = false,
+    val zoomMapa: Double = 13.0,
     val busquedaDireccion: String = "",
     val resultadosBusqueda: List<NominatimResult> = emptyList(),
     val comercioSeleccionado: Comercio? = null,
@@ -103,21 +104,28 @@ class MapaViewModel(application: Application) : AndroidViewModel(application) {
                 val location: Location? = if (conUbicacion) {
                     try {
                         fused.getCurrentLocation(
-                            Priority.PRIORITY_BALANCED_POWER_ACCURACY,
+                            Priority.PRIORITY_HIGH_ACCURACY,
                             CancellationTokenSource().token
                         ).await()
+                            ?: fused.lastLocation.await()
                     } catch (_: Exception) {
-                        null
+                        try {
+                            fused.lastLocation.await()
+                        } catch (_: Exception) {
+                            null
+                        }
                     }
                 } else null
 
                 val lat = location?.latitude ?: _uiState.value.userLat
                 val lon = location?.longitude ?: _uiState.value.userLon
+                val conGps = location != null
                 _uiState.update {
                     it.copy(
                         userLat = lat,
                         userLon = lon,
-                        tieneUbicacionReal = location != null
+                        tieneUbicacionReal = conGps,
+                        zoomMapa = if (conGps) 16.5 else it.zoomMapa
                     )
                 }
                 val comercios = repo.listarComerciosInicial(lat, lon)
@@ -159,6 +167,8 @@ class MapaViewModel(application: Application) : AndroidViewModel(application) {
     fun centrarEnUsuario() {
         if (!_uiState.value.tieneUbicacionReal) {
             cargarUbicacionYComercios(conUbicacion = true)
+        } else {
+            _uiState.update { it.copy(zoomMapa = 16.5) }
         }
     }
 

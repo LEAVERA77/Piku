@@ -1,6 +1,6 @@
 const { query } = require('../services/neon.service');
 const { responderError } = require('../utils/helpers');
-const { selectComerciosColumnas } = require('../utils/comercio.sql.util');
+const { selectComerciosColumnas, selectRecompensasPublicas } = require('../utils/comercio.sql.util');
 const { RUBROS } = require('../constants/rubros');
 
 function parseBbox(req) {
@@ -73,13 +73,11 @@ async function detalleComercio(req, res) {
     );
     if (!result.rows.length) return responderError(res, 404, 'Comercio no encontrado');
 
-    const recompensas = await query(
-      `SELECT id, nombre, descripcion, puntos_requeridos, icono, imagen_url
-       FROM piku_recompensas WHERE comercio_id = $1 AND activo = TRUE
-         AND (stock IS NULL OR stock > 0)
-       ORDER BY puntos_requeridos`,
-      [id]
-    );
+    const recQuery = await selectRecompensasPublicas();
+    let recompensas = { rows: [] };
+    if (recQuery.sql) {
+      recompensas = await query(recQuery.sql, [id]);
+    }
 
     return res.json({
       comercio: result.rows[0],

@@ -26,11 +26,9 @@ function tiene(set, col) {
 }
 
 async function refrescarCache() {
-  cache.piku_usuarios = null;
-  cache.piku_comercios = null;
-  cache.piku_invitaciones_comercio = null;
-  cache.piku_recompensas = null;
-  cache.piku_eventos_usuario = null;
+  Object.keys(cache).forEach((k) => {
+    cache[k] = null;
+  });
   const { invalidarCacheComerciosSelect } = require('./comercio.sql.util');
   invalidarCacheComerciosSelect();
 }

@@ -36,6 +36,7 @@ fun OsmdroidMapView(
     userLon: Double?,
     onComercioClick: (Comercio) -> Unit,
     onViewportChanged: ((minLat: Double, maxLat: Double, minLon: Double, maxLon: Double) -> Unit)?,
+    zoomLevel: Double = 14.0,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -93,7 +94,8 @@ fun OsmdroidMapView(
         onDispose { mapView.removeMapListener(listener) }
     }
 
-    LaunchedEffect(centerLat, centerLon) {
+    LaunchedEffect(centerLat, centerLon, zoomLevel) {
+        mapView.controller.setZoom(zoomLevel)
         mapView.controller.animateTo(GeoPoint(centerLat, centerLon))
     }
 

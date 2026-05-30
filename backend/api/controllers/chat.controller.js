@@ -43,6 +43,27 @@ async function comerciosCercanos(lat, lon, limite = 12) {
   return lista;
 }
 
+function generarRespuestaLocal(puntos, cercanos) {
+  if (!cercanos.length) {
+    return {
+      respuesta: `Tenés ${puntos} puntos. Aún no hay comercios con ubicación en el mapa; revisá la pestaña Canjes.`,
+      comercio_sugerido_id: null,
+    };
+  }
+  const puedeCanjear = cercanos.filter(
+    (c) => c.canje_puntos == null || puntos >= Number(c.canje_puntos)
+  );
+  const mejor = puedeCanjear[0] || cercanos[0];
+  const dist =
+    mejor.distancia != null ? `, a unos ${mejor.distancia} metros` : '';
+  const pts =
+    mejor.canje_puntos != null ? ` (canje desde ${mejor.canje_puntos} puntos)` : '';
+  return {
+    respuesta: `Con ${puntos} puntos te conviene ${mejor.nombre}${dist}${pts}. Tocá «Ver en mapa» para ubicarlo.`,
+    comercio_sugerido_id: mejor.id,
+  };
+}
+
 function extraerComercioSugerido(texto, comercios) {
   if (!texto || !comercios?.length) return null;
   const lower = texto.toLowerCase();
@@ -95,25 +116,27 @@ async function chatPiku(req, res) {
       user: JSON.stringify(contexto, null, 2),
     });
 
-    if (!ia.ok) {
-      return res.status(503).json({
-        error: ia.error,
-        respuesta:
-          'El asistente no está disponible ahora. Revisá que GestorNova o GROQ_API_KEY estén configurados en Render.',
-        comercio_sugerido_id: null,
-      });
-    }
-
-    let respuesta = ia.texto.trim();
+    let respuesta;
     let comercioSugeridoId = null;
-    const matchId = respuesta.match(/SUGERENCIA_ID:\s*([a-f0-9-]{36}|ninguno)/i);
-    if (matchId) {
-      const id = matchId[1];
-      if (id !== 'ninguno') comercioSugeridoId = id;
-      respuesta = respuesta.replace(/SUGERENCIA_ID:\s*[^\n]+/gi, '').trim();
-    }
-    if (!comercioSugeridoId) {
-      comercioSugeridoId = extraerComercioSugerido(respuesta, cercanos);
+    let via = 'local';
+
+    if (ia.ok) {
+      via = ia.via;
+      respuesta = ia.texto.trim();
+      const matchId = respuesta.match(/SUGERENCIA_ID:\s*([a-f0-9-]{36}|ninguno)/i);
+      if (matchId) {
+        const id = matchId[1];
+        if (id !== 'ninguno') comercioSugeridoId = id;
+        respuesta = respuesta.replace(/SUGERENCIA_ID:\s*[^\n]+/gi, '').trim();
+      }
+      if (!comercioSugeridoId) {
+        comercioSugeridoId = extraerComercioSugerido(respuesta, cercanos);
+      }
+    } else {
+      console.warn('chatPiku IA:', ia.error);
+      const local = generarRespuestaLocal(puntos, cercanos);
+      respuesta = local.respuesta;
+      comercioSugeridoId = local.comercio_sugerido_id;
     }
 
     try {
@@ -127,7 +150,7 @@ async function chatPiku(req, res) {
     return res.json({
       respuesta,
       comercio_sugerido_id: comercioSugeridoId,
-      via: ia.via,
+      via,
     });
   } catch (error) {
     console.error('chatPiku:', error);

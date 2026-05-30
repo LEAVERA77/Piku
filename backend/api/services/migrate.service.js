@@ -31,6 +31,11 @@ const CRITICAL_ALTERS = [
   'CREATE INDEX IF NOT EXISTS idx_piku_eventos_usuario_user ON piku_eventos_usuario(usuario_id, created_at DESC)',
   'ALTER TABLE piku_invitaciones_comercio ADD COLUMN IF NOT EXISTS expires_at TIMESTAMPTZ',
   'ALTER TABLE piku_invitaciones_comercio ADD COLUMN IF NOT EXISTS usado BOOLEAN NOT NULL DEFAULT FALSE',
+  'ALTER TABLE piku_recompensas ADD COLUMN IF NOT EXISTS puntos_requeridos INTEGER DEFAULT 100',
+  'ALTER TABLE piku_recompensas ADD COLUMN IF NOT EXISTS activo BOOLEAN NOT NULL DEFAULT TRUE',
+  'ALTER TABLE piku_recompensas ADD COLUMN IF NOT EXISTS stock INTEGER',
+  'ALTER TABLE piku_recompensas ADD COLUMN IF NOT EXISTS icono VARCHAR(16) DEFAULT \'🎁\'',
+  'ALTER TABLE piku_recompensas ADD COLUMN IF NOT EXISTS imagen_url TEXT',
 ];
 
 function splitSqlStatements(sql) {
