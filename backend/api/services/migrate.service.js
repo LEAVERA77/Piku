@@ -7,6 +7,7 @@ const MIGRATION_FILES = [
   'migration_google_auth.sql',
   'migration_recompensas_extend.sql',
   'migration_eventos_usuario.sql',
+  'migration_usuario_envio.sql',
 ];
 
 /** Columnas críticas que la API necesita (por si falla el SQL completo). */
@@ -36,6 +37,11 @@ const CRITICAL_ALTERS = [
   'ALTER TABLE piku_recompensas ADD COLUMN IF NOT EXISTS stock INTEGER',
   'ALTER TABLE piku_recompensas ADD COLUMN IF NOT EXISTS icono VARCHAR(16) DEFAULT \'🎁\'',
   'ALTER TABLE piku_recompensas ADD COLUMN IF NOT EXISTS imagen_url TEXT',
+  'ALTER TABLE piku_usuarios ADD COLUMN IF NOT EXISTS direccion_entrega TEXT',
+  'ALTER TABLE piku_usuarios ADD COLUMN IF NOT EXISTS ciudad VARCHAR(100)',
+  'ALTER TABLE piku_usuarios ADD COLUMN IF NOT EXISTS provincia VARCHAR(100)',
+  'ALTER TABLE piku_usuarios ADD COLUMN IF NOT EXISTS codigo_postal VARCHAR(20)',
+  'ALTER TABLE piku_usuarios ADD COLUMN IF NOT EXISTS notas_entrega TEXT',
 ];
 
 function splitSqlStatements(sql) {

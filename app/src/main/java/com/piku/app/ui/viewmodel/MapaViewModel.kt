@@ -10,7 +10,7 @@ import com.google.android.gms.location.Priority
 import com.google.android.gms.tasks.CancellationTokenSource
 import com.piku.app.data.model.Comercio
 import com.piku.app.data.model.Rubro
-import com.piku.app.data.nominatim.NominatimClient
+import com.piku.app.data.nominatim.NominatimRepository
 import com.piku.app.data.nominatim.NominatimResult
 import com.piku.app.data.repository.MapaRepository
 import kotlinx.coroutines.Job
@@ -35,8 +35,10 @@ data class MapaUiState(
     val userLon: Double = -58.3816,
     val tieneUbicacionReal: Boolean = false,
     val zoomMapa: Double = 13.0,
+    val panelExpandido: Boolean = false,
     val busquedaDireccion: String = "",
     val resultadosBusqueda: List<NominatimResult> = emptyList(),
+    val sugerenciasDireccion: List<NominatimResult> = emptyList(),
     val comercioSeleccionado: Comercio? = null,
     val error: String? = null,
     val chatAbierto: Boolean = false,
@@ -75,7 +77,12 @@ private fun coincideRubro(comercio: Comercio, catalogo: List<Rubro>, seleccionad
 class MapaViewModel(application: Application) : AndroidViewModel(application) {
 
     private val repo = MapaRepository(application)
-    private val nominatim = NominatimClient.get(application)
+    private val nominatim = NominatimRepository(application)
+
+    companion object {
+        private const val ZOOM_UBICACION = 18.0
+        private const val ZOOM_DEFAULT = 13.0
+    }
     private var viewportJob: Job? = null
     private var ultimoViewport: Viewport? = null
 
@@ -125,9 +132,10 @@ class MapaViewModel(application: Application) : AndroidViewModel(application) {
                         userLat = lat,
                         userLon = lon,
                         tieneUbicacionReal = conGps,
-                        zoomMapa = if (conGps) 16.5 else it.zoomMapa
+                        zoomMapa = if (conGps) ZOOM_UBICACION else ZOOM_DEFAULT
                     )
                 }
+                if (conGps) cargarSugerenciasCercanas(lat, lon)
                 val comercios = repo.listarComerciosInicial(lat, lon)
                 _uiState.update {
                     it.copy(cargando = false, comercios = comercios, error = null)
@@ -168,7 +176,22 @@ class MapaViewModel(application: Application) : AndroidViewModel(application) {
         if (!_uiState.value.tieneUbicacionReal) {
             cargarUbicacionYComercios(conUbicacion = true)
         } else {
-            _uiState.update { it.copy(zoomMapa = 16.5) }
+            _uiState.update { it.copy(zoomMapa = ZOOM_UBICACION) }
+        }
+    }
+
+    fun togglePanelExpandido() {
+        _uiState.update { it.copy(panelExpandido = !it.panelExpandido) }
+    }
+
+    private fun cargarSugerenciasCercanas(lat: Double, lon: Double) {
+        viewModelScope.launch {
+            try {
+                val lista = nominatim.sugerenciasPorUbicacion(lat, lon)
+                _uiState.update { it.copy(sugerenciasDireccion = lista) }
+            } catch (_: Exception) {
+                // sin sugerencias
+            }
         }
     }
 
@@ -189,13 +212,17 @@ class MapaViewModel(application: Application) : AndroidViewModel(application) {
 
     fun buscarDireccion(query: String) {
         _uiState.update { it.copy(busquedaDireccion = query) }
-        if (query.length < 3) {
+        val s = _uiState.value
+        if (query.length < 2) {
             _uiState.update { it.copy(resultadosBusqueda = emptyList()) }
+            if (s.tieneUbicacionReal) {
+                cargarSugerenciasCercanas(s.userLat, s.userLon)
+            }
             return
         }
         viewModelScope.launch {
             try {
-                val resultados = nominatim.geocode(query)
+                val resultados = nominatim.buscarCerca(s.userLat, s.userLon, query)
                 _uiState.update { it.copy(resultadosBusqueda = resultados) }
             } catch (_: Exception) {
                 _uiState.update { it.copy(error = "Error en búsqueda de dirección") }
@@ -214,7 +241,48 @@ class MapaViewModel(application: Application) : AndroidViewModel(application) {
         val lat = resultado.lat.toDoubleOrNull() ?: return
         val lon = resultado.lon.toDoubleOrNull() ?: return
         _uiState.update {
-            it.copy(userLat = lat, userLon = lon, resultadosBusqueda = emptyList())
+            it.copy(
+                userLat = lat,
+                userLon = lon,
+                zoomMapa = ZOOM_UBICACION,
+                resultadosBusqueda = emptyList(),
+                sugerenciasDireccion = emptyList(),
+                busquedaDireccion = resultado.displayName.take(80)
+            )
+        }
+    }
+
+    fun enviarPreguntaSugerida(texto: String) {
+        if (texto.isBlank() || _uiState.value.cargandoChat) return
+        viewModelScope.launch {
+            _uiState.update {
+                it.copy(
+                    cargandoChat = true,
+                    preguntaChat = "",
+                    mensajesChat = it.mensajesChat + MensajeChat("usuario", texto)
+                )
+            }
+            try {
+                val s = _uiState.value
+                val res = repo.chatPiku(texto, s.userLat, s.userLon)
+                _uiState.update {
+                    it.copy(
+                        cargandoChat = false,
+                        mensajesChat = it.mensajesChat + MensajeChat("piku", res.respuesta),
+                        comercioSugeridoId = res.comercio_sugerido_id
+                    )
+                }
+            } catch (e: Exception) {
+                _uiState.update {
+                    it.copy(
+                        cargandoChat = false,
+                        mensajesChat = it.mensajesChat + MensajeChat(
+                            "piku",
+                            e.message ?: "No pude conectar con el asistente."
+                        )
+                    )
+                }
+            }
         }
     }
 

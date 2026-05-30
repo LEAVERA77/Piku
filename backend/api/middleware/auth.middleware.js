@@ -30,7 +30,8 @@ async function authMiddleware(req, res, next) {
 
     const result = await query(
       `SELECT id, email, nombre, telefono, rol, avatar_url, activo,
-              puntos_saldo, comercio_id, created_at, updated_at
+              puntos_saldo, comercio_id, created_at, updated_at,
+              direccion_entrega, ciudad, provincia, codigo_postal, notas_entrega
        FROM piku_usuarios WHERE id = $1 LIMIT 1`,
       [userId]
     );

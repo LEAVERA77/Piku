@@ -2,12 +2,8 @@ package com.piku.app.ui.screens
 
 import android.Manifest
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -19,15 +15,11 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -37,13 +29,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
+import com.piku.app.ui.PikuChatSugerencias
 import com.piku.app.ui.components.CharlaConPikuSheet
+import com.piku.app.ui.components.MapaPanelCompacto
 import com.piku.app.ui.components.MarkerInfoBottomSheet
 import com.piku.app.ui.components.OsmdroidMapView
 import com.piku.app.ui.viewmodel.MapaViewModel
@@ -64,6 +57,12 @@ fun MapaScreen(
     )
     val tieneUbicacion = permisosUbicacion.allPermissionsGranted
 
+    val direccionesMostrar = if (uiState.busquedaDireccion.length >= 2) {
+        uiState.resultadosBusqueda
+    } else {
+        uiState.sugerenciasDireccion
+    }
+
     LaunchedEffect(tieneUbicacion) {
         viewModel.cargarUbicacionYComercios(conUbicacion = tieneUbicacion)
     }
@@ -81,9 +80,7 @@ fun MapaScreen(
                 onComercioClick = { viewModel.seleccionarComercio(it) },
                 onViewportChanged = viewModel::onViewportChanged,
                 zoomLevel = uiState.zoomMapa,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .clip(RoundedCornerShape(0.dp))
+                modifier = Modifier.fillMaxSize()
             )
         }
 
@@ -91,8 +88,8 @@ fun MapaScreen(
             CircularProgressIndicator(
                 modifier = Modifier
                     .align(Alignment.TopEnd)
-                    .padding(top = 140.dp, end = 16.dp)
-                    .size(28.dp),
+                    .padding(top = 72.dp, end = 12.dp)
+                    .size(24.dp),
                 strokeWidth = 2.dp
             )
         }
@@ -101,82 +98,38 @@ fun MapaScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .align(Alignment.TopCenter)
-                .padding(12.dp)
+                .padding(horizontal = 8.dp, vertical = 8.dp)
         ) {
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .shadow(4.dp, RoundedCornerShape(16.dp)),
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.96f)
-                )
-            ) {
-                Column(Modifier.padding(12.dp)) {
-                    Text("Mapa de ofertas", style = MaterialTheme.typography.titleMedium)
-                    OutlinedTextField(
-                        value = uiState.busquedaNombre,
-                        onValueChange = { viewModel.setBusquedaNombre(it) },
-                        modifier = Modifier.fillMaxWidth(),
-                        placeholder = { Text("Buscar comercio por nombre") },
-                        singleLine = true
-                    )
-                    OutlinedTextField(
-                        value = uiState.busquedaDireccion,
-                        onValueChange = { viewModel.buscarDireccion(it) },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 6.dp),
-                        placeholder = { Text("Ir a una dirección…") },
-                        singleLine = true
-                    )
-                    Text(
-                        "${uiState.contadorVisibles} comercios visibles",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(top = 6.dp)
-                    )
-                    if (uiState.rubros.isNotEmpty()) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(top = 8.dp)
-                                .horizontalScroll(rememberScrollState()),
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            uiState.rubros.forEach { rubro ->
-                                val selected = uiState.rubrosSeleccionados.contains(rubro.id)
-                                FilterChip(
-                                    selected = selected,
-                                    onClick = { viewModel.toggleRubro(rubro.id) },
-                                    label = { Text(rubro.label) },
-                                    colors = FilterChipDefaults.filterChipColors(
-                                        selectedContainerColor = MaterialTheme.colorScheme.primary,
-                                        selectedLabelColor = MaterialTheme.colorScheme.onPrimary
-                                    )
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-            if (uiState.resultadosBusqueda.isNotEmpty()) {
+            MapaPanelCompacto(
+                busquedaNombre = uiState.busquedaNombre,
+                busquedaDireccion = uiState.busquedaDireccion,
+                contadorVisibles = uiState.contadorVisibles,
+                rubros = uiState.rubros,
+                rubrosSeleccionados = uiState.rubrosSeleccionados,
+                expandido = uiState.panelExpandido,
+                onToggleExpandido = viewModel::togglePanelExpandido,
+                onBusquedaNombreChange = viewModel::setBusquedaNombre,
+                onBusquedaDireccionChange = viewModel::buscarDireccion,
+                onToggleRubro = viewModel::toggleRubro
+            )
+            if (direccionesMostrar.isNotEmpty()) {
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .heightIn(max = 140.dp)
+                        .heightIn(max = 120.dp)
                         .padding(top = 4.dp),
                     shape = RoundedCornerShape(12.dp)
                 ) {
                     Column(Modifier.verticalScroll(rememberScrollState())) {
-                        uiState.resultadosBusqueda.forEach { r ->
+                        direccionesMostrar.forEach { r ->
                             Text(
                                 r.displayName,
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .clickable { viewModel.centrarEnResultado(r) }
-                                    .padding(10.dp),
-                                style = MaterialTheme.typography.bodySmall
+                                    .padding(horizontal = 10.dp, vertical = 8.dp),
+                                style = MaterialTheme.typography.bodySmall,
+                                maxLines = 2
                             )
                         }
                     }
@@ -189,8 +142,7 @@ fun MapaScreen(
                 onClick = { permisosUbicacion.launchMultiplePermissionRequest() },
                 modifier = Modifier
                     .align(Alignment.BottomStart)
-                    .padding(start = 16.dp, bottom = 88.dp),
-                containerColor = MaterialTheme.colorScheme.secondaryContainer
+                    .padding(start = 12.dp, bottom = 88.dp)
             ) {
                 Text("📍", style = MaterialTheme.typography.labelSmall)
             }
@@ -199,7 +151,7 @@ fun MapaScreen(
                 onClick = { viewModel.centrarEnUsuario() },
                 modifier = Modifier
                     .align(Alignment.BottomStart)
-                    .padding(start = 16.dp, bottom = 88.dp)
+                    .padding(start = 12.dp, bottom = 88.dp)
             ) {
                 Icon(Icons.Default.MyLocation, contentDescription = "Mi ubicación")
             }
@@ -209,21 +161,21 @@ fun MapaScreen(
             onClick = { viewModel.abrirChat() },
             modifier = Modifier
                 .align(Alignment.BottomEnd)
-                .padding(end = 16.dp, bottom = 88.dp),
-            containerColor = MaterialTheme.colorScheme.primary
+                .padding(end = 12.dp, bottom = 88.dp),
+            shape = RoundedCornerShape(16.dp)
         ) {
-            Text("💬", style = MaterialTheme.typography.titleMedium)
+            Text("💬")
         }
 
         uiState.error?.let {
             Text(
                 text = it,
                 color = MaterialTheme.colorScheme.onErrorContainer,
+                style = MaterialTheme.typography.bodySmall,
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
-                    .padding(16.dp)
-                    .padding(bottom = 72.dp),
-                style = MaterialTheme.typography.bodySmall
+                    .padding(12.dp)
+                    .padding(bottom = 72.dp)
             )
         }
     }
@@ -246,8 +198,10 @@ fun MapaScreen(
             pregunta = uiState.preguntaChat,
             cargando = uiState.cargandoChat,
             comercioSugeridoId = uiState.comercioSugeridoId,
+            preguntasSugeridas = PikuChatSugerencias.preguntas,
             onPreguntaChange = viewModel::setPreguntaChat,
             onEnviar = viewModel::enviarPreguntaChat,
+            onPreguntaSugerida = viewModel::enviarPreguntaSugerida,
             onVerEnMapa = viewModel::seleccionarComercioSugerido,
             onDismiss = viewModel::cerrarChat
         )

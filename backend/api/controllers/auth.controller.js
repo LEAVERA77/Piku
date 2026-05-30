@@ -611,8 +611,33 @@ async function actualizarPerfil(req, res) {
   try {
     const nombre = req.body.nombre != null ? sanitizarInput(req.body.nombre, 255) : undefined;
     const telefono = req.body.telefono != null ? sanitizarInput(req.body.telefono, 50) : undefined;
-    const avatarUrl = req.body.avatarUrl != null ? sanitizarInput(req.body.avatarUrl, 500) : undefined;
+    const avatarUrl =
+      req.body.avatarUrl != null
+        ? sanitizarInput(req.body.avatarUrl, 500)
+        : req.body.avatar_url != null
+          ? sanitizarInput(req.body.avatar_url, 500)
+          : undefined;
     const password = req.body.password != null ? String(req.body.password) : undefined;
+    const direccionEntrega =
+      req.body.direccionEntrega != null
+        ? sanitizarInput(req.body.direccionEntrega, 500)
+        : req.body.direccion_entrega != null
+          ? sanitizarInput(req.body.direccion_entrega, 500)
+          : undefined;
+    const ciudad = req.body.ciudad != null ? sanitizarInput(req.body.ciudad, 100) : undefined;
+    const provincia = req.body.provincia != null ? sanitizarInput(req.body.provincia, 100) : undefined;
+    const codigoPostal =
+      req.body.codigoPostal != null
+        ? sanitizarInput(req.body.codigoPostal, 20)
+        : req.body.codigo_postal != null
+          ? sanitizarInput(req.body.codigo_postal, 20)
+          : undefined;
+    const notasEntrega =
+      req.body.notasEntrega != null
+        ? sanitizarInput(req.body.notasEntrega, 300)
+        : req.body.notas_entrega != null
+          ? sanitizarInput(req.body.notas_entrega, 300)
+          : undefined;
 
     const campos = [];
     const valores = [];
@@ -630,6 +655,26 @@ async function actualizarPerfil(req, res) {
       campos.push(`avatar_url = $${idx++}`);
       valores.push(avatarUrl || null);
     }
+    if (direccionEntrega !== undefined) {
+      campos.push(`direccion_entrega = $${idx++}`);
+      valores.push(direccionEntrega || null);
+    }
+    if (ciudad !== undefined) {
+      campos.push(`ciudad = $${idx++}`);
+      valores.push(ciudad || null);
+    }
+    if (provincia !== undefined) {
+      campos.push(`provincia = $${idx++}`);
+      valores.push(provincia || null);
+    }
+    if (codigoPostal !== undefined) {
+      campos.push(`codigo_postal = $${idx++}`);
+      valores.push(codigoPostal || null);
+    }
+    if (notasEntrega !== undefined) {
+      campos.push(`notas_entrega = $${idx++}`);
+      valores.push(notasEntrega || null);
+    }
     if (password) {
       if (password.length < 6) return responderError(res, 400, 'Contraseña demasiado corta');
       campos.push(`password_hash = $${idx++}`);
@@ -642,7 +687,8 @@ async function actualizarPerfil(req, res) {
     valores.push(req.user.id);
 
     const sql = `UPDATE piku_usuarios SET ${campos.join(', ')} WHERE id = $${idx}
-                 RETURNING id, email, nombre, telefono, rol, avatar_url, puntos_saldo, comercio_id`;
+                 RETURNING id, email, nombre, telefono, rol, avatar_url, puntos_saldo, comercio_id,
+                           direccion_entrega, ciudad, provincia, codigo_postal, notas_entrega`;
     const updated = await query(sql, valores);
 
     return res.json({

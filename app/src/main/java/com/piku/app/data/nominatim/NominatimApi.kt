@@ -8,7 +8,9 @@ interface NominatimApi {
     suspend fun geocode(
         @Query("q") query: String,
         @Query("format") format: String = "json",
-        @Query("limit") limit: Int = 5
+        @Query("limit") limit: Int = 5,
+        @Query("viewbox") viewbox: String? = null,
+        @Query("bounded") bounded: Int? = null
     ): List<NominatimResult>
 
     @GET("reverse")

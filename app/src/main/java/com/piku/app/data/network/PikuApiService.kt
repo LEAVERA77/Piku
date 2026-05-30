@@ -1,6 +1,10 @@
 package com.piku.app.data.network
 
+import com.piku.app.data.model.ActualizarPerfilRequest
+import com.piku.app.data.model.ActualizarPerfilResponse
+import com.piku.app.data.model.AvatarUploadResponse
 import com.piku.app.data.model.ChatPikuRequest
+import com.piku.app.data.model.PerfilResponse
 import com.piku.app.data.model.ChatPikuResponse
 import com.piku.app.data.model.ComercioDetalleResponse
 import com.piku.app.data.model.ComerciosResponse
@@ -17,7 +21,11 @@ import com.piku.app.data.model.RegistroRequest
 import com.piku.app.data.model.RecompensaSingleResponse
 import com.piku.app.data.model.RecompensasListResponse
 import okhttp3.MultipartBody
+import okhttp3.MultipartBody
 import retrofit2.http.Body
+import retrofit2.http.Multipart
+import retrofit2.http.PUT
+import retrofit2.http.Part
 import retrofit2.http.DELETE
 import retrofit2.http.GET
 import retrofit2.http.Multipart
@@ -45,7 +53,14 @@ interface PikuApiService {
     suspend fun registroComercioGoogle(@Body body: RegistroComercioGoogleRequest): LoginResponse
 
     @GET("api/auth/perfil")
-    suspend fun perfil(): Map<String, Any>
+    suspend fun perfil(): PerfilResponse
+
+    @PUT("api/auth/perfil")
+    suspend fun actualizarPerfil(@Body body: ActualizarPerfilRequest): ActualizarPerfilResponse
+
+    @Multipart
+    @POST("api/usuario/avatar")
+    suspend fun subirAvatar(@Part file: MultipartBody.Part): AvatarUploadResponse
 
     @GET("api/rubros")
     suspend fun listarRubros(): RubrosResponse

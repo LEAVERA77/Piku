@@ -1,5 +1,6 @@
 const { query, withTransaction } = require('../services/neon.service');
 const { registrarEvento } = require('../services/eventos.service');
+const { uploadImage, configurado: cloudinaryOk } = require('../services/cloudinary.service');
 const { generarCodigoUnico, responderError } = require('../utils/helpers');
 
 /**
@@ -207,9 +208,30 @@ async function canjearRecompensa(req, res) {
   }
 }
 
+async function uploadAvatar(req, res) {
+  try {
+    if (!req.file) return responderError(res, 400, 'Archivo de imagen requerido');
+    if (!cloudinaryOk) return responderError(res, 503, 'Cloudinary no configurado en el servidor');
+
+    const dataUri = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
+    const { url } = await uploadImage(dataUri, 'avatars');
+
+    const updated = await query(
+      'UPDATE piku_usuarios SET avatar_url = $1, updated_at = NOW() WHERE id = $2 RETURNING avatar_url',
+      [url, req.user.id]
+    );
+
+    return res.json({ mensaje: 'Avatar actualizado', avatar_url: updated.rows[0].avatar_url });
+  } catch (error) {
+    console.error('uploadAvatar:', error);
+    return responderError(res, 500, 'Error al subir avatar', { detail: error.message });
+  }
+}
+
 module.exports = {
   getSaldoPuntos,
   getHistorialPuntos,
   getRecompensasDisponibles,
   canjearRecompensa,
+  uploadAvatar,
 };

@@ -1,6 +1,7 @@
 package com.piku.app.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -11,7 +12,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -35,8 +38,10 @@ fun CharlaConPikuSheet(
     pregunta: String,
     cargando: Boolean,
     comercioSugeridoId: String?,
+    preguntasSugeridas: List<String>,
     onPreguntaChange: (String) -> Unit,
     onEnviar: () -> Unit,
+    onPreguntaSugerida: (String) -> Unit,
     onVerEnMapa: () -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -61,17 +66,31 @@ fun CharlaConPikuSheet(
         ) {
             Text("Charla con Piku", style = MaterialTheme.typography.titleLarge)
             Text(
-                "Te ayudo a elegir dónde canjear tus puntos",
+                "Elegí una pregunta o escribí la tuya",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(bottom = 12.dp)
+                modifier = Modifier.padding(bottom = 8.dp)
             )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                preguntasSugeridas.forEach { sugerencia ->
+                    AssistChip(
+                        onClick = { onPreguntaSugerida(sugerencia) },
+                        label = { Text(sugerencia, style = MaterialTheme.typography.labelSmall) },
+                        enabled = !cargando
+                    )
+                }
+            }
             LazyColumn(
                 state = listState,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .heightIn(min = 120.dp, max = 300.dp)
-                    .padding(bottom = 8.dp),
+                    .heightIn(min = 100.dp, max = 260.dp)
+                    .padding(vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 items(mensajes) { msg ->
@@ -116,14 +135,16 @@ fun CharlaConPikuSheet(
                     value = pregunta,
                     onValueChange = onPreguntaChange,
                     modifier = Modifier.weight(1f),
-                    placeholder = { Text("¿Qué me conviene cerca?") },
+                    placeholder = { Text("Tu pregunta…") },
                     singleLine = true,
-                    enabled = !cargando
+                    enabled = !cargando,
+                    shape = RoundedCornerShape(12.dp)
                 )
                 Button(
                     onClick = onEnviar,
                     enabled = !cargando && pregunta.isNotBlank(),
-                    modifier = Modifier.padding(start = 8.dp)
+                    modifier = Modifier.padding(start = 8.dp),
+                    shape = RoundedCornerShape(12.dp)
                 ) {
                     if (cargando) {
                         CircularProgressIndicator(
