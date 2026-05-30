@@ -22,6 +22,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import com.piku.app.data.config.ConfigLoader
 import com.piku.app.data.model.Comercio
+import com.piku.app.data.model.Rubro
 import com.piku.app.ui.media.PikuImages
 import com.piku.app.ui.theme.VerdePiku
 import com.piku.app.utils.DistanceCalculator
@@ -30,9 +31,14 @@ import com.piku.app.utils.DistanceCalculator
 @Composable
 fun MarkerInfoBottomSheet(
     comercio: Comercio,
+    rubros: List<Rubro> = emptyList(),
     onDismiss: () -> Unit,
     onVerOfertas: () -> Unit
 ) {
+    val rubroLabel = rubros.firstOrNull { rubro ->
+        val cat = comercio.categoria?.lowercase()?.trim() ?: return@firstOrNull false
+        rubro.categorias.any { c -> cat == c.lowercase() || cat.contains(c.lowercase()) }
+    }?.label ?: comercio.categoria?.replaceFirstChar { it.uppercase() }
     val context = LocalContext.current
     val cloud = ConfigLoader.cloudinaryCloudName(context)
     val logoUrl = comercio.logoUrl
@@ -60,6 +66,20 @@ fun MarkerInfoBottomSheet(
             )
             Spacer(modifier = Modifier.height(12.dp))
             Text(text = comercio.nombre, style = MaterialTheme.typography.headlineSmall)
+            rubroLabel?.let {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+            comercio.puntosMinCanje?.let { pts ->
+                Text(
+                    text = "Canje desde $pts puntos",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
             comercio.direccion?.let {
                 Text(
                     text = it,

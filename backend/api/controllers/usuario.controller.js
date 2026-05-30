@@ -1,4 +1,5 @@
 const { query, withTransaction } = require('../services/neon.service');
+const { registrarEvento } = require('../services/eventos.service');
 const { generarCodigoUnico, responderError } = require('../utils/helpers');
 
 /**
@@ -180,6 +181,14 @@ async function canjearRecompensa(req, res) {
 
       return { recompensa, codigoCanje, nuevoSaldo };
     });
+
+    try {
+      await registrarEvento(req.user.id, 'canje', resultado.recompensa.comercio_id, {
+        recompensa_id: resultado.recompensa.id,
+      });
+    } catch (e) {
+      console.warn('evento canje:', e.message);
+    }
 
     return res.json({
       mensaje: `¡Canjeaste ${resultado.recompensa.nombre}!`,

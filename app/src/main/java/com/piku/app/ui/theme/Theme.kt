@@ -15,10 +15,10 @@ import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
 private val LightColorScheme = lightColorScheme(
-    primary = VerdePiku,
+    primary = AzulPiku,
     onPrimary = TarjetaBlanca,
-    primaryContainer = PrimarioContainer,
-    onPrimaryContainer = Color(0xFF134E4A),
+    primaryContainer = AzulPikuContainer,
+    onPrimaryContainer = Color(0xFF1E3A8A),
     secondary = NaranjaPiku,
     onSecondary = TarjetaBlanca,
     secondaryContainer = SecundarioContainer,

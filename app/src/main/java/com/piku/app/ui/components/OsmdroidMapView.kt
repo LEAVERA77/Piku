@@ -15,10 +15,15 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.piku.app.R
 import com.piku.app.data.model.Comercio
+import org.osmdroid.events.MapListener
+import org.osmdroid.events.ScrollEvent
+import org.osmdroid.events.ZoomEvent
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
+import org.osmdroid.util.BoundingBox
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
+import org.osmdroid.views.overlay.Polygon
 import org.osmdroid.views.overlay.infowindow.InfoWindow
 
 @Composable
@@ -26,7 +31,10 @@ fun OsmdroidMapView(
     comercios: List<Comercio>,
     centerLat: Double,
     centerLon: Double,
+    userLat: Double?,
+    userLon: Double?,
     onComercioClick: (Comercio) -> Unit,
+    onViewportChanged: ((minLat: Double, maxLat: Double, minLon: Double, maxLon: Double) -> Unit)?,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -34,6 +42,11 @@ fun OsmdroidMapView(
     val pinIcon = remember {
         ContextCompat.getDrawable(context, R.drawable.ic_map_pin)?.let { drawable ->
             BitmapDrawable(context.resources, drawable.toBitmap(64, 80))
+        }
+    }
+    val userIcon = remember {
+        ContextCompat.getDrawable(context, R.drawable.ic_map_user_location)?.let { drawable ->
+            BitmapDrawable(context.resources, drawable.toBitmap(48, 48))
         }
     }
     val mapView = remember {
@@ -61,12 +74,47 @@ fun OsmdroidMapView(
         }
     }
 
+    DisposableEffect(mapView, onViewportChanged) {
+        if (onViewportChanged == null) return@DisposableEffect onDispose {}
+        val listener = object : MapListener {
+            override fun onScroll(event: ScrollEvent?): Boolean {
+                notifyViewport(mapView, onViewportChanged)
+                return false
+            }
+
+            override fun onZoom(event: ZoomEvent?): Boolean {
+                notifyViewport(mapView, onViewportChanged)
+                return false
+            }
+        }
+        mapView.addMapListener(listener)
+        mapView.post { notifyViewport(mapView, onViewportChanged) }
+        onDispose { mapView.removeMapListener(listener) }
+    }
+
     LaunchedEffect(centerLat, centerLon) {
         mapView.controller.animateTo(GeoPoint(centerLat, centerLon))
     }
 
-    LaunchedEffect(comercios, pinIcon) {
+    LaunchedEffect(comercios, userLat, userLon, pinIcon, userIcon) {
         mapView.overlays.clear()
+        if (userLat != null && userLon != null) {
+            val userPoint = GeoPoint(userLat, userLon)
+            val precision = Polygon(mapView).apply {
+                points = Polygon.pointsAsCircle(userPoint, 80.0)
+                fillPaint.color = 0x332563EB
+                outlinePaint.color = 0x882563EB
+                outlinePaint.strokeWidth = 2f
+            }
+            mapView.overlays.add(precision)
+            val userMarker = Marker(mapView).apply {
+                position = userPoint
+                title = "Tú estás aquí"
+                setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
+                icon = userIcon
+            }
+            mapView.overlays.add(userMarker)
+        }
         comercios.forEach { comercio ->
             val lat = comercio.lat ?: return@forEach
             val lon = comercio.lon ?: return@forEach
@@ -93,4 +141,12 @@ fun OsmdroidMapView(
         modifier = modifier,
         update = { it.invalidate() }
     )
+}
+
+private fun notifyViewport(
+    mapView: MapView,
+    onViewportChanged: (minLat: Double, maxLat: Double, minLon: Double, maxLon: Double) -> Unit
+) {
+    val bb: BoundingBox = mapView.boundingBox ?: return
+    onViewportChanged(bb.latSouth, bb.latNorth, bb.lonWest, bb.lonEast)
 }

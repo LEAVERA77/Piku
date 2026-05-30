@@ -7,6 +7,8 @@ const usuarioRoutes = require('./routes/usuario.routes');
 const qrRoutes = require('./routes/qr.routes');
 const comercioRoutes = require('./routes/comercio.routes');
 const publicRoutes = require('./routes/public.routes');
+const publicController = require('./controllers/public.controller');
+const chatRoutes = require('./routes/chat.routes');
 const { runStartupMigrations } = require('./services/migrate.service');
 
 const app = express();
@@ -39,7 +41,9 @@ app.use('/api/auth', authRoutes);
 app.use('/api/usuario', usuarioRoutes);
 app.use('/api/qr', qrRoutes);
 app.use('/api/comercio', comercioRoutes);
+app.get('/api/rubros', publicController.listarRubros);
 app.use('/api/public', publicRoutes);
+app.use('/api', chatRoutes);
 
 // Manejo de rutas no encontradas
 app.use((req, res) => {

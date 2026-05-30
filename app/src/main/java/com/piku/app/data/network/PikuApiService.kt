@@ -1,7 +1,11 @@
 package com.piku.app.data.network
 
+import com.piku.app.data.model.ChatPikuRequest
+import com.piku.app.data.model.ChatPikuResponse
 import com.piku.app.data.model.ComercioDetalleResponse
 import com.piku.app.data.model.ComerciosResponse
+import com.piku.app.data.model.EventoRequest
+import com.piku.app.data.model.RubrosResponse
 import com.piku.app.data.model.GoogleLoginRequest
 import com.piku.app.data.model.ImagenUploadResponse
 import com.piku.app.data.model.LoginRequest
@@ -21,6 +25,7 @@ import retrofit2.http.POST
 import retrofit2.http.PUT
 import retrofit2.http.Part
 import retrofit2.http.Path
+import retrofit2.http.Query
 
 interface PikuApiService {
 
@@ -42,8 +47,22 @@ interface PikuApiService {
     @GET("api/auth/perfil")
     suspend fun perfil(): Map<String, Any>
 
+    @GET("api/rubros")
+    suspend fun listarRubros(): RubrosResponse
+
     @GET("api/public/comercios")
-    suspend fun listarComercios(): ComerciosResponse
+    suspend fun listarComercios(
+        @Query("minLat") minLat: Double? = null,
+        @Query("maxLat") maxLat: Double? = null,
+        @Query("minLon") minLon: Double? = null,
+        @Query("maxLon") maxLon: Double? = null
+    ): ComerciosResponse
+
+    @POST("api/chat-piku")
+    suspend fun chatPiku(@Body body: ChatPikuRequest): ChatPikuResponse
+
+    @POST("api/usuario/eventos")
+    suspend fun registrarEvento(@Body body: EventoRequest): Map<String, Any>
 
     @GET("api/public/comercios/{id}")
     suspend fun detalleComercio(@Path("id") id: String): ComercioDetalleResponse

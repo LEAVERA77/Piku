@@ -2,7 +2,11 @@ package com.piku.app.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// Colores de marca Piku (paleta moderna, primarios)
+// Colores de marca Piku (paleta moderna)
+val AzulPiku = Color(0xFF2563EB)
+val AzulPikuContainer = Color(0xFFDBEAFE)
+
+// Primario histórico (acento secundario en mapa)
 val VerdePiku = Color(0xFF0D9488)
 val NaranjaPiku = Color(0xFFEA580C)
 val FondoPiku = Color(0xFFF1F5F9)

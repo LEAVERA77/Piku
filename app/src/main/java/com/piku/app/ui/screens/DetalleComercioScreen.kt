@@ -37,6 +37,7 @@ import androidx.compose.ui.unit.dp
 import com.piku.app.data.config.ConfigLoader
 import com.piku.app.data.model.ComercioDetalleResponse
 import com.piku.app.data.repository.ComercioRepository
+import com.piku.app.data.repository.MapaRepository
 import com.piku.app.ui.components.PikuPhotoImage
 import com.piku.app.ui.media.PikuImages
 import com.piku.app.ui.theme.NaranjaPiku
@@ -53,6 +54,7 @@ fun DetalleComercioScreen(
     var error by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(comercioId) {
+        MapaRepository(context).registrarEvento("vista_comercio", comercioId)
         cargando = true
         try {
             detalle = ComercioRepository(context).detalleComercio(comercioId)

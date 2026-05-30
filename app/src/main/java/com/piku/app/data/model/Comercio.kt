@@ -11,6 +11,8 @@ data class Comercio(
     val lon: Double? = null,
     @SerializedName("logo_url") val logoUrl: String? = null,
     @SerializedName("suscripcion_activa") val suscripcionActiva: Boolean = true,
+    val categoria: String? = null,
+    @SerializedName("puntos_min_canje") val puntosMinCanje: Int? = null,
     @SerializedName("created_at") val createdAt: String? = null,
     /** Distancia en metros desde el usuario (calculada en app). */
     val distanciaMetros: Int? = null

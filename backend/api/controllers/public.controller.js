@@ -1,26 +1,71 @@
 const { query } = require('../services/neon.service');
 const { responderError } = require('../utils/helpers');
 
+const { RUBROS } = require('../constants/rubros');
+
 const COLUMNAS_COMERCIO = `
-  id, usuario_id, nombre, direccion, lat, lon, logo_url, suscripcion_activa, created_at
+  c.id, c.usuario_id, c.nombre, c.direccion, c.lat, c.lon, c.logo_url,
+  c.suscripcion_activa, c.categoria, c.created_at,
+  (SELECT MIN(r.puntos_requeridos)
+   FROM piku_recompensas r
+   WHERE r.comercio_id = c.id AND r.activo = TRUE
+     AND (r.stock IS NULL OR r.stock > 0)
+     AND (r.fecha_inicio IS NULL OR r.fecha_inicio <= NOW())
+     AND (r.fecha_fin IS NULL OR r.fecha_fin >= NOW())) AS puntos_min_canje
 `.trim();
 
+function parseBbox(req) {
+  const minLat = parseFloat(req.query.minLat ?? req.query.min_lat);
+  const maxLat = parseFloat(req.query.maxLat ?? req.query.max_lat);
+  const minLon = parseFloat(req.query.minLon ?? req.query.min_lon);
+  const maxLon = parseFloat(req.query.maxLon ?? req.query.max_lon);
+  if (
+    [minLat, maxLat, minLon, maxLon].every((n) => Number.isFinite(n)) &&
+    minLat <= maxLat &&
+    minLon <= maxLon
+  ) {
+    return { minLat, maxLat, minLon, maxLon };
+  }
+  return null;
+}
+
 /**
- * Lista comercios activos (público).
+ * Lista comercios activos (público). Opcional: bbox (viewport) para carga rápida.
  */
 async function listarComercios(req, res) {
   try {
+    const bbox = parseBbox(req);
+    const params = [];
+    let where = 'WHERE COALESCE(c.suscripcion_activa, TRUE) = TRUE';
+
+    if (bbox) {
+      params.push(bbox.minLat, bbox.maxLat, bbox.minLon, bbox.maxLon);
+      where += ` AND c.lat IS NOT NULL AND c.lon IS NOT NULL
+        AND c.lat BETWEEN $1 AND $2 AND c.lon BETWEEN $3 AND $4`;
+    }
+
     const result = await query(
       `SELECT ${COLUMNAS_COMERCIO}
-       FROM piku_comercios
-       WHERE COALESCE(suscripcion_activa, TRUE) = TRUE
-       ORDER BY nombre ASC`
+       FROM piku_comercios c
+       ${where}
+       ORDER BY c.nombre ASC
+       LIMIT 200`,
+      params
     );
     return res.json({ comercios: result.rows });
   } catch (error) {
     console.error('listarComercios:', error);
     return responderError(res, 500, 'Error al listar comercios', { detail: error.message });
   }
+}
+
+/**
+ * Catálogo de rubros para filtros del mapa.
+ */
+async function listarRubros(req, res) {
+  return res.json({
+    rubros: RUBROS.map(({ id, label, categorias }) => ({ id, label, categorias })),
+  });
 }
 
 /**
@@ -31,8 +76,8 @@ async function detalleComercio(req, res) {
     const { id } = req.params;
     const result = await query(
       `SELECT ${COLUMNAS_COMERCIO}
-       FROM piku_comercios
-       WHERE id = $1 AND COALESCE(suscripcion_activa, TRUE) = TRUE`,
+       FROM piku_comercios c
+       WHERE c.id = $1 AND COALESCE(c.suscripcion_activa, TRUE) = TRUE`,
       [id]
     );
     if (!result.rows.length) return responderError(res, 404, 'Comercio no encontrado');
@@ -89,4 +134,4 @@ async function listarRecompensasPublicas(req, res) {
   }
 }
 
-module.exports = { listarComercios, detalleComercio, listarRecompensasPublicas };
+module.exports = { listarComercios, detalleComercio, listarRecompensasPublicas, listarRubros };

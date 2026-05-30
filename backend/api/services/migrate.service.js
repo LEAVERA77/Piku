@@ -6,6 +6,7 @@ const MIGRATION_FILES = [
   'migration_neon_production_sync.sql',
   'migration_google_auth.sql',
   'migration_recompensas_extend.sql',
+  'migration_eventos_usuario.sql',
 ];
 
 /** Columnas críticas que la API necesita (por si falla el SQL completo). */
