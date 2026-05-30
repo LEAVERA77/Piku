@@ -2,6 +2,7 @@ package com.piku.app.data.security
 
 import android.content.Context
 import android.os.Build
+import com.piku.app.data.datastore.AppPreferences
 import com.piku.app.data.datastore.AuthDataStore
 import kotlinx.coroutines.runBlocking
 import java.io.File
@@ -26,9 +27,12 @@ object InstallSessionGuard {
             }
             if (marcadorGuardado != installId) {
                 guardarMarcador(context, installId)
+                AppPreferences.reiniciarPromptUbicacion(context)
             }
         }
     }
+
+    fun currentInstallId(context: Context): String = obtenerInstallId(context)
 
     private fun obtenerInstallId(context: Context): String {
         val pm = context.packageManager

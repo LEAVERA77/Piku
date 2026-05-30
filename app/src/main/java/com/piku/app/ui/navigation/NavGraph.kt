@@ -15,6 +15,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.piku.app.ui.components.BarraNavegacion
+import com.piku.app.ui.components.UbicacionPermisoGate
 import com.piku.app.ui.screens.CanjesScreen
 import com.piku.app.ui.screens.DetalleComercioScreen
 import com.piku.app.ui.screens.EscanerScreen
@@ -27,18 +28,19 @@ fun PikuClienteNavGraph(
     navController: NavHostController = rememberNavController(),
     onCerrarSesion: () -> Unit = {}
 ) {
-    Scaffold(
-        bottomBar = { BarraNavegacion(navController) }
-    ) { innerPadding ->
-        NavHost(
-            navController = navController,
-            startDestination = PikuDestino.Saldo.ruta,
-            modifier = Modifier.padding(innerPadding),
-            enterTransition = { fadeIn() + slideInHorizontally { it / 4 } },
-            exitTransition = { fadeOut() + slideOutHorizontally { -it / 4 } },
-            popEnterTransition = { fadeIn() + slideInHorizontally { -it / 4 } },
-            popExitTransition = { fadeOut() + slideOutHorizontally { it / 4 } }
-        ) {
+    UbicacionPermisoGate {
+        Scaffold(
+            bottomBar = { BarraNavegacion(navController) }
+        ) { innerPadding ->
+            NavHost(
+                navController = navController,
+                startDestination = PikuDestino.Saldo.ruta,
+                modifier = Modifier.padding(innerPadding),
+                enterTransition = { fadeIn() + slideInHorizontally { it / 4 } },
+                exitTransition = { fadeOut() + slideOutHorizontally { -it / 4 } },
+                popEnterTransition = { fadeIn() + slideInHorizontally { -it / 4 } },
+                popExitTransition = { fadeOut() + slideOutHorizontally { it / 4 } }
+            ) {
             composable(PikuDestino.Saldo.ruta) {
                 SaldoScreen(
                     onEscanearClick = {
@@ -69,6 +71,7 @@ fun PikuClienteNavGraph(
             composable(PikuDestino.Canjes.ruta) { CanjesScreen() }
             composable(PikuDestino.Perfil.ruta) {
                 PerfilScreen(onCerrarSesion = onCerrarSesion)
+            }
             }
         }
     }
