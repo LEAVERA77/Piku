@@ -20,6 +20,15 @@ const CRITICAL_ALTERS = [
   'ALTER TABLE piku_comercios ADD COLUMN IF NOT EXISTS usuario_id UUID',
   'ALTER TABLE piku_comercios ADD COLUMN IF NOT EXISTS suscripcion_activa BOOLEAN NOT NULL DEFAULT TRUE',
   'ALTER TABLE piku_comercios ADD COLUMN IF NOT EXISTS categoria VARCHAR(50)',
+  `CREATE TABLE IF NOT EXISTS piku_eventos_usuario (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    usuario_id UUID NOT NULL REFERENCES piku_usuarios(id) ON DELETE CASCADE,
+    tipo_evento VARCHAR(40) NOT NULL,
+    comercio_id UUID REFERENCES piku_comercios(id) ON DELETE SET NULL,
+    metadata JSONB,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  )`,
+  'CREATE INDEX IF NOT EXISTS idx_piku_eventos_usuario_user ON piku_eventos_usuario(usuario_id, created_at DESC)',
   'ALTER TABLE piku_invitaciones_comercio ADD COLUMN IF NOT EXISTS expires_at TIMESTAMPTZ',
   'ALTER TABLE piku_invitaciones_comercio ADD COLUMN IF NOT EXISTS usado BOOLEAN NOT NULL DEFAULT FALSE',
 ];

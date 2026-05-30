@@ -1,18 +1,7 @@
 const { query } = require('../services/neon.service');
 const { responderError } = require('../utils/helpers');
-
+const { selectComerciosColumnas } = require('../utils/comercio.sql.util');
 const { RUBROS } = require('../constants/rubros');
-
-const COLUMNAS_COMERCIO = `
-  c.id, c.usuario_id, c.nombre, c.direccion, c.lat, c.lon, c.logo_url,
-  c.suscripcion_activa, c.categoria, c.created_at,
-  (SELECT MIN(r.puntos_requeridos)
-   FROM piku_recompensas r
-   WHERE r.comercio_id = c.id AND r.activo = TRUE
-     AND (r.stock IS NULL OR r.stock > 0)
-     AND (r.fecha_inicio IS NULL OR r.fecha_inicio <= NOW())
-     AND (r.fecha_fin IS NULL OR r.fecha_fin >= NOW())) AS puntos_min_canje
-`.trim();
 
 function parseBbox(req) {
   const minLat = parseFloat(req.query.minLat ?? req.query.min_lat);
@@ -34,6 +23,7 @@ function parseBbox(req) {
  */
 async function listarComercios(req, res) {
   try {
+    const columnas = await selectComerciosColumnas();
     const bbox = parseBbox(req);
     const params = [];
     let where = 'WHERE COALESCE(c.suscripcion_activa, TRUE) = TRUE';
@@ -45,7 +35,7 @@ async function listarComercios(req, res) {
     }
 
     const result = await query(
-      `SELECT ${COLUMNAS_COMERCIO}
+      `SELECT ${columnas}
        FROM piku_comercios c
        ${where}
        ORDER BY c.nombre ASC
@@ -74,8 +64,9 @@ async function listarRubros(req, res) {
 async function detalleComercio(req, res) {
   try {
     const { id } = req.params;
+    const columnas = await selectComerciosColumnas();
     const result = await query(
-      `SELECT ${COLUMNAS_COMERCIO}
+      `SELECT ${columnas}
        FROM piku_comercios c
        WHERE c.id = $1 AND COALESCE(c.suscripcion_activa, TRUE) = TRUE`,
       [id]
@@ -86,12 +77,6 @@ async function detalleComercio(req, res) {
       `SELECT id, nombre, descripcion, puntos_requeridos, icono, imagen_url
        FROM piku_recompensas WHERE comercio_id = $1 AND activo = TRUE
          AND (stock IS NULL OR stock > 0)
-         AND (fecha_inicio IS NULL OR fecha_inicio <= NOW())
-         AND (fecha_fin IS NULL OR fecha_fin >= NOW())
-         AND (
-           max_usos_totales IS NULL OR max_usos_totales = 0
-           OR usos_actuales < max_usos_totales
-         )
        ORDER BY puntos_requeridos`,
       [id]
     );

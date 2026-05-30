@@ -17,7 +17,9 @@ object ApiErrorParser {
         val body = e.response()?.errorBody()?.string() ?: return porCodigo
         return try {
             val json = JSONObject(body)
-            json.optString("error").ifBlank { porCodigo }
+            json.optString("respuesta").ifBlank {
+                json.optString("error").ifBlank { porCodigo }
+            }
         } catch (_: Exception) {
             porCodigo
         }

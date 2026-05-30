@@ -113,20 +113,24 @@ class MapaViewModel(application: Application) : AndroidViewModel(application) {
 
                 val lat = location?.latitude ?: _uiState.value.userLat
                 val lon = location?.longitude ?: _uiState.value.userLon
-                val comercios = repo.listarComerciosInicial(lat, lon)
                 _uiState.update {
                     it.copy(
-                        cargando = false,
-                        comercios = comercios,
                         userLat = lat,
                         userLon = lon,
                         tieneUbicacionReal = location != null
                     )
                 }
+                val comercios = repo.listarComerciosInicial(lat, lon)
+                _uiState.update {
+                    it.copy(cargando = false, comercios = comercios, error = null)
+                }
                 repo.registrarEvento("mapa_abierto")
             } catch (e: Exception) {
                 _uiState.update {
-                    it.copy(cargando = false, error = e.message ?: "Error al cargar mapa")
+                    it.copy(
+                        cargando = false,
+                        error = e.message ?: "Error al cargar comercios en el mapa"
+                    )
                 }
             }
         }
@@ -146,10 +150,8 @@ class MapaViewModel(application: Application) : AndroidViewModel(application) {
                     s.userLat, s.userLon, minLat, maxLat, minLon, maxLon
                 )
                 _uiState.update { it.copy(comercios = lista, cargandoViewport = false) }
-            } catch (e: Exception) {
-                _uiState.update {
-                    it.copy(cargandoViewport = false, error = e.message)
-                }
+            } catch (_: Exception) {
+                _uiState.update { it.copy(cargandoViewport = false) }
             }
         }
     }

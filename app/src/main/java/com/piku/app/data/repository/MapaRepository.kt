@@ -6,14 +6,24 @@ import com.piku.app.data.model.ChatPikuResponse
 import com.piku.app.data.model.Comercio
 import com.piku.app.data.model.EventoRequest
 import com.piku.app.data.model.Rubro
+import com.piku.app.data.network.ApiErrorParser
 import com.piku.app.data.network.RetrofitInstance
 import com.piku.app.utils.DistanceCalculator
+import retrofit2.HttpException
 
 class MapaRepository(private val context: Context) {
 
     private val api = RetrofitInstance.api
 
     suspend fun listarRubros(): List<Rubro> = api.listarRubros().rubros
+
+    suspend fun listarComerciosInicial(userLat: Double?, userLon: Double?): List<Comercio> {
+        try {
+            return enriquecerDistancia(api.listarComercios().comercios, userLat, userLon)
+        } catch (e: HttpException) {
+            throw Exception(ApiErrorParser.mensaje(e), e)
+        }
+    }
 
     suspend fun listarComerciosEnViewport(
         userLat: Double?,
@@ -23,13 +33,12 @@ class MapaRepository(private val context: Context) {
         minLon: Double,
         maxLon: Double
     ): List<Comercio> {
-        val lista = api.listarComercios(minLat, maxLat, minLon, maxLon).comercios
-        return enriquecerDistancia(lista, userLat, userLon)
-    }
-
-    suspend fun listarComerciosInicial(userLat: Double?, userLon: Double?): List<Comercio> {
-        val lista = api.listarComercios().comercios
-        return enriquecerDistancia(lista, userLat, userLon)
+        try {
+            val lista = api.listarComercios(minLat, maxLat, minLon, maxLon).comercios
+            return enriquecerDistancia(lista, userLat, userLon)
+        } catch (e: HttpException) {
+            throw Exception(ApiErrorParser.mensaje(e), e)
+        }
     }
 
     private fun enriquecerDistancia(
@@ -46,8 +55,13 @@ class MapaRepository(private val context: Context) {
         }.sortedBy { it.distanciaMetros ?: Int.MAX_VALUE }
     }
 
-    suspend fun chatPiku(pregunta: String, lat: Double?, lon: Double?): ChatPikuResponse =
-        api.chatPiku(ChatPikuRequest(pregunta = pregunta, lat = lat, lon = lon))
+    suspend fun chatPiku(pregunta: String, lat: Double?, lon: Double?): ChatPikuResponse {
+        try {
+            return api.chatPiku(ChatPikuRequest(pregunta = pregunta, lat = lat, lon = lon))
+        } catch (e: HttpException) {
+            throw Exception(ApiErrorParser.mensaje(e), e)
+        }
+    }
 
     suspend fun registrarEvento(tipo: String, comercioId: String? = null) {
         try {

@@ -17,7 +17,9 @@ Endpoints nuevos:
 | POST | `/api/chat-piku` | Asistente (requiere JWT cliente) |
 | POST | `/api/usuario/eventos` | Registro silencioso de uso |
 
-Tras deploy, la migración `migration_eventos_usuario.sql` corre al iniciar el servidor.
+Tras deploy, las migraciones corren al iniciar el servidor (incluye `piku_eventos_usuario`).
+
+El listado de comercios adapta el SQL si faltan columnas (`categoria`, `fecha_inicio`, etc.) en Neon antiguo.
 
 ## App Android
 

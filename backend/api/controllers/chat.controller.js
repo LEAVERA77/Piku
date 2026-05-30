@@ -16,12 +16,10 @@ function distanciaMetros(lat1, lon1, lat2, lon2) {
 }
 
 async function comerciosCercanos(lat, lon, limite = 12) {
+  const { selectComerciosColumnas } = require('../utils/comercio.sql.util');
+  const columnas = await selectComerciosColumnas();
   const result = await query(
-    `SELECT c.id, c.nombre, c.categoria, c.lat, c.lon, c.direccion,
-            (SELECT MIN(r.puntos_requeridos)
-             FROM piku_recompensas r
-             WHERE r.comercio_id = c.id AND r.activo = TRUE
-               AND (r.stock IS NULL OR r.stock > 0)) AS canje_puntos
+    `SELECT ${columnas}
      FROM piku_comercios c
      WHERE COALESCE(c.suscripcion_activa, TRUE) = TRUE
        AND c.lat IS NOT NULL AND c.lon IS NOT NULL
@@ -36,7 +34,7 @@ async function comerciosCercanos(lat, lon, limite = 12) {
       rubro: normalizarCategoria(c.categoria),
       distancia:
         lat != null && lon != null ? distanciaMetros(lat, lon, c.lat, c.lon) : null,
-      canje_puntos: c.canje_puntos,
+      canje_puntos: c.puntos_min_canje,
       direccion: c.direccion,
     }))
     .sort((a, b) => (a.distancia ?? 999999) - (b.distancia ?? 999999))
@@ -97,7 +95,14 @@ async function chatPiku(req, res) {
       user: JSON.stringify(contexto, null, 2),
     });
 
-    if (!ia.ok) return responderError(res, 503, ia.error);
+    if (!ia.ok) {
+      return res.status(503).json({
+        error: ia.error,
+        respuesta:
+          'El asistente no está disponible ahora. Revisá que GestorNova o GROQ_API_KEY estén configurados en Render.',
+        comercio_sugerido_id: null,
+      });
+    }
 
     let respuesta = ia.texto.trim();
     let comercioSugeridoId = null;

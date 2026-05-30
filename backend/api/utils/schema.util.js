@@ -4,6 +4,8 @@ const cache = {
   piku_usuarios: null,
   piku_comercios: null,
   piku_invitaciones_comercio: null,
+  piku_recompensas: null,
+  piku_eventos_usuario: null,
 };
 
 async function columnasTabla(tableName) {
@@ -27,6 +29,10 @@ async function refrescarCache() {
   cache.piku_usuarios = null;
   cache.piku_comercios = null;
   cache.piku_invitaciones_comercio = null;
+  cache.piku_recompensas = null;
+  cache.piku_eventos_usuario = null;
+  const { invalidarCacheComerciosSelect } = require('./comercio.sql.util');
+  invalidarCacheComerciosSelect();
 }
 
 module.exports = { columnasTabla, tiene, refrescarCache };
