@@ -1,5 +1,3 @@
 <?xml version="1.0" encoding="utf-8"?>
-<full-backup-content>
-    <!-- No respaldar sesión ni huella: tras desinstalar/reinstalar debe poder ingresar con email -->
-    <exclude domain="file" path="datastore/" />
-</full-backup-content>
+<!-- allowBackup=false: no respaldar sesión ni huella -->
+<full-backup-content />
