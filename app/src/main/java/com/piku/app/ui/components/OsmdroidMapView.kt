@@ -1,5 +1,6 @@
 package com.piku.app.ui.components
 
+import android.graphics.Color
 import android.graphics.drawable.BitmapDrawable
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -102,8 +103,8 @@ fun OsmdroidMapView(
             val userPoint = GeoPoint(userLat, userLon)
             val precision = Polygon(mapView).apply {
                 points = Polygon.pointsAsCircle(userPoint, 80.0)
-                fillPaint.color = 0x332563EB
-                outlinePaint.color = 0x882563EB
+                fillPaint.color = Color.argb(0x33, 0x25, 0x63, 0xEB)
+                outlinePaint.color = Color.argb(0x88, 0x25, 0x63, 0xEB)
                 outlinePaint.strokeWidth = 2f
             }
             mapView.overlays.add(precision)
