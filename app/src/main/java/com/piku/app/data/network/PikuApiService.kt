@@ -21,11 +21,7 @@ import com.piku.app.data.model.RegistroRequest
 import com.piku.app.data.model.RecompensaSingleResponse
 import com.piku.app.data.model.RecompensasListResponse
 import okhttp3.MultipartBody
-import okhttp3.MultipartBody
 import retrofit2.http.Body
-import retrofit2.http.Multipart
-import retrofit2.http.PUT
-import retrofit2.http.Part
 import retrofit2.http.DELETE
 import retrofit2.http.GET
 import retrofit2.http.Multipart
