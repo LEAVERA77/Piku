@@ -44,12 +44,58 @@ const CRITICAL_ALTERS = [
   'ALTER TABLE piku_usuarios ADD COLUMN IF NOT EXISTS notas_entrega TEXT',
 ];
 
+/**
+ * Divide SQL en sentencias por ';' sin cortar bloques DO $$ ... $$ ni comentarios --.
+ */
 function splitSqlStatements(sql) {
-  return sql
-    .replace(/--[^\n]*/g, '')
-    .split(';')
-    .map((s) => s.trim())
-    .filter((s) => s.length > 0);
+  const statements = [];
+  let current = '';
+  let i = 0;
+  let dollarDelimiter = null;
+
+  while (i < sql.length) {
+    if (dollarDelimiter !== null) {
+      if (sql.startsWith(dollarDelimiter, i)) {
+        current += dollarDelimiter;
+        i += dollarDelimiter.length;
+        dollarDelimiter = null;
+        continue;
+      }
+      current += sql[i];
+      i += 1;
+      continue;
+    }
+
+    if (sql[i] === '$') {
+      const match = sql.slice(i).match(/^\$([A-Za-z0-9_]*)\$/);
+      if (match) {
+        dollarDelimiter = match[0];
+        current += dollarDelimiter;
+        i += dollarDelimiter.length;
+        continue;
+      }
+    }
+
+    if (sql[i] === '-' && sql[i + 1] === '-') {
+      while (i < sql.length && sql[i] !== '\n') i += 1;
+      continue;
+    }
+
+    if (sql[i] === ';') {
+      const trimmed = current.trim();
+      if (trimmed.length > 0) statements.push(trimmed);
+      current = '';
+      i += 1;
+      continue;
+    }
+
+    current += sql[i];
+    i += 1;
+  }
+
+  const trimmed = current.trim();
+  if (trimmed.length > 0) statements.push(trimmed);
+  return statements;
 }
 
 /**
