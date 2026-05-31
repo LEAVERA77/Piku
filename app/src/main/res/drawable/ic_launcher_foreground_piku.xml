@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- PNG 432px: logo a color vivo sobre fondo blanco (ic_launcher_background). -->
+<!-- PNG 432px: logo 36% lienzo, centrado alto; compatible Samsung/Motorola y demas OEM. -->
 <bitmap xmlns:android="http://schemas.android.com/apk/res/android"
     android:gravity="center"
     android:src="@drawable/piku_logo_icon_adaptive" />
