@@ -21,16 +21,6 @@ if (!fs.existsSync(ENV_PATH)) {
 
 require('dotenv').config({ path: ENV_PATH });
 
-/** Typo frecuente al copiar Neon: @dep- en lugar de @ep- */
-function corregirDatabaseUrlNeon() {
-  const url = process.env.DATABASE_URL || '';
-  if (/@dep-/i.test(url)) {
-    process.env.DATABASE_URL = url.replace(/@dep-/gi, '@ep-');
-    console.warn('⚠️ Se corrigió @dep- → @ep- en DATABASE_URL (revisá tu .env para dejarlo bien escrito).');
-  }
-}
-corregirDatabaseUrlNeon();
-
 const bcrypt = require('bcryptjs');
 const { pool, query } = require('../services/neon.service');
 const { normalizarTipoComercio } = require('../constants/tipos_comercio');
@@ -251,34 +241,25 @@ function obtenerHostDb(urlRaw) {
 }
 
 function validarDatabaseUrl() {
-  const url = process.env.DATABASE_URL || '';
-  if (!url.trim()) {
-    console.error('❌ DATABASE_URL no configurada.');
-    console.error('   Creá backend/api/.env (copiá .env.example) con la URL real de Neon.');
+  const url = (process.env.DATABASE_URL || '').trim().replace(/^["']|["']$/g, '');
+  if (!url) {
+    console.error('❌ DATABASE_URL no está definida en .env');
     process.exit(1);
   }
 
   const host = obtenerHostDb(url);
-  const placeholders = [
-    'ep-tu-proyecto',
-    'tu-proyecto',
-    'usuario:password@',
-    'ep-REEMPLAZAR',
-    'example.com',
-    '@host.neon.tech',
-  ];
-
   if (!host) {
-    console.error('❌ No se pudo leer el host de DATABASE_URL.');
+    console.error('❌ DATABASE_URL no es una URL válida');
     process.exit(1);
   }
 
-  if (placeholders.some((p) => url.toLowerCase().includes(p.toLowerCase()))) {
-    console.error('❌ DATABASE_URL parece un ejemplo. Pegá la cadena real de Neon/Render.');
-    console.error(`   Host detectado: ${host}`);
+  const hostLower = host.toLowerCase();
+  if (hostLower.includes('example.com') || hostLower.includes('tu-proyecto')) {
+    console.error('❌ DATABASE_URL parece un ejemplo. Usá tu cadena real de Neon/Render.');
     process.exit(1);
   }
 
+  console.log(`✅ Conectando a: ${host}`);
   return host;
 }
 
