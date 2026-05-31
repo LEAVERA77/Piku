@@ -4,9 +4,13 @@
 
 ### Opción A — Local (recomendado)
 
-1. En [Neon Console](https://console.neon.tech) → tu proyecto → **Connect** → copiá la URL **PostgreSQL** (host tipo `ep-nombre-real-12345678.sa-east-1.aws.neon.tech`, **no** `ep-tu-proyecto`).
+**Render y tu PC son distintos:** pegar `DATABASE_URL` en Render alcanza para la API en la nube. Para `npm run seed:cerrito` tenés que crear **`backend/api/.env`** en tu computadora (no aparece en Git; por eso no lo ves en el repo clonado).
 
-2. Creá el archivo `backend/api/.env` (no se sube a Git):
+1. En el Explorador, carpeta `Piku\backend\api` → copiá `.env.example` → pegá como **`.env`** (mismo nivel que `package.json`).
+
+2. En [Neon Console](https://console.neon.tech) → **Connect** → copiá la URL **PostgreSQL** (la misma que pegaste en Render). Host real: `ep-algo-12345....neon.tech`, **no** `ep-tu-proyecto`.
+
+3. Editá `.env` y dejá una sola línea (o reemplazá la de DATABASE_URL):
 
 ```env
 DATABASE_URL=postgresql://neondb_owner:TU_PASSWORD@ep-XXXXX.region.aws.neon.tech/neondb?sslmode=require

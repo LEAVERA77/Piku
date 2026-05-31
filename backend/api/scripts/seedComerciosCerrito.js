@@ -3,7 +3,23 @@
  * Uso: cd backend/api && node scripts/seedComerciosCerrito.js
  * Requiere DATABASE_URL en .env o entorno.
  */
-require('dotenv').config({ path: require('path').resolve(__dirname, '../.env') });
+const fs = require('fs');
+const path = require('path');
+
+const ENV_PATH = path.resolve(__dirname, '../.env');
+if (!fs.existsSync(ENV_PATH)) {
+  console.error('❌ No existe el archivo backend/api/.env en tu PC.');
+  console.error('');
+  console.error('   Render ya tiene DATABASE_URL en la nube, pero el seed corre LOCAL y necesita .env aquí.');
+  console.error('');
+  console.error('   1. En esta carpeta (backend/api), copiá .env.example y renombralo a .env');
+  console.error('   2. En Neon → Connect → copiá la connection string PostgreSQL');
+  console.error('   3. Pegala en .env como:  DATABASE_URL=postgresql://...');
+  console.error('   4. Volvé a ejecutar: npm run seed:cerrito');
+  process.exit(1);
+}
+
+require('dotenv').config({ path: ENV_PATH });
 
 const bcrypt = require('bcryptjs');
 const { pool, query } = require('../services/neon.service');
