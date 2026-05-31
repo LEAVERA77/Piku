@@ -213,9 +213,38 @@ async function upsertComercio(hash, data) {
   return { comercioId, email };
 }
 
+function validarDatabaseUrl() {
+  const url = process.env.DATABASE_URL || '';
+  if (!url.trim()) {
+    console.error('❌ DATABASE_URL no configurada.');
+    console.error('   Creá backend/api/.env (copiá .env.example) con la URL real de Neon.');
+    process.exit(1);
+  }
+  const placeholders = [
+    'ep-tu-proyecto',
+    'host.neon.tech',
+    'usuario:password@',
+    '/piku_db',
+    'neon.tech/neondb',
+  ];
+  const hostMatch = url.match(/@([^/]+)/);
+  const host = hostMatch ? hostMatch[1] : '';
+  if (
+    placeholders.some((p) => url.includes(p)) ||
+    host === 'host.neon.tech' ||
+    !host.includes('ep-')
+  ) {
+    console.error('❌ DATABASE_URL parece un ejemplo, no tu base real.');
+    console.error(`   Host detectado: ${host || '(vacío)'}`);
+    console.error('   Copiá la connection string desde Neon Console o Render → Environment.');
+    process.exit(1);
+  }
+}
+
 async function main() {
+  validarDatabaseUrl();
   if (!pool) {
-    console.error('❌ DATABASE_URL no configurada');
+    console.error('❌ No se pudo crear el pool de PostgreSQL.');
     process.exit(1);
   }
 

@@ -2,24 +2,34 @@
 
 ## Ejecutar el seed
 
-### Opción A — Local (con `DATABASE_URL` en `backend/api/.env`)
+### Opción A — Local (recomendado)
 
-```bash
-cd backend/api
+1. En [Neon Console](https://console.neon.tech) → tu proyecto → **Connect** → copiá la URL **PostgreSQL** (host tipo `ep-nombre-real-12345678.sa-east-1.aws.neon.tech`, **no** `ep-tu-proyecto`).
+
+2. Creá el archivo `backend/api/.env` (no se sube a Git):
+
+```env
+DATABASE_URL=postgresql://neondb_owner:TU_PASSWORD@ep-XXXXX.region.aws.neon.tech/neondb?sslmode=require
+```
+
+También podés copiar `DATABASE_URL` desde **Render** → servicio Piku → **Environment** (el valor que ya usa la API en producción).
+
+3. Ejecutá:
+
+```powershell
+cd C:\Users\leave\AndroidStudioProjects\Piku\backend\api
 npm run seed:cerrito
 ```
 
-### Opción B — Neon SQL Editor
+Si ves `ENOTFOUND ep-tu-proyecto.neon.tech`, la URL sigue siendo el **ejemplo** de la documentación: reemplazala por la de Neon/Render.
 
-No uses el `.sql` para inserts (el hash de contraseña debe ser bcrypt real). Ejecutá el script Node apuntando a Neon:
+### Opción B — Solo esta sesión (sin .env)
 
-```bash
-cd backend/api
-set DATABASE_URL=postgresql://...@ep-xxx.neon.tech/neondb?sslmode=require
-node scripts/seedComerciosCerrito.js
+```powershell
+cd backend\api
+$env:DATABASE_URL="postgresql://...URL REAL COMPLETA..."
+npm run seed:cerrito
 ```
-
-(PowerShell: `$env:DATABASE_URL="..."`)
 
 ---
 
