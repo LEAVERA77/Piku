@@ -7,15 +7,28 @@
 
 Pegá el valor **sin comillas** en Render. Si guardás `"postgresql://..."`, las comillas pueden entrar en la URL y fallar la conexión.
 
-## GESTORNOVA_API_URL
+## Chat Piku (IA) — Groq, no GestorNova en el navegador
 
-Debe ser exactamente (sin `\n` ni comillas):
+Si abrís `https://api-gestornova.onrender.com` en el navegador y ves **Not Found**, es normal: esa URL es una API sin página de inicio (GET `/` → 404).
+
+**Piku no depende de abrir esa URL.** El chat usa:
+
+1. **`GROQ_API_KEY`** (obligatorio para IA) → llama directo a Groq.
+2. **`GESTORNOVA_API_URL`** (opcional) → solo si GestorNova tuviera rutas como `/api/ia/chat`. Hoy ese deploy suele responder 404 en esas rutas.
+
+Con `GROQ_API_KEY` configurada en Render, **Chat Piku funciona** aunque GestorNova muestre Not Found.
+
+Podés **eliminar** `GESTORNOVA_API_URL` en Render o dejarla; no afecta si Groq responde.
+
+Para no intentar GestorNova nunca: `DISABLE_GESTORNOVA_IA=true`
+
+### GESTORNOVA_API_URL (solo si usás proxy en el futuro)
+
+Sin `\n` ni comillas:
 
 ```
 https://api-gestornova.onrender.com
 ```
-
-Si en Render ves `https://api-gestornova.onrender.com\n`, editá y borrá el salto de línea. El backend ahora hace `trim` por si queda basura.
 
 ## Seed local
 
