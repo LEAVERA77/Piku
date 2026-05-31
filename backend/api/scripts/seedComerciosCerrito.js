@@ -21,9 +21,17 @@ if (!fs.existsSync(ENV_PATH)) {
 
 require('dotenv').config({ path: ENV_PATH });
 
-if (!process.env.DATABASE_URL?.trim() && process.env.DATABASE_URL_DIRECT?.trim()) {
-  process.env.DATABASE_URL = process.env.DATABASE_URL_DIRECT.trim();
+function normalizarDatabaseUrl(raw) {
+  return String(raw || '')
+    .trim()
+    .replace(/^["']|["']$/g, '')
+    .replace(/[;\s]+$/g, '');
 }
+
+if (!process.env.DATABASE_URL?.trim() && process.env.DATABASE_URL_DIRECT?.trim()) {
+  process.env.DATABASE_URL = process.env.DATABASE_URL_DIRECT;
+}
+process.env.DATABASE_URL = normalizarDatabaseUrl(process.env.DATABASE_URL);
 
 const bcrypt = require('bcryptjs');
 const { pool, query } = require('../services/neon.service');
@@ -245,7 +253,7 @@ function obtenerHostDb(urlRaw) {
 }
 
 function validarDatabaseUrl() {
-  const url = (process.env.DATABASE_URL || '').trim().replace(/^["']|["']$/g, '');
+  const url = normalizarDatabaseUrl(process.env.DATABASE_URL);
   if (!url) {
     console.error('❌ DATABASE_URL no está definida en .env');
     process.exit(1);
@@ -310,8 +318,9 @@ async function probarConexionDb() {
       console.error('      DATABASE_URL=postgresql://neondb_owner:npg_.....@ep-....neon.tech/neondb?...');
       console.error('   3. Verificá host ep-... (no dep-) y que la contraseña no esté cortada');
       console.error('   4. Si la contraseña tiene @ # % &, codificá en la URL (@ → %40)');
+      console.error('   5. Probá sin &channel_binding=require al final (solo en .env local)');
       console.error('');
-      console.error('   En Neon podés resetear la contraseña: Project → Connection details → Reset password');
+      console.error('   En Neon: Connection details → Reset password → copiá de nuevo a Render y .env');
       process.exit(1);
     }
     console.error('\n❌ Error de conexión:', err.message);
