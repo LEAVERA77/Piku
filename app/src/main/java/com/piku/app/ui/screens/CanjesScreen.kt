@@ -151,7 +151,7 @@ fun CanjesScreen(
 
 @Preview(showBackground = true)
 @Composable
-private fun CanjesScreenPreview() {
+fun PreviewCanjesScreen() {
     PikuTheme {
         CanjesScreen()
     }

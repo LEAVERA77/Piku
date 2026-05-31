@@ -172,7 +172,7 @@ private fun ItemTransaccion(transaccion: Transaccion) {
 
 @Preview(showBackground = true)
 @Composable
-private fun SaldoScreenPreview() {
+fun PreviewSaldoScreen() {
     PikuTheme {
         SaldoScreen(onEscanearClick = {}, onCanjearClick = {})
     }

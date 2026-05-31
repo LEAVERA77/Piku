@@ -16,8 +16,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.piku.app.data.model.Recompensa
+import com.piku.app.ui.preview.PreviewMocks
+import com.piku.app.ui.theme.PikuTheme
 import com.piku.app.ui.theme.NaranjaPiku
 
 @Composable
@@ -74,5 +77,18 @@ fun TarjetaRecompensa(
                 )
             }
         }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun PreviewTarjetaRecompensa() {
+    PikuTheme {
+        TarjetaRecompensa(
+            recompensa = PreviewMocks.recompensa,
+            puedeCanjear = true,
+            onCanjear = {},
+            modifier = Modifier.padding(16.dp)
+        )
     }
 }

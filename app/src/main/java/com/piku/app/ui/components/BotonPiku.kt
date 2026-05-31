@@ -92,7 +92,7 @@ fun BotonPiku(
 
 @Preview(showBackground = true)
 @Composable
-private fun BotonPikuPreview() {
+fun PreviewBotonPiku() {
     PikuTheme {
         BotonPiku(
             texto = "ESCANEAR QR",

@@ -18,7 +18,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.piku.app.ui.theme.PikuTheme
 import com.piku.app.data.network.RetrofitInstance
 import com.piku.app.ui.components.PikuPhotoImage
 import com.piku.app.ui.media.PikuImages
@@ -64,5 +66,17 @@ fun AdminDashboardScreen(
         Button(onClick = onGenerarQr, modifier = Modifier.fillMaxWidth()) { Text("Generar QR") }
         Spacer(Modifier.height(8.dp))
         Button(onClick = onCerrarSesion, modifier = Modifier.fillMaxWidth()) { Text("Cerrar sesión") }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun PreviewDashboardComercioScreen() {
+    PikuTheme {
+        AdminDashboardScreen(
+            onOfertas = {},
+            onGenerarQr = {},
+            onCerrarSesion = {}
+        )
     }
 }

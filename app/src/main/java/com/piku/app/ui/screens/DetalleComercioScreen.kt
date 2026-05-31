@@ -33,7 +33,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.piku.app.ui.preview.PreviewMocks
+import com.piku.app.ui.theme.PikuTheme
 import com.piku.app.data.config.ConfigLoader
 import com.piku.app.data.model.ComercioDetalleResponse
 import com.piku.app.data.repository.ComercioRepository
@@ -147,5 +150,16 @@ fun DetalleComercioScreen(
                 }
             }
         }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun PreviewDetalleComercioScreen() {
+    PikuTheme {
+        DetalleComercioScreen(
+            comercioId = PreviewMocks.comercioPiku.id,
+            onBack = {}
+        )
     }
 }

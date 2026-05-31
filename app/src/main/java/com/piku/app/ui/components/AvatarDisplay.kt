@@ -13,8 +13,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.sp
 import com.piku.app.ui.media.PikuImages
+import com.piku.app.ui.theme.PikuTheme
 
 @Composable
 fun AvatarDisplay(
@@ -45,5 +47,16 @@ fun AvatarDisplay(
                 contentScale = ContentScale.Crop
             )
         }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun PreviewAvatarDisplay() {
+    PikuTheme {
+        AvatarDisplay(
+            avatarUrl = "emoji:☕",
+            modifier = Modifier.size(72.dp)
+        )
     }
 }

@@ -29,8 +29,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.piku.app.ui.theme.PikuTheme
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
@@ -209,5 +211,13 @@ fun MapaScreen(
             onVerEnMapa = viewModel::seleccionarComercioSugerido,
             onDismiss = viewModel::cerrarChat
         )
+    }
+}
+
+@Preview(showBackground = true, device = "spec:width=411dp,height=891dp")
+@Composable
+fun PreviewMapaScreen() {
+    PikuTheme {
+        MapaScreen(onVerDetalleComercio = {})
     }
 }

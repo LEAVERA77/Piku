@@ -16,7 +16,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.piku.app.ui.preview.PreviewMocks
+import com.piku.app.ui.theme.PikuTheme
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
@@ -110,5 +113,18 @@ fun MarkerInfoBottomSheet(
             }
             Spacer(modifier = Modifier.height(24.dp))
         }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun PreviewMarkerInfoBottomSheet() {
+    PikuTheme {
+        MarkerInfoBottomSheet(
+            comercio = PreviewMocks.comercioPiku,
+            rubros = PreviewMocks.rubros,
+            onDismiss = {},
+            onVerOfertas = {}
+        )
     }
 }

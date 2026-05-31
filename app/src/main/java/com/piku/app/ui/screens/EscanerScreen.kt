@@ -235,7 +235,7 @@ private fun IndicadorEscaneando(modifier: Modifier = Modifier) {
 
 @Preview(showBackground = true)
 @Composable
-private fun EscanerScreenPreview() {
+fun PreviewEscanerScreen() {
     PikuTheme {
         EscanerScreen()
     }

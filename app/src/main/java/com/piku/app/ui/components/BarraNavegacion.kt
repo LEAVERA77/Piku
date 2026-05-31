@@ -62,7 +62,7 @@ fun BarraNavegacion(navController: NavController) {
 
 @Preview
 @Composable
-private fun BarraNavegacionPreview() {
+fun PreviewBarraNavegacion() {
     PikuTheme {
         BarraNavegacion(rememberNavController())
     }

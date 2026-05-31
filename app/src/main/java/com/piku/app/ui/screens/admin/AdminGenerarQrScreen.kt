@@ -20,7 +20,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.piku.app.ui.theme.PikuTheme
 import com.piku.app.data.network.RetrofitInstance
 import com.piku.app.ui.components.BotonPiku
 import kotlinx.coroutines.CoroutineScope
@@ -68,5 +70,13 @@ fun AdminGenerarQrScreen(onBack: () -> Unit) {
             }, modifier = Modifier.fillMaxWidth())
             resultado?.let { Text(it, style = MaterialTheme.typography.bodyLarge) }
         }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun PreviewGenerarQRScreen() {
+    PikuTheme {
+        AdminGenerarQrScreen(onBack = {})
     }
 }

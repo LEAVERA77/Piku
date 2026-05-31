@@ -80,7 +80,7 @@ fun TarjetaSaldo(
 
 @Preview(showBackground = true)
 @Composable
-private fun TarjetaSaldoPreview() {
+fun PreviewTarjetaSaldo() {
     PikuTheme {
         TarjetaSaldo(puntos = 1250, equivalenciaDescuento = 125)
     }

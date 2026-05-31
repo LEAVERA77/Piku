@@ -31,7 +31,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.piku.app.ui.preview.PreviewMocks
+import com.piku.app.ui.theme.PikuTheme
 import com.piku.app.data.model.Rubro
 
 @Composable
@@ -145,5 +148,25 @@ fun MapaPanelCompacto(
                 }
             }
         }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun PreviewMapaPanelCompacto() {
+    PikuTheme {
+        MapaPanelCompacto(
+            busquedaNombre = "café",
+            busquedaDireccion = "Corrientes 1200",
+            contadorVisibles = 5,
+            rubros = PreviewMocks.rubros,
+            rubrosSeleccionados = setOf("cafeteria"),
+            expandido = true,
+            onToggleExpandido = {},
+            onBusquedaNombreChange = {},
+            onBusquedaDireccionChange = {},
+            onIrDireccion = {},
+            onToggleRubro = {}
+        )
     }
 }

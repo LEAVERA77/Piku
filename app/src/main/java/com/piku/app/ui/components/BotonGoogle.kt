@@ -15,8 +15,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.piku.app.R
+import com.piku.app.ui.theme.PikuTheme
 
 @Composable
 fun BotonGoogle(
@@ -43,5 +45,13 @@ fun BotonGoogle(
             Spacer(modifier = Modifier.width(12.dp))
             Text(texto, style = MaterialTheme.typography.labelLarge)
         }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun PreviewBotonGoogle() {
+    PikuTheme {
+        BotonGoogle(texto = "Continuar con Google", onClick = {})
     }
 }

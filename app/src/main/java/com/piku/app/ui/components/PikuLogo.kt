@@ -22,8 +22,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.sp
 import com.piku.app.ui.theme.AmarilloPiku
+import com.piku.app.ui.theme.PikuTheme
 import com.piku.app.ui.theme.CelestePiku
 import com.piku.app.ui.theme.NaranjaPiku
 import com.piku.app.ui.theme.VerdePiku
@@ -127,4 +129,12 @@ private fun LogoLetter(
         fontWeight = FontWeight.ExtraBold,
         color = color
     )
+}
+
+@Preview(showBackground = true)
+@Composable
+fun PreviewPikuLogo() {
+    PikuTheme {
+        PikuLogo(showTagline = true)
+    }
 }

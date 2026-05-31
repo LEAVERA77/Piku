@@ -42,7 +42,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.piku.app.ui.theme.PikuTheme
 import androidx.fragment.app.FragmentActivity
 import com.piku.app.data.config.ConfigLoader
 import com.piku.app.data.datastore.AppPreferences
@@ -643,5 +645,13 @@ fun AuthScreen(
                 )
             }
         }
+    }
+}
+
+@Preview(showBackground = true, name = "Auth - ingresar")
+@Composable
+fun PreviewAuthScreen() {
+    PikuTheme {
+        AuthScreen(onLoginCliente = {}, onLoginComercio = {})
     }
 }

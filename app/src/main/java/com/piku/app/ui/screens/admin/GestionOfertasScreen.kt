@@ -39,7 +39,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.piku.app.ui.theme.PikuTheme
 import com.piku.app.data.model.OfertaComercio
 import com.piku.app.data.repository.OfertaRepository
 import com.piku.app.ui.components.PikuPhotoImage
@@ -201,6 +203,18 @@ fun GestionOfertasScreen(
                 }
             }
         }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun PreviewGestionOfertasScreen() {
+    PikuTheme {
+        GestionOfertasScreen(
+            onBack = {},
+            onNuevaOferta = {},
+            onEditarOferta = {}
+        )
     }
 }
 

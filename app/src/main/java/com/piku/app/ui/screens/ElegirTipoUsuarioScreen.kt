@@ -19,7 +19,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.piku.app.ui.theme.PikuTheme
 import com.piku.app.data.datastore.AppPreferences
 import com.piku.app.ui.components.BotonPiku
 import com.piku.app.ui.components.EstiloBotonPiku
@@ -123,5 +125,13 @@ fun ElegirTipoUsuarioScreen(
                 )
             }
         }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun PreviewElegirTipoUsuarioScreen() {
+    PikuTheme {
+        ElegirTipoUsuarioScreen(onContinuar = {})
     }
 }

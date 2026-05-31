@@ -28,7 +28,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.piku.app.ui.preview.PreviewMocks
+import com.piku.app.ui.theme.PikuTheme
 import com.piku.app.ui.viewmodel.MensajeChat
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -157,5 +160,24 @@ fun CharlaConPikuSheet(
                 }
             }
         }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun PreviewCharlaConPikuSheet() {
+    PikuTheme {
+        CharlaConPikuSheet(
+            mensajes = PreviewMocks.mensajesChat,
+            pregunta = "",
+            cargando = false,
+            comercioSugeridoId = null,
+            preguntasSugeridas = PreviewMocks.preguntasChat,
+            onPreguntaChange = {},
+            onEnviar = {},
+            onPreguntaSugerida = {},
+            onVerEnMapa = {},
+            onDismiss = {}
+        )
     }
 }
