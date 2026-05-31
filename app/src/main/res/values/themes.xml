@@ -9,7 +9,7 @@
 
     <style name="Theme.Piku.Splash" parent="Theme.SplashScreen">
         <item name="postSplashScreenTheme">@style/Theme.Piku</item>
-        <item name="windowSplashScreenBackground">@drawable/ic_launcher_background</item>
+        <item name="windowSplashScreenBackground">@color/piku_splash_background</item>
         <item name="windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground_piku</item>
         <item name="windowSplashScreenIconBackgroundColor">@android:color/transparent</item>
     </style>
