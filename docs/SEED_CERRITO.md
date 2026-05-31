@@ -10,11 +10,13 @@
 
 2. En [Neon Console](https://console.neon.tech) → **Connect** → copiá la URL **PostgreSQL** (la misma que pegaste en Render). Host real: `ep-algo-12345....neon.tech`, **no** `ep-tu-proyecto`.
 
-3. Editá `.env` y dejá una sola línea (o reemplazá la de DATABASE_URL):
+3. Editá `.env`. Pegá **la misma** `DATABASE_URL` que tenés en Render (sin comillas alrededor):
 
 ```env
-DATABASE_URL=postgresql://neondb_owner:TU_PASSWORD@ep-XXXXX.region.aws.neon.tech/neondb?sslmode=require
+DATABASE_URL=postgresql://neondb_owner:TU_PASSWORD@ep-gentle-silence-adns9whd-pooler.c-2.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require
 ```
+
+**Sin** comillas `"` al inicio/fin de la línea. El pooler (`-pooler`) sirve para el seed.
 
 También podés copiar `DATABASE_URL` desde **Render** → servicio Piku → **Environment** (el valor que ya usa la API en producción).
 

@@ -17,10 +17,11 @@ function extraerTextoRespuesta(data) {
  * Llama a Groq vía el API de GestorNova (recomendado) o directo con GROQ_API_KEY.
  */
 async function completarChat({ system, user }) {
-  const baseUrl = (process.env.GESTORNOVA_API_URL || 'https://api-gestornova.onrender.com').replace(
-    /\/$/,
-    ''
-  );
+  const baseUrl = (process.env.GESTORNOVA_API_URL || 'https://api-gestornova.onrender.com')
+    .trim()
+    .replace(/^["']|["']$/g, '')
+    .replace(/\\n/g, '')
+    .replace(/\/$/, '');
   const gestorPaths = ['/api/ia/chat', '/api/ia/completions', '/api/chat'];
   const messages = [
     { role: 'system', content: system },
