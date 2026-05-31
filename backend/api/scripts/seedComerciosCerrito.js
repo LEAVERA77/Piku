@@ -220,20 +220,10 @@ function validarDatabaseUrl() {
     console.error('   Creá backend/api/.env (copiá .env.example) con la URL real de Neon.');
     process.exit(1);
   }
-  const placeholders = [
-    'ep-tu-proyecto',
-    'host.neon.tech',
-    'usuario:password@',
-    '/piku_db',
-    'neon.tech/neondb',
-  ];
-  const hostMatch = url.match(/@([^/]+)/);
-  const host = hostMatch ? hostMatch[1] : '';
-  if (
-    placeholders.some((p) => url.includes(p)) ||
-    host === 'host.neon.tech' ||
-    !host.includes('ep-')
-  ) {
+  const placeholders = ['ep-tu-proyecto', 'host.neon.tech', 'usuario:password@', '@ep-REEMPLAZAR.'];
+  const hostMatch = url.match(/@([^/?]+)/);
+  const host = hostMatch ? hostMatch[1].split(':')[0] : '';
+  if (placeholders.some((p) => url.includes(p)) || host === 'host.neon.tech' || !/^ep-[a-z0-9-]+\./i.test(host)) {
     console.error('❌ DATABASE_URL parece un ejemplo, no tu base real.');
     console.error(`   Host detectado: ${host || '(vacío)'}`);
     console.error('   Copiá la connection string desde Neon Console o Render → Environment.');
