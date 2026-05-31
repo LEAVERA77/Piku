@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- PNG 432px: logo ~37% alto del lienzo (zona segura 40/108) para squircle en todos los OEM. -->
+<!-- PNG 432px: logo ~37% alto, tonos oscurecidos para contrastar con el fondo degradado. -->
 <bitmap xmlns:android="http://schemas.android.com/apk/res/android"
     android:gravity="center"
     android:src="@drawable/piku_logo_icon_adaptive" />
