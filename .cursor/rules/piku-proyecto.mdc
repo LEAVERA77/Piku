@@ -1,0 +1,40 @@
+---
+description: Convenciones del monorepo Piku (Android + backend Node + Neon)
+alwaysApply: true
+---
+
+# Piku — proyecto
+
+## Stack
+
+- **Android**: Kotlin, Jetpack Compose, Retrofit, OSMDroid (no Google Maps), ML Kit para leer QR, ZXing para generar QR en pantalla comercio.
+- **Backend**: Node/Express en `backend/`, desplegado en Render; PostgreSQL en Neon.
+- **Docs migraciones**: `docs/MIGRAR_NEON.md`.
+
+## Git (obligatorio al terminar cambios de código)
+
+1. Commit con prefijo **`[Piku]`** y mensaje en **español**, enfocado en el porqué.
+2. **Push** a la rama actual (`git push origin HEAD`) sin esperar pedido explícito.
+3. No commitear secretos (`.env`, keys, `config.json` con credenciales).
+4. No usar `--no-verify`, amend ni force push salvo pedido explícito.
+
+## Integración API
+
+- Si existe endpoint en backend, la app **cliente/comercio** debe usarlo (repositorio + modelos Gson tipados), no `Map<String, Any>` ni mocks en flujos productivos.
+- Errores HTTP: `ApiErrorParser.mensaje(e)`.
+
+## Flujo QR (puntos en comercio)
+
+1. **Comerciante** (panel → Generar QR): ingresa monto → `POST /api/comercio/generar-qr` → muestra imagen QR con el **texto `codigo`** (ej. `QR-…`), válido ~15 min, un solo uso.
+2. **Cliente** (Escanear): lee ese QR con cámara → `POST /api/qr/validar` con `{ codigo, lat, lon }` (sesión cliente + GPS cerca del comercio, ~100 m).
+3. Backend acredita `puntos_saldo` y marca el QR como usado.
+
+## Registro y mapa
+
+- Dirección comercio: Nominatim en registro; pin en mapa con lat/lon guardados.
+- Teléfono obligatorio en registro **comercio**; opcional en **cliente**.
+
+## UI
+
+- Reutilizar `BotonPiku`, tema `VerdePiku` / `PikuTheme`.
+- ViewModels con lógica de red: preferir `AndroidViewModel` + repositorios.

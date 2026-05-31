@@ -1,11 +1,15 @@
 package com.piku.app.ui.screens.admin
 
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -15,25 +19,28 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.piku.app.ui.theme.PikuTheme
-import com.piku.app.data.network.RetrofitInstance
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.piku.app.ui.components.BotonPiku
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
+import com.piku.app.ui.components.EstiloBotonPiku
+import com.piku.app.ui.theme.PikuTheme
+import com.piku.app.ui.theme.VerdePiku
+import com.piku.app.ui.viewmodel.AdminGenerarQrViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AdminGenerarQrScreen(onBack: () -> Unit) {
-    var monto by remember { mutableStateOf("1000") }
-    var resultado by remember { mutableStateOf<String?>(null) }
+fun AdminGenerarQrScreen(
+    onBack: () -> Unit,
+    viewModel: AdminGenerarQrViewModel = viewModel()
+) {
+    val uiState by viewModel.uiState.collectAsState()
 
     Scaffold(
         topBar = {
@@ -47,28 +54,90 @@ fun AdminGenerarQrScreen(onBack: () -> Unit) {
             )
         }
     ) { padding ->
-        Column(Modifier.fillMaxSize().padding(padding).padding(16.dp)) {
-            OutlinedTextField(
-                value = monto,
-                onValueChange = { monto = it },
-                label = { Text("Monto de la compra") },
-                modifier = Modifier.fillMaxWidth()
+        Column(
+            Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Text(
+                "Ingresá el monto de la compra. El cliente escanea el QR para sumar puntos.",
+                style = MaterialTheme.typography.bodyMedium
             )
-            BotonPiku("Generar QR", {
-                CoroutineScope(Dispatchers.Main).launch {
-                    try {
-                        val res = RetrofitInstance.api.generarQr(
-                            mapOf("monto" to (monto.toDoubleOrNull() ?: 0.0))
-                        )
-                        @Suppress("UNCHECKED_CAST")
-                        val qr = res["qr"] as? Map<*, *>
-                        resultado = "Código: ${qr?.get("codigo")}\nExpira: ${qr?.get("expira_at")}"
-                    } catch (e: Exception) {
-                        resultado = e.message
-                    }
+            OutlinedTextField(
+                value = uiState.monto,
+                onValueChange = viewModel::onMontoChange,
+                label = { Text("Monto de la compra") },
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !uiState.cargando && uiState.qr == null
+            )
+            if (uiState.qr == null) {
+                BotonPiku(
+                    texto = if (uiState.cargando) "Generando…" else "Generar QR",
+                    onClick = { if (!uiState.cargando) viewModel.generar() },
+                    modifier = Modifier.fillMaxWidth(),
+                    habilitado = !uiState.cargando
+                )
+            } else {
+                BotonPiku(
+                    texto = "Generar otro",
+                    onClick = viewModel::limpiar,
+                    modifier = Modifier.fillMaxWidth(),
+                    estilo = EstiloBotonPiku.SECUNDARIO
+                )
+            }
+            uiState.error?.let {
+                Text(it, color = MaterialTheme.colorScheme.error)
+            }
+            if (uiState.cargando) {
+                CircularProgressIndicator(
+                    modifier = Modifier.align(Alignment.CenterHorizontally),
+                    color = VerdePiku
+                )
+            }
+            uiState.qrBitmap?.let { bitmap ->
+                Image(
+                    bitmap = bitmap.asImageBitmap(),
+                    contentDescription = "Código QR para el cliente",
+                    modifier = Modifier
+                        .size(280.dp)
+                        .align(Alignment.CenterHorizontally)
+                )
+            }
+            uiState.qr?.let { qr ->
+                Text(
+                    "Código: ${qr.codigo}",
+                    style = MaterialTheme.typography.titleMedium,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                qr.puntosCalculados?.let { pts ->
+                    Text(
+                        "Puntos a acreditar: $pts",
+                        style = MaterialTheme.typography.bodyLarge,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth(),
+                        color = VerdePiku
+                    )
                 }
-            }, modifier = Modifier.fillMaxWidth())
-            resultado?.let { Text(it, style = MaterialTheme.typography.bodyLarge) }
+                uiState.expiraEnMinutos?.let { min ->
+                    Text(
+                        "Válido ${min} minutos",
+                        style = MaterialTheme.typography.bodySmall,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+                qr.expiraAt?.let { exp ->
+                    Text(
+                        "Expira: $exp",
+                        style = MaterialTheme.typography.labelMedium,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            }
         }
     }
 }

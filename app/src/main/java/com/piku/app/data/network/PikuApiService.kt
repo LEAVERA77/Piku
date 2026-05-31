@@ -26,7 +26,11 @@ import com.piku.app.data.model.LoginResponse
 import com.piku.app.data.model.OfertaStatsResponse
 import com.piku.app.data.model.RegistroComercioGoogleRequest
 import com.piku.app.data.model.RegistroComercioRequest
+import com.piku.app.data.model.GenerarQrRequest
+import com.piku.app.data.model.GenerarQrResponse
 import com.piku.app.data.model.RegistroRequest
+import com.piku.app.data.model.ValidarQrRequest
+import com.piku.app.data.model.ValidarQrResponse
 import com.piku.app.data.model.RecompensaSingleResponse
 import com.piku.app.data.model.RecompensasListResponse
 import okhttp3.MultipartBody
@@ -136,8 +140,11 @@ interface PikuApiService {
         @Part file: MultipartBody.Part
     ): ImagenUploadResponse
 
+    @POST("api/qr/validar")
+    suspend fun validarEscaneo(@Body body: ValidarQrRequest): ValidarQrResponse
+
     @POST("api/comercio/generar-qr")
-    suspend fun generarQr(@Body body: Map<String, Any>): Map<String, Any>
+    suspend fun generarQr(@Body body: GenerarQrRequest): GenerarQrResponse
 
     @GET("api/comercio/estadisticas")
     suspend fun estadisticasComercio(): Map<String, Any>

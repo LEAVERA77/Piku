@@ -8,7 +8,7 @@ alwaysApply: true
 Al completar cambios en el repositorio (features, fixes, refactors, docs del proyecto):
 
 1. **No esperar** a que el usuario pida commit o push.
-2. Hacer **commit** con mensaje claro en español o inglés (estilo del repo), enfocado en el *porqué*.
+2. Hacer **commit** con prefijo **`[Piku]`** y mensaje en español (ver también `piku-proyecto.mdc`), enfocado en el *porqué*.
 3. Hacer **push** a la rama remota actual (`git push origin HEAD` o la rama que corresponda).
 4. **No** incluir secretos (`.env`, API keys, `config.json` con credenciales).
 5. **No** usar `--no-verify`, amend ni force push salvo pedido explícito.

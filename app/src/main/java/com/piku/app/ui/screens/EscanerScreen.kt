@@ -1,6 +1,7 @@
 package com.piku.app.ui.screens
 
 import android.Manifest
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -41,6 +42,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
+import com.google.accompanist.permissions.rememberMultiplePermissionsState
 import com.google.accompanist.permissions.rememberPermissionState
 import com.piku.app.R
 import com.piku.app.ui.components.BotonPiku
@@ -61,6 +63,13 @@ fun EscanerScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val permisoCamara = rememberPermissionState(Manifest.permission.CAMERA)
+    val permisosUbicacion = rememberMultiplePermissionsState(
+        listOf(
+            Manifest.permission.ACCESS_FINE_LOCATION,
+            Manifest.permission.ACCESS_COARSE_LOCATION
+        )
+    )
+    val puedeEscanear = permisoCamara.status.isGranted && permisosUbicacion.allPermissionsGranted
 
     Column(
         modifier = modifier
@@ -74,7 +83,7 @@ fun EscanerScreen(
         )
 
         when {
-            permisoCamara.status.isGranted -> {
+            puedeEscanear -> {
                 Box(
                     modifier = Modifier
                         .weight(1f)
@@ -84,7 +93,7 @@ fun EscanerScreen(
                 ) {
                     QrCameraPreview(
                         linternaActiva = uiState.linternaActiva,
-                        escaneoHabilitado = uiState.escaneando,
+                        escaneoHabilitado = uiState.escaneando && !uiState.validando,
                         onCodigoDetectado = viewModel::onCodigoEscaneado
                     )
 
@@ -100,7 +109,12 @@ fun EscanerScreen(
                             )
                     )
 
-                    if (uiState.escaneando) {
+                    if (uiState.validando) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.align(Alignment.Center),
+                            color = VerdePiku
+                        )
+                    } else if (uiState.escaneando) {
                         IndicadorEscaneando(
                             modifier = Modifier
                                 .align(Alignment.TopCenter)
@@ -145,12 +159,40 @@ fun EscanerScreen(
                             textAlign = TextAlign.Center,
                             modifier = Modifier.fillMaxWidth()
                         )
-                        uiState.ultimoCodigo?.let { codigo ->
+                        uiState.comercioNombre?.let { nombre ->
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = nombre,
+                                style = MaterialTheme.typography.titleSmall,
+                                color = VerdePiku,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+                        uiState.puntosGanados?.let { pts ->
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "+$pts puntos",
+                                style = MaterialTheme.typography.headlineSmall,
+                                color = VerdePiku,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+                        uiState.saldoActual?.let { saldo ->
+                            Text(
+                                text = "Saldo: $saldo pts",
+                                style = MaterialTheme.typography.bodyMedium,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+                        uiState.error?.let { err ->
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
-                                text = codigo,
-                                style = MaterialTheme.typography.labelLarge,
-                                color = VerdePiku,
+                                text = err,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.error,
                                 textAlign = TextAlign.Center,
                                 modifier = Modifier.fillMaxWidth()
                             )
@@ -173,6 +215,8 @@ fun EscanerScreen(
             }
 
             else -> {
+                val faltaCamara = !permisoCamara.status.isGranted
+                val faltaUbicacion = !permisosUbicacion.allPermissionsGranted
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
@@ -190,14 +234,22 @@ fun EscanerScreen(
                         cornerRadius = 16.dp
                     )
                     Text(
-                        text = stringResource(R.string.permiso_camara),
+                        text = when {
+                            faltaCamara && faltaUbicacion ->
+                                "Necesitamos cámara y ubicación para validar que estés en el comercio."
+                            faltaCamara -> stringResource(R.string.permiso_camara)
+                            else -> "Activá la ubicación para validar el QR en el comercio."
+                        },
                         style = MaterialTheme.typography.bodyLarge,
                         textAlign = TextAlign.Center
                     )
                     Spacer(modifier = Modifier.height(24.dp))
                     BotonPiku(
                         texto = stringResource(R.string.conceder_permiso),
-                        onClick = { permisoCamara.launchPermissionRequest() },
+                        onClick = {
+                            if (faltaCamara) permisoCamara.launchPermissionRequest()
+                            else if (faltaUbicacion) permisosUbicacion.launchMultiplePermissionRequest()
+                        },
                         estilo = EstiloBotonPiku.PRIMARIO
                     )
                 }

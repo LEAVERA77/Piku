@@ -5,6 +5,8 @@ import com.piku.app.data.model.Comercio
 import com.piku.app.data.model.ComercioDetalleResponse
 import com.piku.app.data.model.ConfiguracionEnvios
 import com.piku.app.data.model.ConfiguracionEnviosRequest
+import com.piku.app.data.model.GenerarQrRequest
+import com.piku.app.data.model.GenerarQrResponse
 import com.piku.app.data.network.ApiErrorParser
 import com.piku.app.data.network.RetrofitInstance
 import retrofit2.HttpException
@@ -39,6 +41,14 @@ class ComercioRepository(private val context: Context) {
     suspend fun guardarConfigEnvios(request: ConfiguracionEnviosRequest): ConfiguracionEnvios {
         try {
             return api.actualizarConfigEnvios(request).envios
+        } catch (e: HttpException) {
+            throw Exception(ApiErrorParser.mensaje(e), e)
+        }
+    }
+
+    suspend fun generarQr(monto: Double, lat: Double? = null, lon: Double? = null): GenerarQrResponse {
+        try {
+            return api.generarQr(GenerarQrRequest(monto = monto, lat = lat, lon = lon))
         } catch (e: HttpException) {
             throw Exception(ApiErrorParser.mensaje(e), e)
         }

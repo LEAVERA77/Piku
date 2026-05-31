@@ -137,7 +137,8 @@ fun CanjesScreen(
                     TarjetaRecompensa(
                         recompensa = recompensa,
                         puedeCanjear = uiState.puntosDisponibles >= recompensa.puntosRequeridos,
-                        onCanjear = { viewModel.solicitarCanje(recompensa) }
+                        onCanjear = { viewModel.solicitarCanje(recompensa) },
+                        modifier = Modifier.clickable { onVerOferta(recompensa.id) }
                     )
                 }
             }
