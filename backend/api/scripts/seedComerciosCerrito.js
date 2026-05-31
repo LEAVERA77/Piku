@@ -21,6 +21,10 @@ if (!fs.existsSync(ENV_PATH)) {
 
 require('dotenv').config({ path: ENV_PATH });
 
+if (!process.env.DATABASE_URL?.trim() && process.env.DATABASE_URL_DIRECT?.trim()) {
+  process.env.DATABASE_URL = process.env.DATABASE_URL_DIRECT.trim();
+}
+
 const bcrypt = require('bcryptjs');
 const { pool, query } = require('../services/neon.service');
 const { normalizarTipoComercio } = require('../constants/tipos_comercio');
@@ -285,7 +289,11 @@ function validarDatabaseUrl() {
     process.exit(1);
   }
 
-  console.log(`✅ Host: ${host} · Usuario: ${parsed.username}`);
+  const passLen = parsed.password.length;
+  console.log(`✅ Host: ${host} · Usuario: ${parsed.username} · Contraseña en URL: ${passLen} caracteres`);
+  if (passLen < 20 || parsed.password.includes('xxxx') || parsed.password === 'PASSWORD') {
+    console.warn('⚠️ La contraseña parece un placeholder. Pegá la real desde Render (suele ser ~20+ caracteres tras npg_).');
+  }
   return host;
 }
 
