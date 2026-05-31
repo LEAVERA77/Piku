@@ -9,5 +9,7 @@
     <color name="white">#FFFFFFFF</color>
 
     <color name="piku_splash_background">#FFFFFFFF</color>
+    <!-- Blanco puro detrás del adaptive icon para separar del logo a color -->
+    <color name="piku_launcher_background">#FFFFFFFF</color>
     <color name="piku_tagline">#FF455A64</color>
 </resources>

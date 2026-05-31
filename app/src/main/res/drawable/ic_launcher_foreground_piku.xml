@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- PNG 432px: logo ~37% alto, tonos oscurecidos para contrastar con el fondo degradado. -->
+<!-- PNG 432px: logo a color vivo sobre fondo blanco (ic_launcher_background). -->
 <bitmap xmlns:android="http://schemas.android.com/apk/res/android"
     android:gravity="center"
     android:src="@drawable/piku_logo_icon_adaptive" />
