@@ -139,9 +139,10 @@ fun FormularioOfertaScreen(
                 }
                 if (!imagenUrl.isNullOrBlank()) body["imagenUrl"] = imagenUrl
 
-                val id = if (esEdicion && idArticulo != null) {
-                    repo.actualizar(idArticulo, body).id
-                    idArticulo!!
+                val idExistente = idArticulo
+                val id = if (esEdicion && idExistente != null) {
+                    repo.actualizar(idExistente, body).id
+                    idExistente
                 } else {
                     repo.crear(body).id
                 }
