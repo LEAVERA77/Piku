@@ -1,5 +1,6 @@
 package com.piku.app.ui.screens
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -8,6 +9,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -22,8 +25,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import com.piku.app.R
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -35,11 +38,7 @@ import com.piku.app.data.datastore.AuthDataStore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import com.piku.app.data.repository.AuthRepository
-import com.piku.app.ui.components.PikuLogo
-import com.piku.app.ui.theme.AmarilloPiku
-import com.piku.app.ui.theme.CelestePiku
 import com.piku.app.ui.theme.NaranjaPiku
-import com.piku.app.ui.theme.VerdePiku
 import com.piku.app.utils.BiometricHelper
 import kotlinx.coroutines.launch
 
@@ -103,43 +102,46 @@ fun SplashScreen(
         }
     }
 
+    val taglineColor = Color(0xFF455A64)
+    val accentColor = NaranjaPiku
+
     Box(
         Modifier
             .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    listOf(
-                        VerdePiku,
-                        CelestePiku,
-                        NaranjaPiku.copy(alpha = 0.9f),
-                        AmarilloPiku.copy(alpha = 0.7f)
-                    )
-                )
-            ),
+            .background(Color.White),
         contentAlignment = Alignment.Center
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.padding(32.dp)
+            modifier = Modifier.padding(horizontal = 32.dp, vertical = 24.dp)
         ) {
-            PikuLogo(showTagline = false, modifier = Modifier.padding(bottom = 8.dp))
-            Text(
-                tagline,
-                style = MaterialTheme.typography.titleMedium,
-                color = Color.White.copy(alpha = 0.95f)
+            Image(
+                painter = painterResource(R.drawable.piku_logo_brand),
+                contentDescription = "Piku",
+                modifier = Modifier
+                    .fillMaxWidth(0.88f)
+                    .padding(bottom = 8.dp),
+                contentScale = ContentScale.Fit
             )
+            if (tagline.isNotBlank()) {
+                Text(
+                    text = tagline,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = taglineColor
+                )
+            }
             when (paso) {
                 PasoSplash.CARGANDO -> {
                     CircularProgressIndicator(
                         modifier = Modifier.padding(top = 32.dp),
-                        color = Color.White
+                        color = accentColor
                     )
                 }
                 PasoSplash.HUELLA -> {
                     Text(
                         "Confirmá con tu huella",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = Color.White.copy(alpha = 0.9f),
+                        color = taglineColor,
                         modifier = Modifier.padding(top = 24.dp)
                     )
                     TextButton(
@@ -151,14 +153,14 @@ fun SplashScreen(
                         },
                         modifier = Modifier.padding(top = 8.dp)
                     ) {
-                        Text("Ingresar con email o Google", color = Color.White)
+                        Text("Ingresar con email o Google", color = accentColor)
                     }
                 }
                 PasoSplash.ERROR_HUELLA -> {
                     Text(
                         "No se pudo verificar la huella",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = Color.White,
+                        color = taglineColor,
                         modifier = Modifier.padding(top = 24.dp)
                     )
                     Spacer(modifier = Modifier.height(12.dp))
@@ -177,7 +179,7 @@ fun SplashScreen(
                         },
                         modifier = Modifier.padding(top = 4.dp)
                     ) {
-                        Text("Usar email, Google o contraseña", color = Color.White)
+                        Text("Usar email, Google o contraseña", color = accentColor)
                     }
                 }
             }
