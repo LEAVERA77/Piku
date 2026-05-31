@@ -29,6 +29,8 @@ npm run seed:cerrito
 
 Si ves `ENOTFOUND ep-tu-proyecto.neon.tech`, la URL sigue siendo el **ejemplo** de la documentación: reemplazala por la de Neon/Render.
 
+Si el script dice que el host empieza con **`dep-`**, falta la letra **e**: debe ser **`ep-gentle-silence-...`**, no `dep-gentle-silence-...`.
+
 ### Opción B — Solo esta sesión (sin .env)
 
 ```powershell

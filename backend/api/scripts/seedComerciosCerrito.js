@@ -229,6 +229,17 @@ async function upsertComercio(hash, data) {
   return { comercioId, email };
 }
 
+function obtenerHostDb(urlRaw) {
+  const url = String(urlRaw).trim().replace(/^["']|["']$/g, '');
+  try {
+    const parsed = new URL(url.replace(/^postgresql:\/\//i, 'http://'));
+    return parsed.hostname;
+  } catch (_) {
+    const m = url.match(/@([^/?#]+)/);
+    return m ? m[1].split(':')[0].replace(/^["']|["']$/g, '') : '';
+  }
+}
+
 function validarDatabaseUrl() {
   const url = process.env.DATABASE_URL || '';
   if (!url.trim()) {
@@ -236,26 +247,50 @@ function validarDatabaseUrl() {
     console.error('   Creá backend/api/.env (copiá .env.example) con la URL real de Neon.');
     process.exit(1);
   }
-  const placeholders = ['ep-tu-proyecto', 'host.neon.tech', 'usuario:password@', '@ep-REEMPLAZAR.'];
-  const hostMatch = url.match(/@([^/?]+)/);
-  const host = hostMatch ? hostMatch[1].split(':')[0] : '';
-  if (placeholders.some((p) => url.includes(p)) || host === 'host.neon.tech' || !/^ep-[a-z0-9-]+\./i.test(host)) {
-    console.error('❌ DATABASE_URL parece un ejemplo, no tu base real.');
-    console.error(`   Host detectado: ${host || '(vacío)'}`);
-    console.error('   Copiá la connection string desde Neon Console o Render → Environment.');
+
+  const host = obtenerHostDb(url);
+  const placeholders = [
+    'ep-tu-proyecto',
+    'tu-proyecto',
+    'usuario:password@',
+    'ep-REEMPLAZAR',
+    'example.com',
+    '@host.neon.tech',
+  ];
+
+  if (!host) {
+    console.error('❌ No se pudo leer el host de DATABASE_URL.');
     process.exit(1);
   }
+
+  if (placeholders.some((p) => url.toLowerCase().includes(p.toLowerCase()))) {
+    console.error('❌ DATABASE_URL parece un ejemplo. Pegá la cadena real de Neon/Render.');
+    console.error(`   Host detectado: ${host}`);
+    process.exit(1);
+  }
+
+  if (host.startsWith('dep-')) {
+    console.error('❌ El host empieza con "dep-". En Neon suele ser "ep-" (con e).');
+    console.error(`   Host detectado: ${host}`);
+    console.error('   Revisá que no falte la "e" al copiar la URL.');
+    process.exit(1);
+  }
+
+  return host;
 }
 
 async function main() {
-  validarDatabaseUrl();
+  const host = validarDatabaseUrl();
   if (!pool) {
     console.error('❌ No se pudo crear el pool de PostgreSQL.');
     process.exit(1);
   }
 
+  console.log('🌱 Iniciando seed de comercios en Cerrito, Entre Ríos...');
+  console.log(`📡 Conectando a: ${host}`);
+  console.log(`🔐 Contraseña de prueba para comercios: ${PASSWORD}\n`);
+
   const hash = await bcrypt.hash(PASSWORD, 10);
-  console.log('🌱 Seed comercios Cerrito, Entre Ríos...\n');
 
   const creados = [];
   for (const c of COMERCIOS) {
