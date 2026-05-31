@@ -12,6 +12,7 @@ const MIGRATION_FILES = [
   'migration_registro_mapa_ofertas.sql',
   'migration_comercio_envios.sql',
   'migration_notificaciones.sql',
+  'migration_fcm_token.sql',
 ];
 
 /** Columnas críticas que la API necesita (por si falla el SQL completo). */
@@ -63,6 +64,7 @@ const CRITICAL_ALTERS = [
   'ALTER TABLE piku_comercios ADD COLUMN IF NOT EXISTS envio_minimo_compra DECIMAL(10,2)',
   'ALTER TABLE piku_comercios ADD COLUMN IF NOT EXISTS telefono_contacto VARCHAR(20)',
   'CREATE INDEX IF NOT EXISTS idx_piku_comercios_envios ON piku_comercios(realiza_envios)',
+  'ALTER TABLE piku_usuarios ADD COLUMN IF NOT EXISTS fcm_token TEXT',
 ];
 
 /**

@@ -11,9 +11,21 @@ let reconnectTimer = null;
  * URL directa a Neon (sin pooler). LISTEN/NOTIFY no funciona con PgBouncer en modo transaction.
  */
 function resolveDirectConnectionString() {
-  const raw = process.env.DATABASE_URL_DIRECT || process.env.DATABASE_URL;
-  if (!raw) return null;
-  return raw.replace(/-pooler\./g, '.');
+  const direct = process.env.DATABASE_URL_DIRECT;
+  if (direct) {
+    return direct.includes('-pooler') ? direct.replace(/-pooler\./g, '.') : direct;
+  }
+
+  const pooled = process.env.DATABASE_URL;
+  if (!pooled) return null;
+
+  if (pooled.includes('-pooler')) {
+    console.warn(
+      '⚠️ LISTEN/NOTIFY: DATABASE_URL usa pooler de Neon. Definí DATABASE_URL_DIRECT (host sin -pooler) para el listener.'
+    );
+    return pooled.replace(/-pooler\./g, '.');
+  }
+  return pooled;
 }
 
 async function connectAndListen() {
@@ -48,7 +60,10 @@ async function connectAndListen() {
     try {
       payload = msg.payload ? JSON.parse(msg.payload) : null;
     } catch (_) {
-      payload = { raw: msg.payload };
+      if (process.env.NODE_ENV !== 'production') {
+        console.warn('NOTIFY payload no JSON');
+      }
+      return;
     }
     emitter.emit('notification', payload);
     if (process.env.NODE_ENV !== 'production') {

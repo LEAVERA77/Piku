@@ -171,6 +171,9 @@ interface PikuApiService {
     @PUT("api/comercio/notificaciones/{id}/leer")
     suspend fun marcarNotificacionLeida(@Path("id") id: String): Map<String, Any>
 
+    @PUT("api/comercio/dispositivo/fcm")
+    suspend fun registrarFcmToken(@Body body: Map<String, String>): Map<String, Any>
+
     @GET("api/comercio/canjes")
     suspend fun historialCanjesComercio(
         @Query("pagina") pagina: Int = 1,

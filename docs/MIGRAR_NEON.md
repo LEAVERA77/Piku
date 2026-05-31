@@ -55,6 +55,10 @@ En Render, para el listener en tiempo real:
 | `DATABASE_URL` | Conexión **directa** a Neon (sin `-pooler` en el host) |
 | `DATABASE_URL_DIRECT` | (opcional) Misma URL directa si usás pooler en `DATABASE_URL` para queries |
 | `DISABLE_PG_LISTEN` | `true` solo si querés desactivar el listener |
+| `NOTIFICACIONES_RETENCION_DIAS` | Días de retención (default `90`) |
+| `FIREBASE_SERVICE_ACCOUNT_JSON` | Base64 JSON Firebase para FCM (opcional) |
+
+Ver también `docs/NOTIFICACIONES_TIEMPO_REAL.md`.
 
 ## Render — variable recomendada
 

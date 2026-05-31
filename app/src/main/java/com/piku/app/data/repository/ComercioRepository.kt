@@ -89,6 +89,14 @@ class ComercioRepository(private val context: Context) {
         }
     }
 
+    suspend fun registrarFcmToken(token: String) {
+        try {
+            api.registrarFcmToken(mapOf("token" to token))
+        } catch (e: HttpException) {
+            throw Exception(ApiErrorParser.mensaje(e), e)
+        }
+    }
+
     suspend fun historialCanjes(
         pagina: Int = 1,
         limite: Int = 20,

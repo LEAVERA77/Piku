@@ -10,8 +10,10 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -22,7 +24,12 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.piku.app.ui.theme.PikuTheme
 import com.piku.app.data.network.RetrofitInstance
+import com.piku.app.data.network.ComercioRealtimeClient
 import com.piku.app.data.repository.ComercioRepository
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import androidx.compose.runtime.rememberCoroutineScope
 import com.piku.app.ui.components.PikuPhotoImage
 import com.piku.app.ui.media.PikuImages
 
@@ -37,7 +44,21 @@ fun AdminDashboardScreen(
 ) {
     val context = LocalContext.current
     var stats by remember { mutableStateOf<Map<String, Any>?>(null) }
-    var notificacionesNoLeidas by remember { mutableStateOf(0) }
+    var notificacionesNoLeidas by remember { mutableIntStateOf(0) }
+    val repo = remember { ComercioRepository(context) }
+    val scope = rememberCoroutineScope()
+
+    fun refrescarBadge() {
+        scope.launch {
+            try {
+                notificacionesNoLeidas = withContext(Dispatchers.IO) {
+                    repo.contarNotificacionesNoLeidas()
+                }
+            } catch (_: Exception) {
+                notificacionesNoLeidas = 0
+            }
+        }
+    }
 
     LaunchedEffect(Unit) {
         try {
@@ -45,11 +66,13 @@ fun AdminDashboardScreen(
         } catch (_: Exception) {
             stats = null
         }
-        try {
-            notificacionesNoLeidas = ComercioRepository(context).contarNotificacionesNoLeidas()
-        } catch (_: Exception) {
-            notificacionesNoLeidas = 0
-        }
+        refrescarBadge()
+    }
+
+    DisposableEffect(Unit) {
+        val realtime = ComercioRealtimeClient(context) { refrescarBadge() }
+        realtime.conectar()
+        onDispose { realtime.desconectar() }
     }
 
     Column(Modifier.fillMaxSize().padding(24.dp)) {

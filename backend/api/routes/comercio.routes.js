@@ -3,6 +3,10 @@ const multer = require('multer');
 const comercioController = require('../controllers/comercio.controller');
 const { authMiddleware } = require('../middleware/auth.middleware');
 const { soloComercio } = require('../middleware/roles.middleware');
+const {
+  comercioNotificacionesLimiter,
+  comercioCanjesLimiter,
+} = require('../middleware/rateLimit.middleware');
 
 const router = express.Router();
 const upload = multer({
@@ -26,9 +30,18 @@ router.post('/generar-qr', comercioController.generarQR);
 router.get('/estadisticas', comercioController.getEstadisticas);
 router.get('/envios', comercioController.getConfigEnvios);
 router.put('/envios', comercioController.updateConfigEnvios);
-router.get('/notificaciones', comercioController.obtenerNotificaciones);
-router.get('/notificaciones/no-leidas', comercioController.contarNotificacionesNoLeidas);
-router.put('/notificaciones/:id/leer', comercioController.marcarNotificacionLeida);
-router.get('/canjes', comercioController.obtenerHistorialCanjes);
+router.get('/notificaciones', comercioNotificacionesLimiter, comercioController.obtenerNotificaciones);
+router.get(
+  '/notificaciones/no-leidas',
+  comercioNotificacionesLimiter,
+  comercioController.contarNotificacionesNoLeidas
+);
+router.put(
+  '/notificaciones/:id/leer',
+  comercioNotificacionesLimiter,
+  comercioController.marcarNotificacionLeida
+);
+router.get('/canjes', comercioCanjesLimiter, comercioController.obtenerHistorialCanjes);
+router.put('/dispositivo/fcm', comercioController.registrarFcmToken);
 
 module.exports = router;

@@ -1,4 +1,5 @@
 require('dotenv').config();
+const http = require('http');
 const express = require('express');
 const cors = require('cors');
 
@@ -11,16 +12,18 @@ const publicController = require('./controllers/public.controller');
 const chatRoutes = require('./routes/chat.routes');
 const { runStartupMigrations } = require('./services/migrate.service');
 const { startNotificationListener } = require('./services/notificationListener');
+const { startNotificationRetentionJob } = require('./services/notificationRetention.job');
+const { attachWebSocketServer } = require('./services/websocket.service');
+const { wireNotificationHandlers } = require('./services/notificationBridge.service');
+const { initFcm } = require('./services/fcm.service');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Middleware global
 app.use(cors());
 app.use(express.json({ limit: '2mb' }));
 app.use(express.urlencoded({ extended: true }));
 
-// Health check
 app.get('/health', (req, res) => {
   res.json({
     status: 'ok',
@@ -37,7 +40,6 @@ app.get('/', (req, res) => {
   });
 });
 
-// Rutas de la API
 app.use('/api/auth', authRoutes);
 app.use('/api/usuario', usuarioRoutes);
 app.use('/api/qr', qrRoutes);
@@ -46,12 +48,10 @@ app.get('/api/rubros', publicController.listarRubros);
 app.use('/api/public', publicRoutes);
 app.use('/api', chatRoutes);
 
-// Manejo de rutas no encontradas
 app.use((req, res) => {
   res.status(404).json({ error: 'Ruta no encontrada', path: req.path });
 });
 
-// Manejo global de errores
 app.use((err, req, res, _next) => {
   console.error('Error no controlado:', err);
   res.status(500).json({ error: 'Error interno del servidor' });
@@ -64,15 +64,24 @@ async function start() {
     console.error('⚠️ Migraciones al inicio:', error.message);
   }
 
-  app.listen(PORT, () => {
+  initFcm();
+
+  const httpServer = http.createServer(app);
+  attachWebSocketServer(httpServer);
+  wireNotificationHandlers();
+
+  httpServer.listen(PORT, () => {
     console.log(`✅ Servidor Piku corriendo en puerto ${PORT}`);
     console.log(`📡 Health: http://localhost:${PORT}/health`);
     console.log(`🔐 Auth:   http://localhost:${PORT}/api/auth/login`);
+    console.log(`🔌 WS:     ws://localhost:${PORT}/ws/comercio?token=JWT`);
   });
 
   startNotificationListener().catch((err) => {
     console.error('⚠️ Listener NOTIFY:', err.message);
   });
+
+  startNotificationRetentionJob();
 }
 
 start();

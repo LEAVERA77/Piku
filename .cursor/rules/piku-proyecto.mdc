@@ -34,6 +34,8 @@ alwaysApply: true
 - Al insertar en `piku_canjes`, trigger → fila en `piku_notificaciones` + `pg_notify('piku_notificaciones', …)`.
 - Persistencia en BD; NOTIFY es señal efímera (listener en `notificationListener.js`, conexión directa sin pooler).
 - API: `GET /api/comercio/notificaciones`, `PUT .../leer`, `GET /api/comercio/canjes`.
+- Tiempo real: `DATABASE_URL_DIRECT` para LISTEN; WebSocket `/ws/comercio`; FCM opcional con `FIREBASE_SERVICE_ACCOUNT_JSON`.
+- Rate limit en notificaciones/canjes; retención 90 días (`notificationRetention.job.js`).
 
 ## Registro y mapa
 

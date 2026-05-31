@@ -736,6 +736,28 @@ async function obtenerHistorialCanjes(req, res) {
   }
 }
 
+/**
+ * Registra token FCM del usuario comercio (push en segundo plano).
+ */
+async function registrarFcmToken(req, res) {
+  try {
+    const token = String(req.body.token || req.body.fcm_token || '').trim();
+    if (!token || token.length < 20 || token.length > 512) {
+      return responderError(res, 400, 'Token FCM inválido');
+    }
+
+    await query(
+      'UPDATE piku_usuarios SET fcm_token = $1, updated_at = NOW() WHERE id = $2',
+      [token, req.user.id]
+    );
+
+    return res.json({ mensaje: 'Token FCM registrado' });
+  } catch (error) {
+    console.error('registrarFcmToken:', error);
+    return responderError(res, 500, 'Error al registrar dispositivo');
+  }
+}
+
 module.exports = {
   getReglasPuntos,
   updateReglasPuntos,
@@ -755,4 +777,5 @@ module.exports = {
   contarNotificacionesNoLeidas,
   marcarNotificacionLeida,
   obtenerHistorialCanjes,
+  registrarFcmToken,
 };
