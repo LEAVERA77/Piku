@@ -247,9 +247,17 @@ function validarDatabaseUrl() {
     process.exit(1);
   }
 
-  const host = obtenerHostDb(url);
-  if (!host) {
+  let parsed;
+  try {
+    parsed = new URL(url.replace(/^postgresql:\/\//i, 'http://'));
+  } catch (_) {
     console.error('❌ DATABASE_URL no es una URL válida');
+    process.exit(1);
+  }
+
+  const host = parsed.hostname || obtenerHostDb(url);
+  if (!host) {
+    console.error('❌ No se pudo leer el host de DATABASE_URL');
     process.exit(1);
   }
 
@@ -259,19 +267,60 @@ function validarDatabaseUrl() {
     process.exit(1);
   }
 
-  console.log(`✅ Conectando a: ${host}`);
+  if (!parsed.username) {
+    console.error('❌ Falta el usuario en DATABASE_URL (ej. neondb_owner)');
+    process.exit(1);
+  }
+
+  if (!parsed.password || parsed.password === 'PASSWORD' || parsed.password.length < 12) {
+    console.error('❌ La contraseña en DATABASE_URL falta o está incompleta.');
+    console.error('   Copiá la cadena COMPLETA desde Render → Environment → DATABASE_URL');
+    console.error('   (o DATABASE_URL_DIRECT). Debe verse algo como:');
+    console.error('   postgresql://neondb_owner:npg_XXXXXXXXXXXX@ep-....neon.tech/neondb?...');
+    process.exit(1);
+  }
+
+  if (!url.includes('@') || !url.includes('://')) {
+    console.error('❌ DATABASE_URL incompleta. Formato: postgresql://usuario:contraseña@host/base');
+    process.exit(1);
+  }
+
+  console.log(`✅ Host: ${host} · Usuario: ${parsed.username}`);
   return host;
 }
 
+async function probarConexionDb() {
+  try {
+    await query('SELECT 1 AS ok');
+    console.log('✅ Conexión y contraseña de Neon correctas\n');
+  } catch (err) {
+    if (err.code === '28P01' || /password authentication failed/i.test(String(err.message))) {
+      console.error('\n❌ Contraseña incorrecta para neondb_owner (código 28P01).');
+      console.error('');
+      console.error('   1. Render → Piku → Environment → copiá DATABASE_URL (valor completo, botón copiar)');
+      console.error('   2. Pegalo en backend/api/.env en UNA línea, sin comillas:');
+      console.error('      DATABASE_URL=postgresql://neondb_owner:npg_.....@ep-....neon.tech/neondb?...');
+      console.error('   3. Verificá host ep-... (no dep-) y que la contraseña no esté cortada');
+      console.error('   4. Si la contraseña tiene @ # % &, codificá en la URL (@ → %40)');
+      console.error('');
+      console.error('   En Neon podés resetear la contraseña: Project → Connection details → Reset password');
+      process.exit(1);
+    }
+    console.error('\n❌ Error de conexión:', err.message);
+    process.exit(1);
+  }
+}
+
 async function main() {
-  const host = validarDatabaseUrl();
+  validarDatabaseUrl();
   if (!pool) {
     console.error('❌ No se pudo crear el pool de PostgreSQL.');
     process.exit(1);
   }
 
+  await probarConexionDb();
+
   console.log('🌱 Iniciando seed de comercios en Cerrito, Entre Ríos...');
-  console.log(`📡 Conectando a: ${host}`);
   console.log(`🔐 Contraseña de prueba para comercios: ${PASSWORD}\n`);
 
   const hash = await bcrypt.hash(PASSWORD, 10);

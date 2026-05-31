@@ -31,6 +31,17 @@ Si ves `ENOTFOUND ep-tu-proyecto.neon.tech`, la URL sigue siendo el **ejemplo** 
 
 Si el script dice que el host empieza con **`dep-`**, falta la letra **e**: debe ser **`ep-gentle-silence-...`**, no `dep-gentle-silence-...`.
 
+## Error `password authentication failed` (28P01)
+
+La contraseña en `.env` no coincide con Neon. **No inventes la URL**: copiala entera desde Render.
+
+1. Render → servicio **Piku** → **Environment** → **DATABASE_URL** → **Reveal** → copiar todo.
+2. Pegar en `backend/api/.env` en una sola línea, sin `"` alrededor.
+3. Debe incluir `neondb_owner`, contraseña larga (`npg_...`) y host `ep-...neon.tech`.
+4. Si falla igual: Neon Console → **Reset database password** → actualizar Render y tu `.env`.
+
+Caracteres especiales en la contraseña (`@`, `#`, `%`): codificar en la URL (`@` → `%40`).
+
 ### Opción B — Solo esta sesión (sin .env)
 
 ```powershell
