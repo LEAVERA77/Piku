@@ -5,10 +5,10 @@
         android:height="72dp"
         android:gravity="center">
         <inset
-            android:insetLeft="14dp"
-            android:insetTop="14dp"
-            android:insetRight="14dp"
-            android:insetBottom="14dp">
+            android:insetLeft="18dp"
+            android:insetTop="18dp"
+            android:insetRight="18dp"
+            android:insetBottom="18dp">
             <bitmap
                 android:gravity="center"
                 android:src="@drawable/piku_logo_icon" />

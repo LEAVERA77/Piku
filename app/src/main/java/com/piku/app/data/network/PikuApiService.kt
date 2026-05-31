@@ -3,6 +3,8 @@ package com.piku.app.data.network
 import com.piku.app.data.model.ActualizarPerfilRequest
 import com.piku.app.data.model.ActualizarPerfilResponse
 import com.piku.app.data.model.AvatarUploadResponse
+import com.piku.app.data.model.CanjeRequest
+import com.piku.app.data.model.CanjeResponse
 import com.piku.app.data.model.ChatPikuRequest
 import com.piku.app.data.model.PerfilResponse
 import com.piku.app.data.model.ChatPikuResponse
@@ -90,6 +92,9 @@ interface PikuApiService {
 
     @GET("api/usuario/saldo")
     suspend fun saldo(): Map<String, Any>
+
+    @POST("api/usuario/canjear")
+    suspend fun canjearRecompensa(@Body body: CanjeRequest): CanjeResponse
 
     @GET("api/comercio/recompensas")
     suspend fun recompensasComercioLista(): RecompensasListResponse

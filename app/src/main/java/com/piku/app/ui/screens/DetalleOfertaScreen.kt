@@ -11,20 +11,27 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -35,9 +42,10 @@ import com.piku.app.data.config.ConfigLoader
 import com.piku.app.data.datastore.AuthDataStore
 import com.piku.app.data.model.RecompensaDetalleResponse
 import com.piku.app.data.repository.MapaRepository
+import com.piku.app.data.repository.UsuarioRepository
 import com.piku.app.ui.components.PikuPhotoImage
-import com.piku.app.ui.theme.NaranjaPiku
 import com.piku.app.ui.theme.VerdePiku
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -46,17 +54,29 @@ fun DetalleOfertaScreen(
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val snackbar = remember { SnackbarHostState() }
+    val usuarioRepo = remember { UsuarioRepository(context) }
+
     var detalle by remember { mutableStateOf<RecompensaDetalleResponse?>(null) }
     var cargando by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
+    var puntosSaldo by remember { mutableIntStateOf(0) }
+    var esCliente by remember { mutableStateOf(false) }
+    var mostrarConfirmacion by remember { mutableStateOf(false) }
+    var canjeando by remember { mutableStateOf(false) }
+    var codigoCanje by remember { mutableStateOf<String?>(null) }
+
     val cloud = ConfigLoader.cloudinaryCloudName(context)
-    val esCliente = remember { mutableStateOf(false) }
 
     LaunchedEffect(recompensaId) {
         cargando = true
-        esCliente.value = AuthDataStore.rol(context) == "cliente"
+        esCliente = AuthDataStore.rol(context) == "cliente"
         try {
             detalle = MapaRepository(context).detalleRecompensa(recompensaId)
+            if (esCliente) {
+                puntosSaldo = usuarioRepo.obtenerSaldo()
+            }
         } catch (e: Exception) {
             error = e.message
         } finally {
@@ -64,7 +84,25 @@ fun DetalleOfertaScreen(
         }
     }
 
+    fun ejecutarCanje() {
+        scope.launch {
+            canjeando = true
+            try {
+                val res = usuarioRepo.canjearRecompensa(recompensaId)
+                puntosSaldo = res.puntosRestantes ?: puntosSaldo
+                codigoCanje = res.codigoCanje
+                mostrarConfirmacion = false
+                snackbar.showSnackbar(res.mensaje)
+            } catch (e: Exception) {
+                snackbar.showSnackbar(e.message ?: "No se pudo canjear")
+            } finally {
+                canjeando = false
+            }
+        }
+    }
+
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbar) },
         topBar = {
             TopAppBar(
                 title = { Text(detalle?.recompensa?.nombre ?: "Oferta") },
@@ -81,6 +119,8 @@ fun DetalleOfertaScreen(
             error != null -> Text(error!!, Modifier.padding(padding).padding(16.dp))
             detalle != null -> {
                 val oferta = detalle!!.recompensa
+                val puedeCanjear = esCliente && puntosSaldo >= oferta.puntosRequeridos && codigoCanje == null
+
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
@@ -107,6 +147,13 @@ fun DetalleOfertaScreen(
                             color = MaterialTheme.colorScheme.primary
                         )
                     }
+                    if (esCliente) {
+                        Text(
+                            "Tu saldo: $puntosSaldo pts",
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.padding(top = 6.dp)
+                        )
+                    }
                     Text(
                         "${oferta.puntosRequeridos} puntos necesarios",
                         style = MaterialTheme.typography.titleMedium,
@@ -130,23 +177,84 @@ fun DetalleOfertaScreen(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
-                    if (esCliente.value) {
+                    codigoCanje?.let { codigo ->
+                        Spacer(Modifier.height(16.dp))
+                        Text(
+                            "Código de canje",
+                            style = MaterialTheme.typography.titleSmall,
+                            color = VerdePiku
+                        )
+                        Text(
+                            codigo,
+                            style = MaterialTheme.typography.headlineSmall,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        Text(
+                            "Mostrá este código en el comercio para usar tu beneficio.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(top = 4.dp)
+                        )
+                    }
+                    if (esCliente && codigoCanje == null) {
                         Spacer(Modifier.height(24.dp))
                         Button(
-                            onClick = { /* canje vía flujo existente en Canjes */ },
+                            onClick = { mostrarConfirmacion = true },
                             modifier = Modifier.fillMaxWidth(),
-                            enabled = false
+                            enabled = puedeCanjear && !canjeando,
+                            colors = ButtonDefaults.buttonColors(containerColor = VerdePiku)
                         ) {
-                            Text("Canjear (próximamente desde aquí)", color = NaranjaPiku)
+                            if (canjeando) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.height(24.dp),
+                                    strokeWidth = 2.dp
+                                )
+                            } else {
+                                Text("Canjear")
+                            }
                         }
-                        Text(
-                            "Usá la pestaña Canjes para canjear con tus puntos.",
-                            style = MaterialTheme.typography.bodySmall,
-                            modifier = Modifier.padding(top = 8.dp)
-                        )
+                        if (!puedeCanjear && puntosSaldo < oferta.puntosRequeridos) {
+                            Text(
+                                "Te faltan ${oferta.puntosRequeridos - puntosSaldo} puntos para canjear.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.padding(top = 8.dp)
+                            )
+                        }
                     }
                 }
             }
         }
+    }
+
+    if (mostrarConfirmacion && detalle != null) {
+        val oferta = detalle!!.recompensa
+        AlertDialog(
+            onDismissRequest = { if (!canjeando) mostrarConfirmacion = false },
+            title = { Text("Confirmar canje") },
+            text = {
+                Text(
+                    "¿Canjear \"${oferta.nombre}\" por ${oferta.puntosRequeridos} puntos? " +
+                        "Te quedarán ${puntosSaldo - oferta.puntosRequeridos} pts."
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = { ejecutarCanje() },
+                    enabled = !canjeando,
+                    colors = ButtonDefaults.buttonColors(containerColor = VerdePiku)
+                ) {
+                    Text(if (canjeando) "Canjeando…" else "Canjear")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { mostrarConfirmacion = false },
+                    enabled = !canjeando
+                ) {
+                    Text("Cancelar")
+                }
+            }
+        )
     }
 }
