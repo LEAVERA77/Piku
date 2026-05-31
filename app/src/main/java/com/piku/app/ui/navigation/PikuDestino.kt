@@ -18,11 +18,13 @@ enum class PikuDestino(
     Escaner("escaner", "Escanear"),
     Canjes("canjes", "Canjes"),
     Perfil("perfil", "Perfil"),
-    DetalleComercio("detalle_comercio/{comercioId}", "Detalle", mostrarEnBarra = false);
+    DetalleComercio("detalle_comercio/{comercioId}", "Detalle", mostrarEnBarra = false),
+    DetalleOferta("detalle_oferta/{recompensaId}", "Oferta", mostrarEnBarra = false);
 
     companion object {
         val barraInferior = entries.filter { it.mostrarEnBarra }
         fun detalleComercio(id: String) = "detalle_comercio/$id"
+        fun detalleOferta(id: String) = "detalle_oferta/$id"
     }
 }
 
@@ -33,6 +35,7 @@ fun PikuDestino.icono(): ImageVector = when (this) {
     PikuDestino.Canjes -> Icons.Default.CardGiftcard
     PikuDestino.Perfil -> Icons.Default.Person
     PikuDestino.DetalleComercio -> Icons.Default.Map
+    PikuDestino.DetalleOferta -> Icons.Default.CardGiftcard
 }
 
 object PikuRutasRoot {

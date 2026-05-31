@@ -4,7 +4,12 @@ data class RegistroRequest(
     val email: String,
     val password: String,
     val nombre: String,
-    val telefono: String? = null
+    val telefono: String? = null,
+    val calle: String? = null,
+    val numero: String? = null,
+    val ciudad: String? = null,
+    val provincia: String? = null,
+    val codigoPostal: String? = null
 )
 
 data class GoogleLoginRequest(
@@ -17,9 +22,14 @@ data class RegistroComercioRequest(
     val nombre: String,
     val telefono: String? = null,
     val nombreComercio: String,
-    val direccion: String? = null,
+    val calle: String? = null,
+    val numero: String? = null,
+    val ciudad: String? = null,
+    val provincia: String? = null,
+    val codigoPostal: String? = null,
     val lat: Double? = null,
     val lon: Double? = null,
+    val tipoComercio: String? = null,
     val categoria: String? = null,
     val codigoInvitacion: String? = null
 )
@@ -29,7 +39,14 @@ data class RegistroComercioGoogleRequest(
     val nombre: String? = null,
     val nombreComercio: String,
     val telefono: String? = null,
-    val direccion: String? = null,
+    val calle: String? = null,
+    val numero: String? = null,
+    val ciudad: String? = null,
+    val provincia: String? = null,
+    val codigoPostal: String? = null,
+    val lat: Double? = null,
+    val lon: Double? = null,
+    val tipoComercio: String? = null,
     val categoria: String? = null,
     val codigoInvitacion: String? = null
 )

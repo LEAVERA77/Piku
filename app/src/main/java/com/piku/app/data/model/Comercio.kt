@@ -12,7 +12,10 @@ data class Comercio(
     @SerializedName("logo_url") val logoUrl: String? = null,
     @SerializedName("suscripcion_activa") val suscripcionActiva: Boolean = true,
     val categoria: String? = null,
+    @SerializedName("tipo_comercio") val tipoComercio: String? = null,
+    @SerializedName("icono_emoji") val iconoEmoji: String? = null,
     @SerializedName("puntos_min_canje") val puntosMinCanje: Int? = null,
+    @SerializedName("cantidad_ofertas") val cantidadOfertas: Int = 0,
     @SerializedName("created_at") val createdAt: String? = null,
     /** Distancia en metros desde el usuario (calculada en app). */
     val distanciaMetros: Int? = null
@@ -31,10 +34,24 @@ data class RecompensaPublica(
     val descripcion: String? = null,
     @SerializedName("puntos_requeridos") val puntosRequeridos: Int,
     val icono: String? = null,
-    @SerializedName("imagen_url") val imagenUrl: String? = null
+    @SerializedName("imagen_url") val imagenUrl: String? = null,
+    val tipo: String? = null,
+    val condiciones: String? = null,
+    @SerializedName("vigencia_desde") val vigenciaDesde: String? = null,
+    @SerializedName("vigencia_hasta") val vigenciaHasta: String? = null
 ) {
-    fun photoUrl(): String = com.piku.app.ui.media.PikuImages.resolve(imagenUrl, id, nombre)
+    fun photoUrl(cloudName: String? = null): String =
+        com.piku.app.ui.media.PikuImages.resolve(imagenUrl, id, nombre, cloudName)
 }
+
+data class OfertasComercioResponse(
+    val ofertas: List<RecompensaPublica> = emptyList()
+)
+
+data class RecompensaDetalleResponse(
+    val recompensa: RecompensaPublica,
+    val comercio: Comercio? = null
+)
 
 data class ComerciosResponse(
     val comercios: List<Comercio>

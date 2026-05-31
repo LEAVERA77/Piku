@@ -53,11 +53,19 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import com.piku.app.data.model.LoginResponse
 import com.piku.app.data.repository.AuthRepository
+import com.piku.app.data.TipoComercio
 import com.piku.app.ui.components.BotonGoogle
 import com.piku.app.ui.components.BotonPiku
 import com.piku.app.ui.components.CampoContrasena
+import com.piku.app.ui.components.DireccionFormState
 import com.piku.app.ui.components.EstiloBotonPiku
+import com.piku.app.ui.components.FormularioDireccionRegistro
 import com.piku.app.ui.components.PikuLogo
+import com.piku.app.ui.components.SelectorUbicacionMapa
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExposedDropdownMenu
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import com.piku.app.utils.BiometricHelper
 import com.piku.app.utils.GoogleAuthHelper
 import com.piku.app.utils.GoogleSignInHelper
@@ -88,6 +96,14 @@ private fun validarNombreApellido(nombre: String, apellido: String): String? {
 private fun nombreCompleto(nombre: String, apellido: String): String =
     "${nombre.trim()} ${apellido.trim()}"
 
+private fun validarDireccion(form: DireccionFormState): String? {
+    if (form.calle.trim().length < 2) return "Ingresá la calle"
+    if (form.numero.trim().isBlank()) return "Ingresá el número"
+    if (form.ciudad.trim().length < 2) return "Ingresá la ciudad"
+    if (form.provincia.isBlank()) return "Seleccioná la provincia"
+    return null
+}
+
 private fun validarComercioParaGoogle(nombreComercio: String, codigoInvitacion: String): String? {
     if (nombreComercio.trim().length < 2) return "Ingresá el nombre del comercio (mínimo 2 caracteres)"
     if (codigoInvitacion.isBlank()) return "Ingresá el código de invitación"
@@ -99,6 +115,7 @@ private fun nombreResponsableComercio(nombre: String, apellido: String): String?
     return completo.ifBlank { null }
 }
 
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
 fun AuthScreen(
     onLoginCliente: () -> Unit,
@@ -123,8 +140,11 @@ fun AuthScreen(
     var telefono by remember { mutableStateOf("") }
     var rolRegistro by remember { mutableStateOf(RolRegistro.CLIENTE) }
     var nombreComercio by remember { mutableStateOf("") }
-    var direccionComercio by remember { mutableStateOf("") }
-    var categoriaComercio by remember { mutableStateOf("cafeteria") }
+    var direccionForm by remember { mutableStateOf(DireccionFormState()) }
+    var tipoComercioId by remember { mutableStateOf(TipoComercio.CAFETERIA.id) }
+    var mapLat by remember { mutableStateOf(-34.6037) }
+    var mapLon by remember { mutableStateOf(-58.3816) }
+    var tipoComercioExpanded by remember { mutableStateOf(false) }
     var codigoInvitacion by remember {
         mutableStateOf(ConfigLoader.codigoInvitacionComercio(context).orEmpty())
     }
@@ -185,16 +205,33 @@ fun AuthScreen(
     }
 
     fun ejecutarGoogle(idToken: String) {
+        if (modo == ModoAuth.REGISTRAR && rolRegistro == RolRegistro.COMERCIO) {
+            validarComercioParaGoogle(nombreComercio, codigoInvitacion)?.let {
+                error = it
+                return
+            }
+            validarDireccion(direccionForm)?.let {
+                error = it
+                return
+            }
+        }
         ejecutar {
             val repo = AuthRepository(context)
             if (modo == ModoAuth.REGISTRAR && rolRegistro == RolRegistro.COMERCIO) {
+                val dir = direccionForm
                 repo.registroComercioGoogle(
                     idToken = idToken,
                     nombre = nombreResponsableComercio(nombre, apellido),
                     nombreComercio = nombreComercio,
                     telefono = telefono,
-                    direccion = direccionComercio,
-                    categoria = categoriaComercio,
+                    calle = dir.calle,
+                    numero = dir.numero,
+                    ciudad = dir.ciudad,
+                    provincia = dir.provincia,
+                    codigoPostal = dir.codigoPostal,
+                    lat = mapLat,
+                    lon = mapLon,
+                    tipoComercio = tipoComercioId,
                     codigoInvitacion = codigoInvitacion
                 )
             } else {
@@ -438,27 +475,72 @@ fun AuthScreen(
                 }
                 Spacer(modifier = Modifier.height(12.dp))
 
+            }
+
+            if (modo == ModoAuth.REGISTRAR) {
+                Spacer(modifier = Modifier.height(10.dp))
+                Text(
+                    "Dirección",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                FormularioDireccionRegistro(
+                    state = direccionForm,
+                    onChange = { direccionForm = it },
+                    fieldColors = fieldColors,
+                    fieldShape = fieldShape
+                )
                 if (rolRegistro == RolRegistro.COMERCIO) {
-                    OutlinedTextField(
-                        value = direccionComercio,
-                        onValueChange = { direccionComercio = it },
-                        label = { Text("Dirección (opcional)") },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true,
-                        shape = fieldShape,
-                        colors = fieldColors
-                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    val tipoSeleccionado = TipoComercio.desdeId(tipoComercioId)
+                    ExposedDropdownMenuBox(
+                        expanded = tipoComercioExpanded,
+                        onExpandedChange = { tipoComercioExpanded = it }
+                    ) {
+                        OutlinedTextField(
+                            value = "${tipoSeleccionado.emoji} ${tipoSeleccionado.etiqueta}",
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { Text("Tipo de comercio") },
+                            trailingIcon = {
+                                ExposedDropdownMenuDefaults.TrailingIcon(expanded = tipoComercioExpanded)
+                            },
+                            modifier = Modifier
+                                .menuAnchor()
+                                .fillMaxWidth(),
+                            shape = fieldShape,
+                            colors = fieldColors
+                        )
+                        ExposedDropdownMenu(
+                            expanded = tipoComercioExpanded,
+                            onDismissRequest = { tipoComercioExpanded = false }
+                        ) {
+                            TipoComercio.entries.forEach { tipo ->
+                                DropdownMenuItem(
+                                    text = { Text("${tipo.emoji} ${tipo.etiqueta}") },
+                                    onClick = {
+                                        tipoComercioId = tipo.id
+                                        tipoComercioExpanded = false
+                                    }
+                                )
+                            }
+                        }
+                    }
                     Spacer(modifier = Modifier.height(10.dp))
-                    OutlinedTextField(
-                        value = categoriaComercio,
-                        onValueChange = { categoriaComercio = it },
-                        label = { Text("Categoría (ej. cafeteria)") },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true,
-                        shape = fieldShape,
-                        colors = fieldColors
+                    Text(
+                        "Ubicación en el mapa",
+                        style = MaterialTheme.typography.titleSmall
                     )
-                    Spacer(modifier = Modifier.height(10.dp))
+                    Spacer(modifier = Modifier.height(6.dp))
+                    SelectorUbicacionMapa(
+                        lat = mapLat,
+                        lon = mapLon,
+                        onCentroCambiado = { la, lo ->
+                            mapLat = la
+                            mapLon = lo
+                        }
+                    )
                 }
             }
 
@@ -533,8 +615,11 @@ fun AuthScreen(
                                 error = "El nombre del comercio es demasiado corto"
                             rolRegistro == RolRegistro.COMERCIO && codigoInvitacion.isBlank() ->
                                 error = "Ingresá el código de invitación del comercio"
+                            validarDireccion(direccionForm) != null ->
+                                error = validarDireccion(direccionForm)
                             else -> ejecutar {
                                 val nombreEnvio = nombreCompleto(nombre, apellido)
+                                val dir = direccionForm
                                 if (rolRegistro == RolRegistro.COMERCIO) {
                                     AuthRepository(context).registroComercio(
                                         nombre = nombreEnvio,
@@ -542,16 +627,27 @@ fun AuthScreen(
                                         password = password,
                                         nombreComercio = nombreComercio,
                                         telefono = telefono,
-                                        direccion = direccionComercio,
-                                        categoria = categoriaComercio,
+                                        calle = dir.calle,
+                                        numero = dir.numero,
+                                        ciudad = dir.ciudad,
+                                        provincia = dir.provincia,
+                                        codigoPostal = dir.codigoPostal,
+                                        lat = mapLat,
+                                        lon = mapLon,
+                                        tipoComercio = tipoComercioId,
                                         codigoInvitacion = codigoInvitacion
                                     )
                                 } else {
                                     AuthRepository(context).registro(
-                                        nombreEnvio,
-                                        email,
-                                        password,
-                                        telefono
+                                        nombre = nombreEnvio,
+                                        email = email,
+                                        password = password,
+                                        telefono = telefono,
+                                        calle = dir.calle,
+                                        numero = dir.numero,
+                                        ciudad = dir.ciudad,
+                                        provincia = dir.provincia,
+                                        codigoPostal = dir.codigoPostal
                                     )
                                 }
                             }

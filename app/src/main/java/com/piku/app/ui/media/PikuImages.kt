@@ -48,8 +48,21 @@ object PikuImages {
         }
     }
 
-    fun resolve(url: String?, id: String? = null, nombre: String? = null): String {
-        if (!url.isNullOrBlank() && url.startsWith("http")) return url
+    fun cloudinaryOptimized(url: String, cloudName: String, width: Int = 800, height: Int = 600): String {
+        if (!url.contains("res.cloudinary.com")) return url
+        if (url.contains("/upload/") && url.contains("q_auto")) return url
+        return url.replace(
+            "/upload/",
+            "/upload/w_$width,h_$height,c_limit,q_auto,f_auto/"
+        )
+    }
+
+    fun resolve(url: String?, id: String? = null, nombre: String? = null, cloudName: String? = null): String {
+        if (!url.isNullOrBlank() && url.startsWith("http")) {
+            return if (cloudName != null && url.contains("res.cloudinary.com/$cloudName")) {
+                cloudinaryOptimized(url, cloudName)
+            } else url
+        }
         if (!id.isNullOrBlank()) return forRecompensaId(id)
         if (!nombre.isNullOrBlank()) return forRecompensaNombre(nombre)
         return regalo

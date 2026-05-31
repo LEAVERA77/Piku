@@ -4,8 +4,14 @@
         android:width="72dp"
         android:height="72dp"
         android:gravity="center">
-        <bitmap
-            android:gravity="center"
-            android:src="@drawable/piku_logo_icon" />
+        <inset
+            android:insetLeft="14dp"
+            android:insetTop="14dp"
+            android:insetRight="14dp"
+            android:insetBottom="14dp">
+            <bitmap
+                android:gravity="center"
+                android:src="@drawable/piku_logo_icon" />
+        </inset>
     </item>
 </layer-list>

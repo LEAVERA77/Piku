@@ -34,7 +34,12 @@ class AuthRepository(private val context: Context) {
         nombre: String,
         email: String,
         password: String,
-        telefono: String? = null
+        telefono: String? = null,
+        calle: String,
+        numero: String,
+        ciudad: String,
+        provincia: String,
+        codigoPostal: String? = null
     ): LoginResponse {
         val response = apiCall {
             api.registroCliente(
@@ -42,7 +47,12 @@ class AuthRepository(private val context: Context) {
                     email = email.trim().lowercase(),
                     password = password,
                     nombre = nombre.trim(),
-                    telefono = telefono?.trim()?.ifEmpty { null }
+                    telefono = telefono?.trim()?.ifEmpty { null },
+                    calle = calle.trim(),
+                    numero = numero.trim(),
+                    ciudad = ciudad.trim(),
+                    provincia = provincia.trim(),
+                    codigoPostal = codigoPostal?.trim()?.ifEmpty { null }
                 )
             )
         }
@@ -56,10 +66,17 @@ class AuthRepository(private val context: Context) {
         password: String,
         nombreComercio: String,
         telefono: String? = null,
-        direccion: String? = null,
-        categoria: String? = null,
+        calle: String,
+        numero: String,
+        ciudad: String,
+        provincia: String,
+        codigoPostal: String? = null,
+        lat: Double? = null,
+        lon: Double? = null,
+        tipoComercio: String,
         codigoInvitacion: String? = null
     ): LoginResponse {
+        val tipo = com.piku.app.data.TipoComercio.desdeId(tipoComercio)
         val response = apiCall {
             api.registroComercio(
                 RegistroComercioRequest(
@@ -68,8 +85,15 @@ class AuthRepository(private val context: Context) {
                     nombre = nombre.trim(),
                     telefono = telefono?.trim()?.ifEmpty { null },
                     nombreComercio = nombreComercio.trim(),
-                    direccion = direccion?.trim()?.ifEmpty { null },
-                    categoria = categoria?.trim()?.ifEmpty { null },
+                    calle = calle.trim(),
+                    numero = numero.trim(),
+                    ciudad = ciudad.trim(),
+                    provincia = provincia.trim(),
+                    codigoPostal = codigoPostal?.trim()?.ifEmpty { null },
+                    lat = lat,
+                    lon = lon,
+                    tipoComercio = tipo.id,
+                    categoria = tipo.categoria,
                     codigoInvitacion = codigoInvitacion?.trim()?.ifEmpty { null }
                 )
             )
@@ -83,10 +107,17 @@ class AuthRepository(private val context: Context) {
         nombre: String?,
         nombreComercio: String,
         telefono: String? = null,
-        direccion: String? = null,
-        categoria: String? = null,
+        calle: String,
+        numero: String,
+        ciudad: String,
+        provincia: String,
+        codigoPostal: String? = null,
+        lat: Double? = null,
+        lon: Double? = null,
+        tipoComercio: String,
         codigoInvitacion: String? = null
     ): LoginResponse {
+        val tipo = com.piku.app.data.TipoComercio.desdeId(tipoComercio)
         val response = apiCall {
             api.registroComercioGoogle(
                 RegistroComercioGoogleRequest(
@@ -94,8 +125,15 @@ class AuthRepository(private val context: Context) {
                     nombre = nombre?.trim()?.ifEmpty { null },
                     nombreComercio = nombreComercio.trim(),
                     telefono = telefono?.trim()?.ifEmpty { null },
-                    direccion = direccion?.trim()?.ifEmpty { null },
-                    categoria = categoria?.trim()?.ifEmpty { null },
+                    calle = calle.trim(),
+                    numero = numero.trim(),
+                    ciudad = ciudad.trim(),
+                    provincia = provincia.trim(),
+                    codigoPostal = codigoPostal?.trim()?.ifEmpty { null },
+                    lat = lat,
+                    lon = lon,
+                    tipoComercio = tipo.id,
+                    categoria = tipo.categoria,
                     codigoInvitacion = codigoInvitacion?.trim()?.ifEmpty { null }
                 )
             )

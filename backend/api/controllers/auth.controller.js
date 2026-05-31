@@ -5,6 +5,11 @@ const { signToken } = require('../middleware/auth.middleware');
 const { validarEmail, sanitizarInput, responderError } = require('../utils/helpers');
 const { columnasTabla, tiene } = require('../utils/schema.util');
 const osmService = require('../services/osm.service');
+const { normalizarTipoComercio } = require('../constants/tipos_comercio');
+const {
+  resolverDireccionRegistro,
+  agregarCamposDireccionUsuario,
+} = require('../utils/direccion.registro.util');
 
 /**
  * Publica el comercio como Note en OSM (no bloquea el registro si falla).
@@ -96,6 +101,13 @@ async function registroCliente(req, res) {
     if (password.length < 6) return responderError(res, 400, 'La contraseña debe tener al menos 6 caracteres');
     if (!nombre) return responderError(res, 400, 'Nombre requerido');
 
+    let direccionData;
+    try {
+      direccionData = await resolverDireccionRegistro(req.body);
+    } catch (e) {
+      return responderError(res, e.status || 400, e.message);
+    }
+
     const existe = await query('SELECT id FROM piku_usuarios WHERE LOWER(email) = $1', [email]);
     if (existe.rows.length) {
       return responderError(
@@ -106,12 +118,17 @@ async function registroCliente(req, res) {
     }
 
     const hash = await bcrypt.hash(password, 10);
+    const colsUsuario = await columnasTabla('piku_usuarios');
+    const campos = ['email', 'password_hash', 'nombre', 'telefono', 'rol'];
+    const vals = [email, hash, nombre, telefono || null, 'cliente'];
+    agregarCamposDireccionUsuario(colsUsuario, campos, vals, direccionData);
     const returning = (await camposUsuario()).join(', ');
+    const placeholders = vals.map((_, i) => `$${i + 1}`).join(', ');
     const insert = await query(
-      `INSERT INTO piku_usuarios (email, password_hash, nombre, telefono, rol)
-       VALUES ($1, $2, $3, $4, 'cliente')
+      `INSERT INTO piku_usuarios (${campos.join(', ')})
+       VALUES (${placeholders})
        RETURNING ${returning}`,
-      [email, hash, nombre, telefono || null]
+      vals
     );
 
     const usuario = normalizarUsuario(insert.rows[0]);
@@ -137,16 +154,24 @@ async function registroComercio(req, res) {
     const password = String(req.body.password || '');
     const nombre = sanitizarInput(req.body.nombre, 255);
     const nombreComercio = sanitizarInput(req.body.nombreComercio || req.body.nombre_comercio, 255);
-    const direccion = sanitizarInput(req.body.direccion, 500);
     const codigoInvitacion = sanitizarInput(req.body.codigoInvitacion || req.body.codigo_invitacion, 64);
-    const lat = req.body.lat != null ? parseFloat(req.body.lat) : null;
-    const lon = req.body.lon != null ? parseFloat(req.body.lon) : null;
-    const categoria = sanitizarInput(req.body.categoria, 50);
+    const tipoRaw = req.body.tipoComercio || req.body.tipo_comercio || req.body.categoria;
+    const tipoInfo = normalizarTipoComercio(tipoRaw);
 
     if (!validarEmail(email)) return responderError(res, 400, 'Email inválido');
     if (password.length < 6) return responderError(res, 400, 'La contraseña debe tener al menos 6 caracteres');
     if (!nombre || !nombreComercio) {
       return responderError(res, 400, 'Nombre del responsable y del comercio son requeridos');
+    }
+
+    let direccionData;
+    try {
+      direccionData = await resolverDireccionRegistro(req.body, {
+        lat: req.body.lat,
+        lon: req.body.lon,
+      });
+    } catch (e) {
+      return responderError(res, e.status || 400, e.message);
     }
 
     const existe = await query('SELECT id FROM piku_usuarios WHERE LOWER(email) = $1', [email]);
@@ -198,15 +223,17 @@ async function registroComercio(req, res) {
           comercioVals.push(val);
         }
       };
-      addComercio('direccion', direccion || null);
-      addComercio('lat', lat);
-      addComercio('lon', lon);
+      addComercio('direccion', direccionData.direccion);
+      addComercio('lat', direccionData.lat);
+      addComercio('lon', direccionData.lon);
       addComercio('suscripcion_activa', true);
-      addComercio('categoria', categoria || null);
+      addComercio('categoria', tipoInfo.categoria);
+      addComercio('tipo_comercio', tipoInfo.id);
+      addComercio('icono_emoji', tipoInfo.emoji);
 
       const comercioPlaceholders = comercioVals.map((_, i) => `$${i + 1}`).join(', ');
       const comercioReturning = ['id', 'nombre'];
-      for (const c of ['direccion', 'lat', 'lon', 'categoria']) {
+      for (const c of ['direccion', 'lat', 'lon', 'categoria', 'tipo_comercio', 'icono_emoji']) {
         if (tiene(colsComercio, c)) comercioReturning.push(c);
       }
 
@@ -228,6 +255,7 @@ async function registroComercio(req, res) {
         usuarioCampos.push('comercio_id');
         usuarioVals.push(comercio.id);
       }
+      agregarCamposDireccionUsuario(colsUsuario, usuarioCampos, usuarioVals, direccionData);
 
       const usuarioReturning = ['id', 'email', 'nombre', 'rol'];
       if (tiene(colsUsuario, 'comercio_id')) usuarioReturning.push('comercio_id');
@@ -351,14 +379,22 @@ async function registroComercioGoogle(req, res) {
     const google = await verificarIdTokenGoogle(idToken);
     const nombre = sanitizarInput(req.body.nombre, 255) || google.nombre;
     const nombreComercio = sanitizarInput(req.body.nombreComercio || req.body.nombre_comercio, 255);
-    const direccion = sanitizarInput(req.body.direccion, 500);
     const codigoInvitacion = sanitizarInput(req.body.codigoInvitacion || req.body.codigo_invitacion, 64);
-    const lat = req.body.lat != null ? parseFloat(req.body.lat) : null;
-    const lon = req.body.lon != null ? parseFloat(req.body.lon) : null;
-    const categoria = sanitizarInput(req.body.categoria, 50);
+    const tipoRaw = req.body.tipoComercio || req.body.tipo_comercio || req.body.categoria;
+    const tipoInfo = normalizarTipoComercio(tipoRaw);
 
     if (!nombre || !nombreComercio) {
       return responderError(res, 400, 'Nombre del responsable y del comercio son requeridos');
+    }
+
+    let direccionData;
+    try {
+      direccionData = await resolverDireccionRegistro(req.body, {
+        lat: req.body.lat,
+        lon: req.body.lon,
+      });
+    } catch (e) {
+      return responderError(res, e.status || 400, e.message);
     }
 
     const selectCols = (await camposUsuario()).join(', ');
@@ -426,15 +462,17 @@ async function registroComercioGoogle(req, res) {
           comercioVals.push(val);
         }
       };
-      addComercio('direccion', direccion || null);
-      addComercio('lat', lat);
-      addComercio('lon', lon);
+      addComercio('direccion', direccionData.direccion);
+      addComercio('lat', direccionData.lat);
+      addComercio('lon', direccionData.lon);
       addComercio('suscripcion_activa', true);
-      addComercio('categoria', categoria || null);
+      addComercio('categoria', tipoInfo.categoria);
+      addComercio('tipo_comercio', tipoInfo.id);
+      addComercio('icono_emoji', tipoInfo.emoji);
 
       const comercioPlaceholders = comercioVals.map((_, i) => `$${i + 1}`).join(', ');
       const comercioReturning = ['id', 'nombre'];
-      for (const c of ['direccion', 'lat', 'lon', 'categoria']) {
+      for (const c of ['direccion', 'lat', 'lon', 'categoria', 'tipo_comercio', 'icono_emoji']) {
         if (tiene(colsComercio, c)) comercioReturning.push(c);
       }
 
@@ -456,6 +494,7 @@ async function registroComercioGoogle(req, res) {
         usuarioCampos.push('comercio_id');
         usuarioVals.push(comercio.id);
       }
+      agregarCamposDireccionUsuario(colsUsuario, usuarioCampos, usuarioVals, direccionData);
       if (tiene(colsUsuario, 'google_id')) {
         usuarioCampos.push('google_id');
         usuarioVals.push(google.googleId);

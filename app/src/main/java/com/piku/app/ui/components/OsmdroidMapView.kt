@@ -15,7 +15,9 @@ import androidx.core.graphics.drawable.toBitmap
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.piku.app.R
+import com.piku.app.data.TipoComercio
 import com.piku.app.data.model.Comercio
+import com.piku.app.utils.MapPinBitmap
 import org.osmdroid.events.MapListener
 import org.osmdroid.events.ScrollEvent
 import org.osmdroid.events.ZoomEvent
@@ -123,16 +125,26 @@ fun OsmdroidMapView(
         comercios.forEach { comercio ->
             val lat = comercio.lat ?: return@forEach
             val lon = comercio.lon ?: return@forEach
+            val emoji = TipoComercio.emojiPara(comercio)
+            val markerIcon = MapPinBitmap.crear(
+                context = context,
+                emoji = emoji,
+                nombre = comercio.nombre,
+                cantidadOfertas = comercio.cantidadOfertas
+            )
             val marker = Marker(mapView).apply {
                 position = GeoPoint(lat, lon)
                 title = comercio.nombre
-                snippet = comercio.direccion ?: ""
+                snippet = if (comercio.cantidadOfertas > 0) {
+                    "${comercio.cantidadOfertas} oferta(s) activa(s)"
+                } else {
+                    comercio.direccion ?: ""
+                }
                 setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
-                icon = pinIcon
-                setOnMarkerClickListener { m, _ ->
+                icon = markerIcon
+                setOnMarkerClickListener { _, _ ->
                     onComercioClick(comercio)
                     InfoWindow.closeAllInfoWindowsOn(mapView)
-                    m.showInfoWindow()
                     true
                 }
             }

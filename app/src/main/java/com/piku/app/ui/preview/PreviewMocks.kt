@@ -20,7 +20,10 @@ object PreviewMocks {
         lat = -34.6037,
         lon = -58.3816,
         categoria = "cafeteria",
+        tipoComercio = "cafeteria",
+        iconoEmoji = "☕",
         puntosMinCanje = 100,
+        cantidadOfertas = 2,
         distanciaMetros = 420
     )
 

@@ -1,6 +1,11 @@
 const { query } = require('../services/neon.service');
 const { responderError } = require('../utils/helpers');
-const { selectComerciosColumnas, selectRecompensasPublicas } = require('../utils/comercio.sql.util');
+const { calcularDistancia } = require('../services/nominatim.service');
+const {
+  selectComerciosColumnas,
+  selectRecompensasPublicas,
+} = require('../utils/comercio.sql.util');
+const { columnasTabla } = require('../utils/schema.util');
 const { RUBROS } = require('../constants/rubros');
 
 function parseBbox(req) {
@@ -50,6 +55,42 @@ async function listarComercios(req, res) {
 }
 
 /**
+ * Comercios cercanos a un punto (radio en metros, default 5000).
+ */
+async function comerciosCercanos(req, res) {
+  try {
+    const lat = parseFloat(req.query.lat);
+    const lon = parseFloat(req.query.lon);
+    const radio = parseInt(req.query.radio || '5000', 10) || 5000;
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
+      return responderError(res, 400, 'Parámetros lat y lon requeridos');
+    }
+
+    const columnas = await selectComerciosColumnas();
+    const result = await query(
+      `SELECT ${columnas}
+       FROM piku_comercios c
+       WHERE COALESCE(c.suscripcion_activa, TRUE) = TRUE
+         AND c.lat IS NOT NULL AND c.lon IS NOT NULL`,
+      []
+    );
+
+    const comercios = result.rows
+      .map((c) => ({
+        ...c,
+        distancia_metros: calcularDistancia(lat, lon, c.lat, c.lon),
+      }))
+      .filter((c) => c.distancia_metros <= radio)
+      .sort((a, b) => a.distancia_metros - b.distancia_metros);
+
+    return res.json({ comercios });
+  } catch (error) {
+    console.error('comerciosCercanos:', error);
+    return responderError(res, 500, 'Error al buscar comercios cercanos', { detail: error.message });
+  }
+}
+
+/**
  * Catálogo de rubros para filtros del mapa.
  */
 async function listarRubros(req, res) {
@@ -90,6 +131,57 @@ async function detalleComercio(req, res) {
 }
 
 /**
+ * Ofertas activas de un comercio.
+ */
+async function ofertasComercio(req, res) {
+  try {
+    const { id } = req.params;
+    const recQuery = await selectRecompensasPublicas();
+    if (!recQuery.sql) return res.json({ ofertas: [] });
+    const recompensas = await query(recQuery.sql, [id]);
+    return res.json({ ofertas: recompensas.rows });
+  } catch (error) {
+    console.error('ofertasComercio:', error);
+    return responderError(res, 500, 'Error al listar ofertas', { detail: error.message });
+  }
+}
+
+/**
+ * Detalle público de una recompensa/oferta.
+ */
+async function detalleRecompensa(req, res) {
+  try {
+    const { id } = req.params;
+    const cols = await columnasTabla('piku_recompensas');
+    if (!cols.size) return responderError(res, 404, 'Oferta no encontrada');
+
+    const meta = await query('SELECT comercio_id FROM piku_recompensas WHERE id = $1', [id]);
+    if (!meta.rows.length) return responderError(res, 404, 'Oferta no encontrada');
+
+    const recQuery = await selectRecompensasPublicas();
+    if (!recQuery.sql) return responderError(res, 404, 'Oferta no encontrada');
+
+    const lista = await query(recQuery.sql, [meta.rows[0].comercio_id]);
+    const recompensa = lista.rows.find((r) => String(r.id) === String(id));
+    if (!recompensa) return responderError(res, 404, 'Oferta no encontrada o no vigente');
+
+    const columnas = await selectComerciosColumnas();
+    const cRes = await query(
+      `SELECT ${columnas} FROM piku_comercios c WHERE c.id = $1`,
+      [meta.rows[0].comercio_id]
+    );
+
+    return res.json({
+      recompensa,
+      comercio: cRes.rows[0] || null,
+    });
+  } catch (error) {
+    console.error('detalleRecompensa:', error);
+    return responderError(res, 500, 'Error al obtener oferta', { detail: error.message });
+  }
+}
+
+/**
  * Recompensas activas de todos los comercios (público).
  */
 async function listarRecompensasPublicas(req, res) {
@@ -117,4 +209,12 @@ async function listarRecompensasPublicas(req, res) {
   }
 }
 
-module.exports = { listarComercios, detalleComercio, listarRecompensasPublicas, listarRubros };
+module.exports = {
+  listarComercios,
+  comerciosCercanos,
+  detalleComercio,
+  ofertasComercio,
+  detalleRecompensa,
+  listarRecompensasPublicas,
+  listarRubros,
+};

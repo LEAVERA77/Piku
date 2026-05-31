@@ -20,6 +20,15 @@ ALTER TABLE piku_comercios ADD COLUMN IF NOT EXISTS categoria VARCHAR(50);
 
 ALTER TABLE piku_invitaciones_comercio ADD COLUMN IF NOT EXISTS expires_at TIMESTAMPTZ;
 ALTER TABLE piku_invitaciones_comercio ADD COLUMN IF NOT EXISTS usado BOOLEAN NOT NULL DEFAULT FALSE;
+
+-- Registro con dirección, mapa y ofertas (ver migration_registro_mapa_ofertas.sql)
+ALTER TABLE piku_usuarios ADD COLUMN IF NOT EXISTS lat DOUBLE PRECISION;
+ALTER TABLE piku_usuarios ADD COLUMN IF NOT EXISTS lon DOUBLE PRECISION;
+ALTER TABLE piku_usuarios ADD COLUMN IF NOT EXISTS direccion TEXT;
+ALTER TABLE piku_comercios ADD COLUMN IF NOT EXISTS tipo_comercio VARCHAR(50);
+ALTER TABLE piku_comercios ADD COLUMN IF NOT EXISTS icono_emoji VARCHAR(10);
+ALTER TABLE piku_recompensas ADD COLUMN IF NOT EXISTS condiciones TEXT;
+CREATE INDEX IF NOT EXISTS idx_piku_comercios_coords ON piku_comercios(lat, lon);
 ```
 
 ## Opción B — Redeploy en Render

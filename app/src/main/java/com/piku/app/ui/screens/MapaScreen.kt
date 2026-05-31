@@ -26,6 +26,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -39,7 +43,10 @@ import com.google.accompanist.permissions.rememberMultiplePermissionsState
 import com.piku.app.ui.PikuChatSugerencias
 import com.piku.app.ui.components.CharlaConPikuSheet
 import com.piku.app.ui.components.MapaPanelCompacto
+import com.piku.app.data.model.RecompensaPublica
+import com.piku.app.data.repository.MapaRepository
 import com.piku.app.ui.components.MarkerInfoBottomSheet
+import com.piku.app.ui.components.OfertasBottomSheet
 import com.piku.app.ui.components.OsmdroidMapView
 import com.piku.app.ui.viewmodel.MapaViewModel
 
@@ -47,9 +54,14 @@ import com.piku.app.ui.viewmodel.MapaViewModel
 @Composable
 fun MapaScreen(
     onVerDetalleComercio: (String) -> Unit,
+    onVerDetalleOferta: (String) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: MapaViewModel = viewModel()
 ) {
+    val context = LocalContext.current
+    val mapaRepo = remember { MapaRepository(context) }
+    var ofertasPin by remember { mutableStateOf<List<RecompensaPublica>>(emptyList()) }
+    var cargandoOfertas by remember { mutableStateOf(false) }
     val uiState by viewModel.uiState.collectAsState()
     val permisosUbicacion = rememberMultiplePermissionsState(
         listOf(
@@ -184,18 +196,42 @@ fun MapaScreen(
         }
     }
 
+    LaunchedEffect(uiState.comercioSeleccionado?.id) {
+        val c = uiState.comercioSeleccionado
+        if (c == null || c.esOpenStreetMap()) {
+            ofertasPin = emptyList()
+            return@LaunchedEffect
+        }
+        cargandoOfertas = true
+        try {
+            ofertasPin = mapaRepo.ofertasComercio(c.id).ofertas
+        } catch (_: Exception) {
+            ofertasPin = emptyList()
+        } finally {
+            cargandoOfertas = false
+        }
+    }
+
     uiState.comercioSeleccionado?.let { comercio ->
-        MarkerInfoBottomSheet(
-            comercio = comercio,
-            rubros = uiState.rubros,
-            onDismiss = { viewModel.seleccionarComercio(null) },
-            onVerOfertas = {
-                if (!comercio.esOpenStreetMap()) {
+        if (comercio.esOpenStreetMap()) {
+            MarkerInfoBottomSheet(
+                comercio = comercio,
+                rubros = uiState.rubros,
+                onDismiss = { viewModel.seleccionarComercio(null) },
+                onVerOfertas = {}
+            )
+        } else {
+            OfertasBottomSheet(
+                comercio = comercio,
+                ofertas = ofertasPin,
+                cargando = cargandoOfertas,
+                onDismiss = { viewModel.seleccionarComercio(null) },
+                onVerDetalle = { id ->
                     viewModel.seleccionarComercio(null)
-                    onVerDetalleComercio(comercio.id)
+                    onVerDetalleOferta(id)
                 }
-            }
-        )
+            )
+        }
     }
 
     if (uiState.chatAbierto) {
@@ -218,6 +254,6 @@ fun MapaScreen(
 @Composable
 fun PreviewMapaScreen() {
     PikuTheme {
-        MapaScreen(onVerDetalleComercio = {})
+        MapaScreen(onVerDetalleComercio = {}, onVerDetalleOferta = {})
     }
 }

@@ -4,6 +4,8 @@ import android.content.Context
 import com.piku.app.data.model.ChatPikuRequest
 import com.piku.app.data.model.ChatPikuResponse
 import com.piku.app.data.model.Comercio
+import com.piku.app.data.model.OfertasComercioResponse
+import com.piku.app.data.model.RecompensaDetalleResponse
 import com.piku.app.data.model.EventoRequest
 import com.piku.app.data.model.Rubro
 import com.piku.app.data.network.ApiErrorParser
@@ -58,6 +60,22 @@ class MapaRepository(private val context: Context) {
     suspend fun chatPiku(pregunta: String, lat: Double?, lon: Double?): ChatPikuResponse {
         try {
             return api.chatPiku(ChatPikuRequest(pregunta = pregunta, lat = lat, lon = lon))
+        } catch (e: HttpException) {
+            throw Exception(ApiErrorParser.mensaje(e), e)
+        }
+    }
+
+    suspend fun ofertasComercio(comercioId: String): OfertasComercioResponse {
+        try {
+            return api.ofertasComercio(comercioId)
+        } catch (e: HttpException) {
+            throw Exception(ApiErrorParser.mensaje(e), e)
+        }
+    }
+
+    suspend fun detalleRecompensa(id: String): RecompensaDetalleResponse {
+        try {
+            return api.detalleRecompensa(id)
         } catch (e: HttpException) {
             throw Exception(ApiErrorParser.mensaje(e), e)
         }

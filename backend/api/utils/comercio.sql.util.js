@@ -41,14 +41,29 @@ async function selectComerciosColumnas() {
   const categoriaSql = tiene(colsComercio, 'categoria')
     ? 'c.categoria'
     : 'NULL::varchar AS categoria';
+  const tipoComercioSql = tiene(colsComercio, 'tipo_comercio')
+    ? 'c.tipo_comercio'
+    : 'NULL::varchar AS tipo_comercio';
+  const iconoEmojiSql = tiene(colsComercio, 'icono_emoji')
+    ? 'c.icono_emoji'
+    : 'NULL::varchar AS icono_emoji';
 
   const colPuntos = columnaPuntosRecompensa(colsRecomp);
   let puntosMin = 'NULL::int AS puntos_min_canje';
+  let cantidadOfertas = '0::int AS cantidad_ofertas';
   if (colsRecomp.size > 0 && colPuntos) {
     const filtro = filtrosRecompensaVigente(colsRecomp);
     puntosMin = `(SELECT MIN(r.${colPuntos})
       FROM piku_recompensas r
       WHERE ${filtro}) AS puntos_min_canje`;
+    cantidadOfertas = `(SELECT COUNT(*)::int
+      FROM piku_recompensas r
+      WHERE ${filtro}) AS cantidad_ofertas`;
+  } else if (colsRecomp.size > 0) {
+    const filtro = filtrosRecompensaVigente(colsRecomp);
+    cantidadOfertas = `(SELECT COUNT(*)::int
+      FROM piku_recompensas r
+      WHERE ${filtro}) AS cantidad_ofertas`;
   }
 
   const suscripcion = tiene(colsComercio, 'suscripcion_activa')
@@ -57,7 +72,8 @@ async function selectComerciosColumnas() {
 
   cacheSelect = `
     c.id, c.usuario_id, c.nombre, c.direccion, c.lat, c.lon, c.logo_url,
-    ${suscripcion}, ${categoriaSql}, c.created_at, ${puntosMin}
+    ${suscripcion}, ${categoriaSql}, ${tipoComercioSql}, ${iconoEmojiSql},
+    c.created_at, ${puntosMin}, ${cantidadOfertas}
   `.trim();
 
   return cacheSelect;
@@ -71,6 +87,16 @@ async function selectRecompensasPublicas() {
   }
   const colPuntos = columnaPuntosRecompensa(cols);
   const puntosSql = colPuntos ? `r.${colPuntos} AS puntos_requeridos` : 'NULL::int AS puntos_requeridos';
+  const vigenciaDesdeSql = tiene(cols, 'vigencia_desde')
+    ? 'r.vigencia_desde AS vigencia_desde'
+    : tiene(cols, 'fecha_inicio')
+      ? 'r.fecha_inicio AS vigencia_desde'
+      : 'NULL::timestamptz AS vigencia_desde';
+  const vigenciaHastaSql = tiene(cols, 'vigencia_hasta')
+    ? 'r.vigencia_hasta AS vigencia_hasta'
+    : tiene(cols, 'fecha_fin')
+      ? 'r.fecha_fin AS vigencia_hasta'
+      : 'NULL::timestamptz AS vigencia_hasta';
   const campos = [
     'r.id',
     'r.nombre',
@@ -78,6 +104,10 @@ async function selectRecompensasPublicas() {
     puntosSql,
     tiene(cols, 'icono') ? 'r.icono' : "NULL::varchar AS icono",
     tiene(cols, 'imagen_url') ? 'r.imagen_url' : 'NULL::text AS imagen_url',
+    tiene(cols, 'tipo') ? 'r.tipo' : "NULL::varchar AS tipo",
+    tiene(cols, 'condiciones') ? 'r.condiciones' : 'NULL::text AS condiciones',
+    vigenciaDesdeSql,
+    vigenciaHastaSql,
   ];
   let where = 'r.comercio_id = $1';
   if (tiene(cols, 'activo')) where += ' AND r.activo = TRUE';

@@ -8,6 +8,8 @@ import com.piku.app.data.model.PerfilResponse
 import com.piku.app.data.model.ChatPikuResponse
 import com.piku.app.data.model.ComercioDetalleResponse
 import com.piku.app.data.model.ComerciosResponse
+import com.piku.app.data.model.OfertasComercioResponse
+import com.piku.app.data.model.RecompensaDetalleResponse
 import com.piku.app.data.model.EventoRequest
 import com.piku.app.data.model.RubrosResponse
 import com.piku.app.data.model.GoogleLoginRequest
@@ -77,6 +79,12 @@ interface PikuApiService {
 
     @GET("api/public/comercios/{id}")
     suspend fun detalleComercio(@Path("id") id: String): ComercioDetalleResponse
+
+    @GET("api/public/comercios/{id}/ofertas")
+    suspend fun ofertasComercio(@Path("id") id: String): OfertasComercioResponse
+
+    @GET("api/public/recompensas/{id}")
+    suspend fun detalleRecompensa(@Path("id") id: String): RecompensaDetalleResponse
 
     @GET("api/usuario/saldo")
     suspend fun saldo(): Map<String, Any>

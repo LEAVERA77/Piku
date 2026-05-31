@@ -18,6 +18,7 @@ import com.piku.app.ui.components.BarraNavegacion
 import com.piku.app.ui.components.UbicacionPermisoGate
 import com.piku.app.ui.screens.CanjesScreen
 import com.piku.app.ui.screens.DetalleComercioScreen
+import com.piku.app.ui.screens.DetalleOfertaScreen
 import com.piku.app.ui.screens.EscanerScreen
 import com.piku.app.ui.screens.MapaScreen
 import com.piku.app.ui.screens.PerfilScreen
@@ -55,6 +56,9 @@ fun PikuClienteNavGraph(
                 MapaScreen(
                     onVerDetalleComercio = { id ->
                         navController.navigate(PikuDestino.detalleComercio(id))
+                    },
+                    onVerDetalleOferta = { id ->
+                        navController.navigate(PikuDestino.detalleOferta(id))
                     }
                 )
             }
@@ -64,6 +68,15 @@ fun PikuClienteNavGraph(
             ) { entry ->
                 DetalleComercioScreen(
                     comercioId = entry.arguments?.getString("comercioId") ?: "",
+                    onBack = { navController.popBackStack() }
+                )
+            }
+            composable(
+                route = PikuDestino.DetalleOferta.ruta,
+                arguments = listOf(navArgument("recompensaId") { type = NavType.StringType })
+            ) { entry ->
+                DetalleOfertaScreen(
+                    recompensaId = entry.arguments?.getString("recompensaId") ?: "",
                     onBack = { navController.popBackStack() }
                 )
             }

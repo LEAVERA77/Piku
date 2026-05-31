@@ -8,6 +8,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.padding
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
@@ -119,7 +121,8 @@ fun SplashScreen(
                 painter = painterResource(R.drawable.piku_logo_brand),
                 contentDescription = "Piku",
                 modifier = Modifier
-                    .fillMaxWidth(0.88f)
+                    .size(width = 220.dp, height = 200.dp)
+                    .heightIn(max = 220.dp)
                     .padding(bottom = 8.dp),
                 contentScale = ContentScale.Fit
             )
