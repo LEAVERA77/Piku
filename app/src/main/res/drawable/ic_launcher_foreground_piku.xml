@@ -1,20 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Adaptive icon + splash: logo dentro de la zona segura (66dp en lienzo 108dp). -->
-<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-    <item
-        android:width="108dp"
-        android:height="108dp"
-        android:gravity="center">
-        <inset
-            android:insetLeft="26dp"
-            android:insetTop="26dp"
-            android:insetRight="26dp"
-            android:insetBottom="26dp">
-            <scale
-                android:drawable="@drawable/piku_logo_icon"
-                android:scaleGravity="center"
-                android:scaleHeight="78%"
-                android:scaleWidth="78%" />
-        </inset>
-    </item>
-</layer-list>
+<!-- PNG cuadrado con márgenes (nodpi); compatible con adaptive icon en Samsung/One UI. -->
+<bitmap xmlns:android="http://schemas.android.com/apk/res/android"
+    android:gravity="center"
+    android:src="@drawable/piku_logo_icon_adaptive" />
