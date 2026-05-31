@@ -85,7 +85,7 @@ fun GestionOfertasScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Mis ofertas") },
+                title = { Text("Mis artículos") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")

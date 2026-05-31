@@ -95,7 +95,7 @@ fun AdminDashboardScreen(
             }
         } ?: Text("Sin estadísticas (verificá sesión de comercio)")
         Spacer(Modifier.height(24.dp))
-        Button(onClick = onOfertas, modifier = Modifier.fillMaxWidth()) { Text("Gestionar ofertas") }
+        Button(onClick = onOfertas, modifier = Modifier.fillMaxWidth()) { Text("Publicar artículos") }
         Spacer(Modifier.height(8.dp))
         Button(onClick = onConfigEnvios, modifier = Modifier.fillMaxWidth()) { Text("Configurar envíos") }
         Spacer(Modifier.height(8.dp))

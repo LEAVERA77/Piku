@@ -226,6 +226,11 @@ fun MapaScreen(
                 ofertas = ofertasPin,
                 cargando = cargandoOfertas,
                 onDismiss = { viewModel.seleccionarComercio(null) },
+                onVerCatalogo = {
+                    val id = comercio.id
+                    viewModel.seleccionarComercio(null)
+                    onVerDetalleComercio(id)
+                },
                 onVerDetalle = { id ->
                     viewModel.seleccionarComercio(null)
                     onVerDetalleOferta(id)

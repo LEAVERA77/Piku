@@ -11,6 +11,8 @@ const MIGRATION_FILES = [
   'migration_comercio_osm_note.sql',
   'migration_registro_mapa_ofertas.sql',
   'migration_comercio_envios.sql',
+  'migration_radio_metros.sql',
+  'migration_reglas_puntos_extend.sql',
   'migration_notificaciones.sql',
   'migration_fcm_token.sql',
 ];
@@ -63,6 +65,12 @@ const CRITICAL_ALTERS = [
   'ALTER TABLE piku_comercios ADD COLUMN IF NOT EXISTS costo_envio DECIMAL(10,2) DEFAULT 0',
   'ALTER TABLE piku_comercios ADD COLUMN IF NOT EXISTS envio_minimo_compra DECIMAL(10,2)',
   'ALTER TABLE piku_comercios ADD COLUMN IF NOT EXISTS telefono_contacto VARCHAR(20)',
+  'ALTER TABLE piku_comercios ADD COLUMN IF NOT EXISTS radio_metros INTEGER NOT NULL DEFAULT 100',
+  'ALTER TABLE piku_reglas_puntos ADD COLUMN IF NOT EXISTS puntos_por_peso NUMERIC(10, 2) NOT NULL DEFAULT 1',
+  'ALTER TABLE piku_reglas_puntos ADD COLUMN IF NOT EXISTS monto_minimo NUMERIC(10, 2) NOT NULL DEFAULT 0',
+  'ALTER TABLE piku_reglas_puntos ADD COLUMN IF NOT EXISTS puntos_fijos INTEGER NOT NULL DEFAULT 0',
+  'ALTER TABLE piku_reglas_puntos ADD COLUMN IF NOT EXISTS max_puntos_por_dia INTEGER NOT NULL DEFAULT 500',
+  'ALTER TABLE piku_reglas_puntos ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()',
   'CREATE INDEX IF NOT EXISTS idx_piku_comercios_envios ON piku_comercios(realiza_envios)',
   'ALTER TABLE piku_usuarios ADD COLUMN IF NOT EXISTS fcm_token TEXT',
 ];

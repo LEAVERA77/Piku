@@ -5,6 +5,7 @@ let cacheSelect = null;
 
 function columnaPuntosRecompensa(colsRecomp) {
   if (tiene(colsRecomp, 'puntos_requeridos')) return 'puntos_requeridos';
+  if (tiene(colsRecomp, 'puntos_necesarios')) return 'puntos_necesarios';
   if (tiene(colsRecomp, 'puntos')) return 'puntos';
   if (tiene(colsRecomp, 'costo_puntos')) return 'costo_puntos';
   return null;
@@ -133,6 +134,10 @@ async function selectRecompensasPublicas() {
     tiene(cols, 'icono') ? 'r.icono' : "NULL::varchar AS icono",
     tiene(cols, 'imagen_url') ? 'r.imagen_url' : 'NULL::text AS imagen_url',
     tiene(cols, 'tipo') ? 'r.tipo' : "NULL::varchar AS tipo",
+    tiene(cols, 'porcentaje_descuento')
+      ? 'r.porcentaje_descuento'
+      : 'NULL::int AS porcentaje_descuento',
+    tiene(cols, 'producto_nombre') ? 'r.producto_nombre' : 'NULL::varchar AS producto_nombre',
     tiene(cols, 'condiciones') ? 'r.condiciones' : 'NULL::text AS condiciones',
     vigenciaDesdeSql,
     vigenciaHastaSql,

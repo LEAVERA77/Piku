@@ -68,7 +68,10 @@ fun PikuClienteNavGraph(
             ) { entry ->
                 DetalleComercioScreen(
                     comercioId = entry.arguments?.getString("comercioId") ?: "",
-                    onBack = { navController.popBackStack() }
+                    onBack = { navController.popBackStack() },
+                    onVerArticulo = { id ->
+                        navController.navigate(PikuDestino.detalleOferta(id))
+                    }
                 )
             }
             composable(

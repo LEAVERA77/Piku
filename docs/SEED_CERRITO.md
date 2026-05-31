@@ -10,7 +10,10 @@
 
 2. En [Neon Console](https://console.neon.tech) → **Connect** → copiá la URL **PostgreSQL** (la misma que pegaste en Render). Host real: `ep-algo-12345....neon.tech`, **no** `ep-tu-proyecto`.
 
-3. Editá `.env`. Copiá **`DATABASE_URL_DIRECT`** de Render (o `DATABASE_URL` con pooler; ambas sirven para el seed):
+3. Editá `.env`. Copiá **`DATABASE_URL`** o **`DATABASE_URL_DIRECT`** de Render (con o sin `-pooler` en el host; ambas sirven para el seed):
+
+   Si ves *"La contraseña falta o está incompleta"* con la URL bien pegada: la contraseña puede tener `#` (dotenv la corta). Usá comillas en `.env`:
+   `DATABASE_URL="postgresql://..."`
 
 **En Render (nube):** las comillas `"..."` en el panel están bien.
 

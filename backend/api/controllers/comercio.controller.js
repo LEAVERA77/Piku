@@ -10,6 +10,7 @@ const {
   parseFloatOrNull,
   normalizarTipo,
   TIPOS_VALIDOS,
+  insertRecompensa,
 } = require('../utils/recompensa.helpers');
 
 function getComercioId(req) {
@@ -179,36 +180,28 @@ async function createRecompensa(req, res) {
       return responderError(res, 400, 'Nombre y puntos requeridos válidos');
     }
 
-    const insert = await query(
-      `INSERT INTO piku_recompensas
-       (comercio_id, nombre, descripcion, puntos_requeridos, icono, stock, imagen_url,
-        tipo, porcentaje_descuento, monto_maximo_descuento, producto_nombre,
-        fecha_inicio, fecha_fin, horarios_validos, max_usos_por_usuario, max_usos_totales, usos_actuales, activo)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,0,TRUE)
-       RETURNING *`,
-      [
-        comercioId,
-        nombre,
-        descripcion,
-        puntos,
-        icono,
-        stock,
-        imagenUrl || null,
-        tipo,
-        parseIntOrNull(req.body.porcentajeDescuento ?? req.body.porcentaje_descuento),
-        parseFloatOrNull(req.body.montoMaximoDescuento ?? req.body.monto_maximo_descuento),
-        sanitizarInput(req.body.productoNombre ?? req.body.producto_nombre, 100),
-        fechaInicio,
-        fechaFin,
+    const insert = await insertRecompensa(query, comercioId, {
+      nombre,
+      descripcion,
+      puntos,
+      icono,
+      stock,
+      imagenUrl: imagenUrl || null,
+      tipo,
+      porcentajeDescuento: parseIntOrNull(req.body.porcentajeDescuento ?? req.body.porcentaje_descuento),
+      montoMaximoDescuento: parseFloatOrNull(req.body.montoMaximoDescuento ?? req.body.monto_maximo_descuento),
+      productoNombre: sanitizarInput(req.body.productoNombre ?? req.body.producto_nombre, 100),
+      fechaInicio,
+      fechaFin,
+      horariosValidos:
         req.body.horariosValidos ?? req.body.horarios_validos
           ? JSON.stringify(req.body.horariosValidos ?? req.body.horarios_validos)
           : null,
-        parseIntOrNull(req.body.maxUsosPorUsuario ?? req.body.max_usos_por_usuario) ?? 1,
-        parseIntOrNull(req.body.maxUsosTotales ?? req.body.max_usos_totales) ?? 0,
-      ]
-    );
+      maxUsosPorUsuario: parseIntOrNull(req.body.maxUsosPorUsuario ?? req.body.max_usos_por_usuario) ?? 1,
+      maxUsosTotales: parseIntOrNull(req.body.maxUsosTotales ?? req.body.max_usos_totales) ?? 0,
+    });
 
-    return res.status(201).json({ mensaje: 'Recompensa creada', recompensa: insert.rows[0] });
+    return res.status(201).json({ mensaje: 'Artículo publicado', recompensa: insert.rows[0] });
   } catch (error) {
     console.error('createRecompensa:', error);
     return responderError(res, 500, 'Error al crear recompensa', { detail: error.message });
@@ -318,34 +311,25 @@ async function duplicateRecompensa(req, res) {
     if (!orig.rows.length) return responderError(res, 404, 'Recompensa no encontrada');
     const r = orig.rows[0];
 
-    const insert = await query(
-      `INSERT INTO piku_recompensas
-       (comercio_id, nombre, descripcion, puntos_requeridos, icono, stock, imagen_url,
-        tipo, porcentaje_descuento, monto_maximo_descuento, producto_nombre,
-        fecha_inicio, fecha_fin, horarios_validos, max_usos_por_usuario, max_usos_totales, usos_actuales, activo)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,0,TRUE)
-       RETURNING *`,
-      [
-        comercioId,
-        `${r.nombre} (copia)`,
-        r.descripcion,
-        r.puntos_requeridos,
-        r.icono,
-        r.stock,
-        r.imagen_url,
-        r.tipo,
-        r.porcentaje_descuento,
-        r.monto_maximo_descuento,
-        r.producto_nombre,
-        r.fecha_inicio,
-        r.fecha_fin,
-        r.horarios_validos,
-        r.max_usos_por_usuario,
-        r.max_usos_totales,
-      ]
-    );
+    const insert = await insertRecompensa(query, comercioId, {
+      nombre: `${r.nombre} (copia)`,
+      descripcion: r.descripcion,
+      puntos: r.puntos_requeridos ?? r.puntos_necesarios,
+      icono: r.icono,
+      stock: r.stock,
+      imagenUrl: r.imagen_url,
+      tipo: r.tipo,
+      porcentajeDescuento: r.porcentaje_descuento,
+      montoMaximoDescuento: r.monto_maximo_descuento,
+      productoNombre: r.producto_nombre,
+      fechaInicio: r.fecha_inicio,
+      fechaFin: r.fecha_fin,
+      horariosValidos: r.horarios_validos,
+      maxUsosPorUsuario: r.max_usos_por_usuario,
+      maxUsosTotales: r.max_usos_totales,
+    });
 
-    return res.status(201).json({ mensaje: 'Oferta duplicada', recompensa: insert.rows[0] });
+    return res.status(201).json({ mensaje: 'Artículo duplicado', recompensa: insert.rows[0] });
   } catch (error) {
     console.error('duplicateRecompensa:', error);
     return responderError(res, 500, 'Error al duplicar recompensa');

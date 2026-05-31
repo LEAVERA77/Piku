@@ -78,12 +78,22 @@ data class RecompensaPublica(
     val icono: String? = null,
     @SerializedName("imagen_url") val imagenUrl: String? = null,
     val tipo: String? = null,
+    @SerializedName("porcentaje_descuento") val porcentajeDescuento: Int? = null,
+    @SerializedName("producto_nombre") val productoNombre: String? = null,
     val condiciones: String? = null,
     @SerializedName("vigencia_desde") val vigenciaDesde: String? = null,
     @SerializedName("vigencia_hasta") val vigenciaHasta: String? = null
 ) {
     fun photoUrl(cloudName: String? = null): String =
         com.piku.app.ui.media.PikuImages.resolve(imagenUrl, id, nombre, cloudName)
+
+    fun resumenBeneficio(): String = when (tipo) {
+        "descuento" -> porcentajeDescuento?.let { "$it% de descuento" } ?: "Descuento"
+        "2x1" -> "2x1"
+        "producto_gratis" -> productoNombre?.takeIf { it.isNotBlank() } ?: "Producto gratis"
+        "envio_gratis" -> "Envío gratis"
+        else -> tipo?.replace('_', ' ')?.replaceFirstChar { it.uppercase() }.orEmpty()
+    }
 }
 
 data class OfertasComercioResponse(

@@ -154,7 +154,7 @@ fun FormularioOfertaScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(if (esEdicion) "Editar oferta" else "Nueva oferta") },
+                title = { Text(if (esEdicion) "Editar artículo" else "Publicar artículo") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")

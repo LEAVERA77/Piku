@@ -43,6 +43,7 @@ import com.piku.app.data.datastore.AuthDataStore
 import com.piku.app.data.model.RecompensaDetalleResponse
 import com.piku.app.data.repository.MapaRepository
 import com.piku.app.data.repository.UsuarioRepository
+import com.piku.app.ui.components.ComercioEnvioContactoCard
 import com.piku.app.ui.components.PikuPhotoImage
 import com.piku.app.ui.theme.VerdePiku
 import kotlinx.coroutines.launch
@@ -140,6 +141,15 @@ fun DetalleOfertaScreen(
                     )
                     Spacer(Modifier.height(16.dp))
                     Text(oferta.nombre, style = MaterialTheme.typography.headlineMedium)
+                    val beneficio = oferta.resumenBeneficio()
+                    if (beneficio.isNotBlank()) {
+                        Text(
+                            beneficio,
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.secondary,
+                            modifier = Modifier.padding(top = 4.dp)
+                        )
+                    }
                     detalle!!.comercio?.nombre?.let {
                         Text(
                             it,
@@ -195,6 +205,28 @@ fun DetalleOfertaScreen(
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(top = 4.dp)
                         )
+                    }
+                    if (esCliente) {
+                        Spacer(Modifier.height(16.dp))
+                        Text(
+                            "En el comercio",
+                            style = MaterialTheme.typography.titleSmall
+                        )
+                        Text(
+                            "1. En la caja, escaneá el QR del comercio (pestaña Inicio → Escanear) para sumar puntos.\n" +
+                                "2. Cuando tengas suficientes puntos, canjeá este artículo y mostrá el código en el local.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    detalle!!.comercio?.let { c ->
+                        if (c.realizaEnvios || !c.telefonoContacto.isNullOrBlank()) {
+                            Spacer(Modifier.height(16.dp))
+                            ComercioEnvioContactoCard(
+                                comercio = c,
+                                articuloNombre = oferta.nombre
+                            )
+                        }
                     }
                     if (esCliente && codigoCanje == null) {
                         Spacer(Modifier.height(24.dp))
