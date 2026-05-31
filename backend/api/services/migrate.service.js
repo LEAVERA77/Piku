@@ -8,6 +8,7 @@ const MIGRATION_FILES = [
   'migration_recompensas_extend.sql',
   'migration_eventos_usuario.sql',
   'migration_usuario_envio.sql',
+  'migration_comercio_osm_note.sql',
 ];
 
 /** Columnas críticas que la API necesita (por si falla el SQL completo). */
@@ -42,6 +43,8 @@ const CRITICAL_ALTERS = [
   'ALTER TABLE piku_usuarios ADD COLUMN IF NOT EXISTS provincia VARCHAR(100)',
   'ALTER TABLE piku_usuarios ADD COLUMN IF NOT EXISTS codigo_postal VARCHAR(20)',
   'ALTER TABLE piku_usuarios ADD COLUMN IF NOT EXISTS notas_entrega TEXT',
+  'ALTER TABLE piku_comercios ADD COLUMN IF NOT EXISTS osm_note_id BIGINT',
+  'ALTER TABLE piku_comercios ADD COLUMN IF NOT EXISTS osm_note_created_at TIMESTAMPTZ',
 ];
 
 /**

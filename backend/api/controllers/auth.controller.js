@@ -4,6 +4,34 @@ const { query, withTransaction } = require('../services/neon.service');
 const { signToken } = require('../middleware/auth.middleware');
 const { validarEmail, sanitizarInput, responderError } = require('../utils/helpers');
 const { columnasTabla, tiene } = require('../utils/schema.util');
+const osmService = require('../services/osm.service');
+
+/**
+ * Publica el comercio como Note en OSM (no bloquea el registro si falla).
+ */
+async function publicarComercioEnOsm(comercio) {
+  try {
+    const resultado = await osmService.createNoteForComercio(comercio);
+    if (!resultado) return;
+
+    const cols = await columnasTabla('piku_comercios');
+    if (resultado.noteId && tiene(cols, 'osm_note_id')) {
+      const sets = ['osm_note_id = $1'];
+      const vals = [resultado.noteId];
+      if (tiene(cols, 'osm_note_created_at')) {
+        sets.push('osm_note_created_at = NOW()');
+      }
+      vals.push(comercio.id);
+      await query(
+        `UPDATE piku_comercios SET ${sets.join(', ')} WHERE id = $${vals.length}`,
+        vals
+      );
+    }
+    console.log(`[OSM] Note creado para comercio ${comercio.id}`, resultado.noteId || '(sin id)');
+  } catch (error) {
+    console.error('[OSM] No se pudo crear Note:', error.message);
+  }
+}
 
 async function camposUsuario(permitePassword = false) {
   const cols = await columnasTabla('piku_usuarios');
@@ -253,6 +281,8 @@ async function registroComercio(req, res) {
       comercioId: resultado.usuario.comercio_id,
     });
 
+    await publicarComercioEnOsm(resultado.comercio);
+
     return res.status(201).json({
       mensaje: 'Comercio registrado correctamente',
       token,
@@ -486,6 +516,8 @@ async function registroComercioGoogle(req, res) {
       rol: resultado.usuario.rol,
       comercioId: resultado.usuario.comercio_id,
     });
+
+    await publicarComercioEnOsm(resultado.comercio);
 
     return res.status(201).json({
       mensaje: 'Comercio registrado con Google',
