@@ -15,7 +15,10 @@ import com.piku.app.data.model.ComerciosResponse
 import com.piku.app.data.model.OfertasComercioResponse
 import com.piku.app.data.model.RecompensaDetalleResponse
 import com.piku.app.data.model.EventoRequest
+import com.piku.app.data.model.HistorialResponse
+import com.piku.app.data.model.RecompensasDisponiblesResponse
 import com.piku.app.data.model.RubrosResponse
+import com.piku.app.data.model.SaldoApiResponse
 import com.piku.app.data.model.GoogleLoginRequest
 import com.piku.app.data.model.ImagenUploadResponse
 import com.piku.app.data.model.LoginRequest
@@ -91,7 +94,13 @@ interface PikuApiService {
     suspend fun detalleRecompensa(@Path("id") id: String): RecompensaDetalleResponse
 
     @GET("api/usuario/saldo")
-    suspend fun saldo(): Map<String, Any>
+    suspend fun saldoCliente(): SaldoApiResponse
+
+    @GET("api/usuario/historial")
+    suspend fun historialPuntos(@Query("limite") limite: Int = 50): HistorialResponse
+
+    @GET("api/usuario/recompensas")
+    suspend fun recompensasDisponibles(): RecompensasDisponiblesResponse
 
     @POST("api/usuario/canjear")
     suspend fun canjearRecompensa(@Body body: CanjeRequest): CanjeResponse

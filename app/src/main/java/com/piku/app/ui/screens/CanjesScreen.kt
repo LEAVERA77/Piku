@@ -1,6 +1,7 @@
 package com.piku.app.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -14,6 +15,7 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -42,16 +44,32 @@ import kotlinx.coroutines.delay
 
 @Composable
 fun CanjesScreen(
+    onVerOferta: (String) -> Unit = {},
     modifier: Modifier = Modifier,
     viewModel: CanjesViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
+    LaunchedEffect(Unit) {
+        viewModel.cargar()
+    }
+
     LaunchedEffect(uiState.mensajeExito) {
         if (uiState.mensajeExito != null) {
-            delay(3000)
+            delay(5000)
             viewModel.limpiarMensaje()
         }
+    }
+
+    if (uiState.cargando && uiState.recompensas.isEmpty()) {
+        Column(
+            modifier = modifier.fillMaxSize(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            CircularProgressIndicator()
+        }
+        return
     }
 
     Column(
@@ -71,6 +89,11 @@ fun CanjesScreen(
         )
 
         Spacer(modifier = Modifier.height(16.dp))
+
+        uiState.error?.let { err ->
+            Text(err, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+            Spacer(modifier = Modifier.height(8.dp))
+        }
 
         uiState.mensajeExito?.let { mensaje ->
             Snackbar(
@@ -134,13 +157,17 @@ fun CanjesScreen(
             confirmButton = {
                 Button(
                     onClick = { viewModel.confirmarCanje() },
+                    enabled = !uiState.canjeando,
                     colors = ButtonDefaults.buttonColors(containerColor = VerdePiku)
                 ) {
-                    Text("Canjear")
+                    Text(if (uiState.canjeando) "Canjeando…" else "Canjear")
                 }
             },
             dismissButton = {
-                TextButton(onClick = { viewModel.cancelarCanje() }) {
+                TextButton(
+                    onClick = { viewModel.cancelarCanje() },
+                    enabled = !uiState.canjeando
+                ) {
                     Text("Cancelar")
                 }
             },

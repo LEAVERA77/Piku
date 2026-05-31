@@ -18,10 +18,3 @@ data class CanjeResponse(
     @SerializedName("puntos_restantes") val puntosRestantes: Int? = null,
     val recompensa: CanjeRecompensaResumen? = null
 )
-
-data class SaldoResponse(
-    @SerializedName("puntos_saldo") val puntosSaldo: Int = 0,
-    val puntos: Int? = null
-) {
-    fun puntosActuales(): Int = puntosSaldo.takeIf { it > 0 } ?: puntos ?: 0
-}

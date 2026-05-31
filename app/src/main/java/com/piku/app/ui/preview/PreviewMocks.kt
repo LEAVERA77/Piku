@@ -2,6 +2,7 @@ package com.piku.app.ui.preview
 
 import com.piku.app.data.model.Comercio
 import com.piku.app.data.model.Recompensa
+import com.piku.app.ui.media.PikuImages
 import com.piku.app.data.model.Rubro
 import com.piku.app.ui.PikuChatSugerencias
 import com.piku.app.ui.viewmodel.MensajeChat
@@ -41,7 +42,7 @@ object PreviewMocks {
         id = "preview-recompensa",
         nombre = "Café gratis",
         puntosRequeridos = 150,
-        imageUrl = "",
+        imageUrl = PikuImages.cafe,
         descripcion = "Un espresso de cortesía"
     )
 }

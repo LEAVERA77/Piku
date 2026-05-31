@@ -75,7 +75,7 @@ fun DetalleOfertaScreen(
         try {
             detalle = MapaRepository(context).detalleRecompensa(recompensaId)
             if (esCliente) {
-                puntosSaldo = usuarioRepo.obtenerSaldo()
+                puntosSaldo = usuarioRepo.obtenerSaldo().puntos
             }
         } catch (e: Exception) {
             error = e.message

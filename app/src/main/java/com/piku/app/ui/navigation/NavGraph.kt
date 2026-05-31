@@ -81,7 +81,13 @@ fun PikuClienteNavGraph(
                 )
             }
             composable(PikuDestino.Escaner.ruta) { EscanerScreen() }
-            composable(PikuDestino.Canjes.ruta) { CanjesScreen() }
+            composable(PikuDestino.Canjes.ruta) {
+                CanjesScreen(
+                    onVerOferta = { id ->
+                        navController.navigate(PikuDestino.detalleOferta(id))
+                    }
+                )
+            }
             composable(PikuDestino.Perfil.ruta) {
                 PerfilScreen(onCerrarSesion = onCerrarSesion)
             }
