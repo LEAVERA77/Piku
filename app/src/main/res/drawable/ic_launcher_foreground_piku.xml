@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- PNG 432px: logo 36% lienzo, centrado alto; compatible Samsung/Motorola y demas OEM. -->
+<!-- PNG 432px: logo ~18% lienzo (50% mas chico); centrado alto para mascara circular. -->
 <bitmap xmlns:android="http://schemas.android.com/apk/res/android"
     android:gravity="center"
     android:src="@drawable/piku_logo_icon_adaptive" />
