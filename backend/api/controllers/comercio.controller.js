@@ -16,6 +16,19 @@ function getComercioId(req) {
   return req.user.comercio_id;
 }
 
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function esUuid(valor) {
+  return typeof valor === 'string' && UUID_RE.test(valor);
+}
+
+function escapeIlike(texto) {
+  return String(texto).replace(/[%_\\]/g, '\\$&');
+}
+
+const ESTADOS_CANJE = new Set(['confirmado', 'pendiente', 'cancelado']);
+
 /**
  * Obtiene reglas de puntos del comercio.
  */
@@ -551,6 +564,178 @@ async function updateConfigEnvios(req, res) {
   }
 }
 
+/**
+ * Notificaciones del comercio (persistidas; NOTIFY es solo señal en tiempo real).
+ */
+async function obtenerNotificaciones(req, res) {
+  try {
+    const comercioId = getComercioId(req);
+    if (!comercioId) return responderError(res, 403, 'Sin comercio asociado');
+
+    const limite = Math.min(Math.max(parseInt(req.query.limite, 10) || 20, 1), 50);
+    const offset = Math.max(parseInt(req.query.offset, 10) || 0, 0);
+    const soloNoLeidas = req.query.solo_no_leidas === 'true';
+
+    let sql = `
+      SELECT id, comercio_id, usuario_id, recompensa_id, canje_id, tipo, titulo, cuerpo, leida, created_at
+      FROM piku_notificaciones
+      WHERE comercio_id = $1`;
+    const params = [comercioId];
+
+    if (soloNoLeidas) {
+      sql += ' AND leida = false';
+    }
+    sql += ` ORDER BY created_at DESC LIMIT $2 OFFSET $3`;
+    params.push(limite, offset);
+
+    const [rows, countRes] = await Promise.all([
+      query(sql, params),
+      query(
+        `SELECT COUNT(*)::int AS total FROM piku_notificaciones
+         WHERE comercio_id = $1${soloNoLeidas ? ' AND leida = false' : ''}`,
+        [comercioId]
+      ),
+    ]);
+
+    return res.json({
+      notificaciones: rows.rows,
+      total: countRes.rows[0].total,
+      limite,
+      offset,
+    });
+  } catch (error) {
+    console.error('obtenerNotificaciones:', error);
+    return responderError(res, 500, 'Error al obtener notificaciones');
+  }
+}
+
+/**
+ * Cantidad de notificaciones sin leer (badge en app comercio).
+ */
+async function contarNotificacionesNoLeidas(req, res) {
+  try {
+    const comercioId = getComercioId(req);
+    if (!comercioId) return responderError(res, 403, 'Sin comercio asociado');
+
+    const result = await query(
+      `SELECT COUNT(*)::int AS total FROM piku_notificaciones
+       WHERE comercio_id = $1 AND leida = false`,
+      [comercioId]
+    );
+    return res.json({ noLeidas: result.rows[0].total });
+  } catch (error) {
+    console.error('contarNotificacionesNoLeidas:', error);
+    return responderError(res, 500, 'Error al contar notificaciones');
+  }
+}
+
+/**
+ * Marca una notificación como leída (solo del comercio autenticado).
+ */
+async function marcarNotificacionLeida(req, res) {
+  try {
+    const comercioId = getComercioId(req);
+    if (!comercioId) return responderError(res, 403, 'Sin comercio asociado');
+
+    const { id } = req.params;
+    if (!esUuid(id)) return responderError(res, 400, 'ID de notificación inválido');
+
+    const updated = await query(
+      `UPDATE piku_notificaciones SET leida = true
+       WHERE id = $1 AND comercio_id = $2
+       RETURNING id`,
+      [id, comercioId]
+    );
+    if (!updated.rows.length) return responderError(res, 404, 'Notificación no encontrada');
+
+    return res.json({ mensaje: 'Notificación marcada como leída', id: updated.rows[0].id });
+  } catch (error) {
+    console.error('marcarNotificacionLeida:', error);
+    return responderError(res, 500, 'Error al marcar notificación');
+  }
+}
+
+/**
+ * Historial de canjes del comercio con filtros y paginación.
+ */
+async function obtenerHistorialCanjes(req, res) {
+  try {
+    const comercioId = getComercioId(req);
+    if (!comercioId) return responderError(res, 403, 'Sin comercio asociado');
+
+    const pagina = Math.max(parseInt(req.query.pagina, 10) || 1, 1);
+    const limite = Math.min(Math.max(parseInt(req.query.limite, 10) || 20, 1), 50);
+    const offset = (pagina - 1) * limite;
+    const { estado, fecha_desde, fecha_hasta, buscar } = req.query;
+
+    if (estado && !ESTADOS_CANJE.has(estado)) {
+      return responderError(res, 400, 'Estado de canje inválido');
+    }
+
+    let sql = `
+      SELECT
+        c.id,
+        c.usuario_id,
+        c.recompensa_id,
+        c.puntos_usados,
+        c.codigo_canje,
+        c.estado,
+        c.created_at,
+        u.nombre AS cliente_nombre,
+        r.nombre AS oferta_nombre,
+        r.puntos_requeridos,
+        r.tipo AS oferta_tipo,
+        r.imagen_url
+      FROM piku_canjes c
+      INNER JOIN piku_recompensas r ON r.id = c.recompensa_id
+      LEFT JOIN piku_usuarios u ON u.id = c.usuario_id
+      WHERE r.comercio_id = $1`;
+    const params = [comercioId];
+    let idx = 2;
+
+    if (estado) {
+      sql += ` AND c.estado = $${idx++}`;
+      params.push(estado);
+    }
+    if (fecha_desde) {
+      sql += ` AND c.created_at >= $${idx++}`;
+      params.push(fecha_desde);
+    }
+    if (fecha_hasta) {
+      sql += ` AND c.created_at <= $${idx++}`;
+      params.push(fecha_hasta);
+    }
+    if (buscar && String(buscar).trim()) {
+      sql += ` AND (u.nombre ILIKE $${idx} ESCAPE '\\' OR r.nombre ILIKE $${idx} ESCAPE '\\' OR c.codigo_canje ILIKE $${idx} ESCAPE '\\')`;
+      params.push(`%${escapeIlike(String(buscar).trim())}%`);
+      idx += 1;
+    }
+
+    const countSql = sql.replace(
+      /SELECT[\s\S]*FROM piku_canjes c/,
+      'SELECT COUNT(*)::int AS total FROM piku_canjes c'
+    );
+
+    sql += ` ORDER BY c.created_at DESC LIMIT $${idx++} OFFSET $${idx++}`;
+    params.push(limite, offset);
+
+    const [canjes, totalRes] = await Promise.all([
+      query(sql, params),
+      query(countSql, params.slice(0, params.length - 2)),
+    ]);
+
+    return res.json({
+      canjes: canjes.rows,
+      total: totalRes.rows[0].total,
+      pagina,
+      limite,
+    });
+  } catch (error) {
+    console.error('obtenerHistorialCanjes:', error);
+    return responderError(res, 500, 'Error al obtener historial de canjes');
+  }
+}
+
 module.exports = {
   getReglasPuntos,
   updateReglasPuntos,
@@ -566,4 +751,8 @@ module.exports = {
   getEstadisticas,
   getConfigEnvios,
   updateConfigEnvios,
+  obtenerNotificaciones,
+  contarNotificacionesNoLeidas,
+  marcarNotificacionLeida,
+  obtenerHistorialCanjes,
 };

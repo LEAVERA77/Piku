@@ -22,6 +22,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.piku.app.ui.theme.PikuTheme
 import com.piku.app.data.network.RetrofitInstance
+import com.piku.app.data.repository.ComercioRepository
 import com.piku.app.ui.components.PikuPhotoImage
 import com.piku.app.ui.media.PikuImages
 
@@ -30,15 +31,24 @@ fun AdminDashboardScreen(
     onOfertas: () -> Unit,
     onConfigEnvios: () -> Unit = {},
     onGenerarQr: () -> Unit,
+    onNotificaciones: () -> Unit = {},
+    onHistorialCanjes: () -> Unit = {},
     onCerrarSesion: () -> Unit
 ) {
+    val context = LocalContext.current
     var stats by remember { mutableStateOf<Map<String, Any>?>(null) }
+    var notificacionesNoLeidas by remember { mutableStateOf(0) }
 
     LaunchedEffect(Unit) {
         try {
             stats = RetrofitInstance.api.estadisticasComercio()
         } catch (_: Exception) {
             stats = null
+        }
+        try {
+            notificacionesNoLeidas = ComercioRepository(context).contarNotificacionesNoLeidas()
+        } catch (_: Exception) {
+            notificacionesNoLeidas = 0
         }
     }
 
@@ -68,6 +78,20 @@ fun AdminDashboardScreen(
         Spacer(Modifier.height(8.dp))
         Button(onClick = onGenerarQr, modifier = Modifier.fillMaxWidth()) { Text("Generar QR") }
         Spacer(Modifier.height(8.dp))
+        Button(onClick = onNotificaciones, modifier = Modifier.fillMaxWidth()) {
+            Text(
+                if (notificacionesNoLeidas > 0) {
+                    "Notificaciones ($notificacionesNoLeidas)"
+                } else {
+                    "Notificaciones"
+                }
+            )
+        }
+        Spacer(Modifier.height(8.dp))
+        Button(onClick = onHistorialCanjes, modifier = Modifier.fillMaxWidth()) {
+            Text("Historial de canjes")
+        }
+        Spacer(Modifier.height(8.dp))
         Button(onClick = onCerrarSesion, modifier = Modifier.fillMaxWidth()) { Text("Cerrar sesión") }
     }
 }
@@ -80,6 +104,8 @@ fun PreviewDashboardComercioScreen() {
             onOfertas = {},
             onConfigEnvios = {},
             onGenerarQr = {},
+            onNotificaciones = {},
+            onHistorialCanjes = {},
             onCerrarSesion = {}
         )
     }

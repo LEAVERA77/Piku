@@ -29,6 +29,12 @@ alwaysApply: true
 2. **Cliente** (Escanear): lee ese QR con cámara → `POST /api/qr/validar` con `{ codigo, lat, lon }` (sesión cliente + GPS cerca del comercio, ~100 m).
 3. Backend acredita `puntos_saldo` y marca el QR como usado.
 
+## Notificaciones comercio
+
+- Al insertar en `piku_canjes`, trigger → fila en `piku_notificaciones` + `pg_notify('piku_notificaciones', …)`.
+- Persistencia en BD; NOTIFY es señal efímera (listener en `notificationListener.js`, conexión directa sin pooler).
+- API: `GET /api/comercio/notificaciones`, `PUT .../leer`, `GET /api/comercio/canjes`.
+
 ## Registro y mapa
 
 - Dirección comercio: Nominatim en registro; pin en mapa con lat/lon guardados.

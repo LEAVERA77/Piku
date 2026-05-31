@@ -44,6 +44,18 @@ CREATE INDEX IF NOT EXISTS idx_piku_comercios_envios ON piku_comercios(realiza_e
 1. [Render Dashboard](https://dashboard.render.com) → servicio **Piku** → **Manual Deploy** → *Deploy latest commit*.
 2. El servidor aplica migraciones al iniciar y el auth se adapta al esquema existente (commit `f7ae301`+).
 
+## Notificaciones (LISTEN/NOTIFY)
+
+Tras deploy, el servidor aplica `migration_notificaciones.sql` (tabla `piku_notificaciones` + trigger al canjear).
+
+En Render, para el listener en tiempo real:
+
+| Variable | Valor |
+|----------|--------|
+| `DATABASE_URL` | Conexión **directa** a Neon (sin `-pooler` en el host) |
+| `DATABASE_URL_DIRECT` | (opcional) Misma URL directa si usás pooler en `DATABASE_URL` para queries |
+| `DISABLE_PG_LISTEN` | `true` solo si querés desactivar el listener |
+
 ## Render — variable recomendada
 
 Para registro de **comercio** con código `PIKU2025`:

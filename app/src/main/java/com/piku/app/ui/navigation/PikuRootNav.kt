@@ -14,6 +14,8 @@ import com.piku.app.ui.screens.SplashScreen
 import com.piku.app.ui.screens.admin.AdminDashboardScreen
 import com.piku.app.ui.screens.admin.AdminGenerarQrScreen
 import com.piku.app.ui.screens.comercio.ConfiguracionEnvioScreen
+import com.piku.app.ui.screens.comercio.HistorialCanjesScreen
+import com.piku.app.ui.screens.comercio.NotificacionesComercioScreen
 import com.piku.app.ui.screens.admin.FormularioOfertaScreen
 import com.piku.app.ui.screens.admin.GestionOfertasScreen
 import kotlinx.coroutines.CoroutineScope
@@ -90,6 +92,8 @@ fun PikuRootNav() {
                 onOfertas = { navController.navigate(PikuRutasRoot.AdminGestionOfertas) },
                 onConfigEnvios = { navController.navigate(PikuRutasRoot.AdminConfigEnvios) },
                 onGenerarQr = { navController.navigate(PikuRutasRoot.AdminQr) },
+                onNotificaciones = { navController.navigate(PikuRutasRoot.AdminNotificaciones) },
+                onHistorialCanjes = { navController.navigate(PikuRutasRoot.AdminHistorialCanjes) },
                 onCerrarSesion = {
                     CoroutineScope(Dispatchers.Main).launch {
                         AuthRepository(context).logout()
@@ -129,6 +133,12 @@ fun PikuRootNav() {
         }
         composable(PikuRutasRoot.AdminConfigEnvios) {
             ConfiguracionEnvioScreen(onBack = { navController.popBackStack() })
+        }
+        composable(PikuRutasRoot.AdminNotificaciones) {
+            NotificacionesComercioScreen(onBack = { navController.popBackStack() })
+        }
+        composable(PikuRutasRoot.AdminHistorialCanjes) {
+            HistorialCanjesScreen(onBack = { navController.popBackStack() })
         }
     }
 }

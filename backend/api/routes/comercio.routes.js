@@ -26,5 +26,9 @@ router.post('/generar-qr', comercioController.generarQR);
 router.get('/estadisticas', comercioController.getEstadisticas);
 router.get('/envios', comercioController.getConfigEnvios);
 router.put('/envios', comercioController.updateConfigEnvios);
+router.get('/notificaciones', comercioController.obtenerNotificaciones);
+router.get('/notificaciones/no-leidas', comercioController.contarNotificacionesNoLeidas);
+router.put('/notificaciones/:id/leer', comercioController.marcarNotificacionLeida);
+router.get('/canjes', comercioController.obtenerHistorialCanjes);
 
 module.exports = router;

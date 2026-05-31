@@ -11,6 +11,7 @@ const MIGRATION_FILES = [
   'migration_comercio_osm_note.sql',
   'migration_registro_mapa_ofertas.sql',
   'migration_comercio_envios.sql',
+  'migration_notificaciones.sql',
 ];
 
 /** Columnas críticas que la API necesita (por si falla el SQL completo). */

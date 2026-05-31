@@ -10,6 +10,7 @@ const publicRoutes = require('./routes/public.routes');
 const publicController = require('./controllers/public.controller');
 const chatRoutes = require('./routes/chat.routes');
 const { runStartupMigrations } = require('./services/migrate.service');
+const { startNotificationListener } = require('./services/notificationListener');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -67,6 +68,10 @@ async function start() {
     console.log(`✅ Servidor Piku corriendo en puerto ${PORT}`);
     console.log(`📡 Health: http://localhost:${PORT}/health`);
     console.log(`🔐 Auth:   http://localhost:${PORT}/api/auth/login`);
+  });
+
+  startNotificationListener().catch((err) => {
+    console.error('⚠️ Listener NOTIFY:', err.message);
   });
 }
 

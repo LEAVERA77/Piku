@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -23,6 +24,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -32,6 +34,7 @@ import com.piku.app.ui.components.BotonPiku
 import com.piku.app.ui.components.EstiloBotonPiku
 import com.piku.app.ui.theme.PikuTheme
 import com.piku.app.ui.theme.VerdePiku
+import com.piku.app.utils.QrShareHelper
 import com.piku.app.ui.viewmodel.AdminGenerarQrViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -41,6 +44,7 @@ fun AdminGenerarQrScreen(
     viewModel: AdminGenerarQrViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val context = LocalContext.current
 
     Scaffold(
         topBar = {
@@ -135,6 +139,24 @@ fun AdminGenerarQrScreen(
                         style = MaterialTheme.typography.labelMedium,
                         textAlign = TextAlign.Center,
                         modifier = Modifier.fillMaxWidth()
+                    )
+                }
+                uiState.qrBitmap?.let { bitmap ->
+                    val monto = uiState.monto.toDoubleOrNull() ?: 0.0
+                    BotonPiku(
+                        texto = "Compartir por WhatsApp",
+                        onClick = {
+                            QrShareHelper.compartirQr(
+                                context = context,
+                                bitmap = bitmap,
+                                codigo = qr.codigo,
+                                monto = monto,
+                                puntos = qr.puntosCalculados,
+                                minutosValidez = uiState.expiraEnMinutos
+                            )
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        icono = Icons.Default.Share
                     )
                 }
             }

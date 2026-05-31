@@ -9,6 +9,9 @@ import com.piku.app.data.model.ChatPikuRequest
 import com.piku.app.data.model.PerfilResponse
 import com.piku.app.data.model.ChatPikuResponse
 import com.piku.app.data.model.ConfiguracionEnviosRequest
+import com.piku.app.data.model.HistorialCanjesComercioResponse
+import com.piku.app.data.model.NotificacionesNoLeidasResponse
+import com.piku.app.data.model.NotificacionesResponse
 import com.piku.app.data.model.ConfiguracionEnviosResponse
 import com.piku.app.data.model.ComercioDetalleResponse
 import com.piku.app.data.model.ComerciosResponse
@@ -154,4 +157,27 @@ interface PikuApiService {
 
     @PUT("api/comercio/envios")
     suspend fun actualizarConfigEnvios(@Body body: ConfiguracionEnviosRequest): ConfiguracionEnviosResponse
+
+    @GET("api/comercio/notificaciones")
+    suspend fun notificacionesComercio(
+        @Query("limite") limite: Int = 20,
+        @Query("offset") offset: Int = 0,
+        @Query("solo_no_leidas") soloNoLeidas: Boolean? = null
+    ): NotificacionesResponse
+
+    @GET("api/comercio/notificaciones/no-leidas")
+    suspend fun notificacionesNoLeidas(): NotificacionesNoLeidasResponse
+
+    @PUT("api/comercio/notificaciones/{id}/leer")
+    suspend fun marcarNotificacionLeida(@Path("id") id: String): Map<String, Any>
+
+    @GET("api/comercio/canjes")
+    suspend fun historialCanjesComercio(
+        @Query("pagina") pagina: Int = 1,
+        @Query("limite") limite: Int = 20,
+        @Query("estado") estado: String? = null,
+        @Query("fecha_desde") fechaDesde: String? = null,
+        @Query("fecha_hasta") fechaHasta: String? = null,
+        @Query("buscar") buscar: String? = null
+    ): HistorialCanjesComercioResponse
 }
