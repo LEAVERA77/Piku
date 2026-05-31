@@ -19,8 +19,6 @@ if (!fs.existsSync(ENV_PATH)) {
   process.exit(1);
 }
 
-require('dotenv').config({ path: ENV_PATH });
-
 function normalizarDatabaseUrl(raw) {
   return String(raw || '')
     .trim()
@@ -28,10 +26,50 @@ function normalizarDatabaseUrl(raw) {
     .replace(/[;\s]+$/g, '');
 }
 
-if (!process.env.DATABASE_URL?.trim() && process.env.DATABASE_URL_DIRECT?.trim()) {
-  process.env.DATABASE_URL = process.env.DATABASE_URL_DIRECT;
+/** Lee el valor tras = sin que dotenv trate # como comentario (corta contraseñas/URLs). */
+function leerVariableEnvArchivo(nombre) {
+  const content = fs.readFileSync(ENV_PATH, 'utf8');
+  const re = new RegExp(`^\\s*${nombre}\\s*=\\s*(.*)$`, 'i');
+  for (const line of content.split(/\r?\n/)) {
+    const t = line.trim();
+    if (!t || t.startsWith('#')) continue;
+    const m = line.match(re);
+    if (m) return normalizarDatabaseUrl(m[1]);
+  }
+  return '';
 }
-process.env.DATABASE_URL = normalizarDatabaseUrl(process.env.DATABASE_URL);
+
+function cargarDatabaseUrl() {
+  require('dotenv').config({ path: ENV_PATH });
+
+  const desdeArchivo = leerVariableEnvArchivo('DATABASE_URL');
+  const desdeArchivoDirect = leerVariableEnvArchivo('DATABASE_URL_DIRECT');
+  const desdeDotenv = normalizarDatabaseUrl(process.env.DATABASE_URL);
+  const desdeDotenvDirect = normalizarDatabaseUrl(process.env.DATABASE_URL_DIRECT);
+
+  let url =
+    desdeArchivo ||
+    desdeDotenv ||
+    desdeArchivoDirect ||
+    desdeDotenvDirect;
+
+  if (desdeDotenv && desdeArchivo && desdeDotenv !== desdeArchivo) {
+    console.warn(
+      '⚠️ DATABASE_URL en .env: dotenv leyó menos caracteres que la línea del archivo.',
+    );
+    console.warn('   Suele pasar si la URL o contraseña tiene # — usamos la línea completa del archivo.');
+    url = desdeArchivo;
+  }
+
+  if (!url) {
+    console.error('❌ DATABASE_URL (o DATABASE_URL_DIRECT) no está en backend/api/.env');
+    process.exit(1);
+  }
+
+  process.env.DATABASE_URL = url;
+}
+
+cargarDatabaseUrl();
 
 const bcrypt = require('bcryptjs');
 const { pool, query } = require('../services/neon.service');
@@ -132,6 +170,12 @@ function fechaFinDesdeDias(dias) {
   return new Date(Date.now() + dias * 24 * 60 * 60 * 1000).toISOString();
 }
 
+/** Neon viejo puede no aceptar envio_gratis en el CHECK de tipo. */
+function tipoOfertaParaInsert(tipo) {
+  if (tipo === 'envio_gratis') return 'descuento';
+  return tipo;
+}
+
 async function upsertComercio(hash, data) {
   const tipoInfo = normalizarTipoComercio(data.tipoComercio);
   const email = data.email.toLowerCase();
@@ -154,10 +198,10 @@ async function upsertComercio(hash, data) {
   } else {
     const comercioInsert = await query(
       `INSERT INTO piku_comercios (
-         nombre, direccion, lat, lon, radio_metros, activo, suscripcion_activa,
+         nombre, direccion, lat, lon, activo, suscripcion_activa,
          categoria, tipo_comercio, icono_emoji,
          realiza_envios, costo_envio, envio_minimo_compra, telefono_contacto
-       ) VALUES ($1,$2,$3,$4,100,TRUE,TRUE,$5,$6,$7,$8,$9,$10,$11)
+       ) VALUES ($1,$2,$3,$4,TRUE,TRUE,$5,$6,$7,$8,$9,$10,$11)
        RETURNING id`,
       [
         data.nombre,
@@ -205,12 +249,17 @@ async function upsertComercio(hash, data) {
     throw new Error(`Sin comercio_id para ${email}`);
   }
 
-  await query(
-    `INSERT INTO piku_reglas_puntos (comercio_id, puntos_por_peso, monto_minimo, puntos_fijos, max_puntos_por_dia, activo)
-     VALUES ($1, 1, 0, 10, 500, TRUE)
-     ON CONFLICT (comercio_id) DO NOTHING`,
-    [comercioId]
+  const reglasExistentes = await query(
+    'SELECT id FROM piku_reglas_puntos WHERE comercio_id = $1 LIMIT 1',
+    [comercioId],
   );
+  if (!reglasExistentes.rows.length) {
+    await query(
+      `INSERT INTO piku_reglas_puntos (comercio_id, puntos_por_peso, monto_minimo, puntos_fijos, max_puntos_por_dia, activo)
+       VALUES ($1, 1, 0, 10, 500, TRUE)`,
+      [comercioId],
+    );
+  }
 
   for (const oferta of data.ofertas) {
     const dup = await query(
@@ -222,16 +271,16 @@ async function upsertComercio(hash, data) {
     const fechaFin = fechaFinDesdeDias(oferta.dias);
     await query(
       `INSERT INTO piku_recompensas (
-         comercio_id, nombre, descripcion, puntos_requeridos, icono, tipo,
+         comercio_id, nombre, descripcion, puntos_necesarios, puntos_requeridos, icono, tipo,
          porcentaje_descuento, fecha_inicio, fecha_fin, max_usos_por_usuario, max_usos_totales, activo
-       ) VALUES ($1,$2,$3,$4,$5,$6,$7,NOW(),$8,1,0,TRUE)`,
+       ) VALUES ($1,$2,$3,$4,$4,$5,$6,$7,NOW(),$8,1,0,TRUE)`,
       [
         comercioId,
         oferta.nombre,
         `Oferta de prueba — ${data.nombre}, Cerrito`,
         oferta.puntos,
         oferta.icono,
-        oferta.tipo,
+        tipoOfertaParaInsert(oferta.tipo),
         oferta.porcentaje || null,
         fechaFin,
       ]
@@ -241,15 +290,29 @@ async function upsertComercio(hash, data) {
   return { comercioId, email };
 }
 
-function obtenerHostDb(urlRaw) {
-  const url = String(urlRaw).trim().replace(/^["']|["']$/g, '');
-  try {
-    const parsed = new URL(url.replace(/^postgresql:\/\//i, 'http://'));
-    return parsed.hostname;
-  } catch (_) {
-    const m = url.match(/@([^/?#]+)/);
-    return m ? m[1].split(':')[0].replace(/^["']|["']$/g, '') : '';
-  }
+/** Parsea postgresql://user:pass@host/db sin URL() (falla con @ o % en la contraseña). */
+function parsePostgresUrl(connectionString) {
+  const url = normalizarDatabaseUrl(connectionString);
+  const scheme = url.match(/^postgres(?:ql)?:\/\//i);
+  if (!scheme) return null;
+  const rest = url.slice(scheme[0].length);
+  const atIdx = rest.lastIndexOf('@');
+  if (atIdx < 0) return null;
+
+  const userPass = rest.slice(0, atIdx);
+  const hostPart = rest.slice(atIdx + 1);
+  const colonIdx = userPass.indexOf(':');
+  const username =
+    colonIdx >= 0
+      ? decodeURIComponent(userPass.slice(0, colonIdx))
+      : decodeURIComponent(userPass);
+  const password =
+    colonIdx >= 0 ? decodeURIComponent(userPass.slice(colonIdx + 1)) : '';
+
+  const hostMatch = hostPart.match(/^([^/?#]+)/);
+  const hostname = hostMatch ? hostMatch[1].split(':')[0] : '';
+
+  return { username, password, hostname, url };
 }
 
 function validarDatabaseUrl() {
@@ -259,15 +322,18 @@ function validarDatabaseUrl() {
     process.exit(1);
   }
 
-  let parsed;
-  try {
-    parsed = new URL(url.replace(/^postgresql:\/\//i, 'http://'));
-  } catch (_) {
-    console.error('❌ DATABASE_URL no es una URL válida');
+  if (!url.includes('@') || !url.includes('://')) {
+    console.error('❌ DATABASE_URL incompleta. Formato: postgresql://usuario:contraseña@host/base');
     process.exit(1);
   }
 
-  const host = parsed.hostname || obtenerHostDb(url);
+  const parsed = parsePostgresUrl(url);
+  if (!parsed) {
+    console.error('❌ DATABASE_URL no es una URL PostgreSQL válida');
+    process.exit(1);
+  }
+
+  const host = parsed.hostname;
   if (!host) {
     console.error('❌ No se pudo leer el host de DATABASE_URL');
     process.exit(1);
@@ -284,23 +350,21 @@ function validarDatabaseUrl() {
     process.exit(1);
   }
 
-  if (!parsed.password || parsed.password === 'PASSWORD' || parsed.password.length < 12) {
-    console.error('❌ La contraseña en DATABASE_URL falta o está incompleta.');
+  if (!parsed.password || parsed.password === 'PASSWORD') {
+    console.error('❌ Falta la contraseña en DATABASE_URL (entre : y @).');
     console.error('   Copiá la cadena COMPLETA desde Render → Environment → DATABASE_URL');
-    console.error('   (o DATABASE_URL_DIRECT). Debe verse algo como:');
+    console.error('   (o DATABASE_URL_DIRECT). Ejemplo:');
     console.error('   postgresql://neondb_owner:npg_XXXXXXXXXXXX@ep-....neon.tech/neondb?...');
-    process.exit(1);
-  }
-
-  if (!url.includes('@') || !url.includes('://')) {
-    console.error('❌ DATABASE_URL incompleta. Formato: postgresql://usuario:contraseña@host/base');
+    console.error('');
+    console.error('   Si la contraseña tiene #, en .env usá comillas:');
+    console.error('   DATABASE_URL="postgresql://..."');
     process.exit(1);
   }
 
   const passLen = parsed.password.length;
   console.log(`✅ Host: ${host} · Usuario: ${parsed.username} · Contraseña en URL: ${passLen} caracteres`);
-  if (passLen < 20 || parsed.password.includes('xxxx') || parsed.password === 'PASSWORD') {
-    console.warn('⚠️ La contraseña parece un placeholder. Pegá la real desde Render (suele ser ~20+ caracteres tras npg_).');
+  if (passLen < 8 || parsed.password.includes('xxxx') || parsed.password === 'PASSWORD') {
+    console.warn('⚠️ La contraseña parece cortada o placeholder. Copiá de nuevo desde Render (botón copiar).');
   }
   return host;
 }
@@ -336,6 +400,15 @@ async function main() {
   }
 
   await probarConexionDb();
+
+  for (const stmt of [
+    'ALTER TABLE piku_reglas_puntos ADD COLUMN IF NOT EXISTS puntos_por_peso NUMERIC(10, 2) NOT NULL DEFAULT 1',
+    'ALTER TABLE piku_reglas_puntos ADD COLUMN IF NOT EXISTS monto_minimo NUMERIC(10, 2) NOT NULL DEFAULT 0',
+    'ALTER TABLE piku_reglas_puntos ADD COLUMN IF NOT EXISTS puntos_fijos INTEGER NOT NULL DEFAULT 0',
+    'ALTER TABLE piku_reglas_puntos ADD COLUMN IF NOT EXISTS max_puntos_por_dia INTEGER NOT NULL DEFAULT 500',
+  ]) {
+    await query(stmt);
+  }
 
   console.log('🌱 Iniciando seed de comercios en Cerrito, Entre Ríos...');
   console.log(`🔐 Contraseña de prueba para comercios: ${PASSWORD}\n`);
