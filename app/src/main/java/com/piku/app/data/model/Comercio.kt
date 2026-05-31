@@ -82,10 +82,25 @@ data class RecompensaPublica(
     @SerializedName("producto_nombre") val productoNombre: String? = null,
     val condiciones: String? = null,
     @SerializedName("vigencia_desde") val vigenciaDesde: String? = null,
-    @SerializedName("vigencia_hasta") val vigenciaHasta: String? = null
+    @SerializedName("vigencia_hasta") val vigenciaHasta: String? = null,
+    val imagenes: List<RecompensaImagen>? = null,
+    @SerializedName("imagenes_urls") val imagenesUrls: List<String>? = null,
+    @SerializedName("imagenes_extra") val imagenesExtra: Int? = null
 ) {
     fun photoUrl(cloudName: String? = null): String =
         com.piku.app.ui.media.PikuImages.resolve(imagenUrl, id, nombre, cloudName)
+
+    fun todasLasFotos(cloudName: String? = null): List<String> {
+        val urls = imagenesUrls?.filter { it.isNotBlank() }?.toMutableList() ?: mutableListOf()
+        if (urls.isEmpty()) {
+            imagenes?.map { it.imagenUrl }?.filter { it.isNotBlank() }?.let { urls.addAll(it) }
+        }
+        val portada = imagenUrl?.takeIf { it.isNotBlank() }
+            ?: urls.firstOrNull()
+        if (portada != null && !urls.contains(portada)) urls.add(0, portada)
+        if (urls.isEmpty()) urls.add(photoUrl(cloudName))
+        return urls.distinct()
+    }
 
     fun resumenBeneficio(): String = when (tipo) {
         "descuento" -> porcentajeDescuento?.let { "$it% de descuento" } ?: "Descuento"

@@ -41,9 +41,12 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.piku.app.ui.theme.PikuTheme
+import com.piku.app.data.model.OfertaComercio
 import com.piku.app.data.repository.OfertaRepository
 import coil.compose.AsyncImage
 import com.piku.app.ui.components.BotonPiku
+import com.piku.app.ui.components.EstiloBotonPiku
+import com.piku.app.ui.components.GaleriaArticuloEditor
 import com.piku.app.ui.components.PikuPhotoImage
 import com.piku.app.ui.media.PikuImages
 import kotlinx.coroutines.launch
@@ -82,6 +85,9 @@ fun FormularioOfertaScreen(
     var imagenLocal by remember { mutableStateOf<Uri?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
     var cargando by remember { mutableStateOf(false) }
+    var idArticulo by remember { mutableStateOf(ofertaId?.takeIf { it != "new" }) }
+    var ofertaActual by remember { mutableStateOf<OfertaComercio?>(null) }
+    var listoParaSalir by remember { mutableStateOf(esEdicion) }
 
     val picker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
@@ -102,6 +108,8 @@ fun FormularioOfertaScreen(
                 maxPorUsuario = (o.maxUsosPorUsuario ?: 1).toString()
                 maxTotales = (o.maxUsosTotales ?: 0).toString()
                 imagenUrl = o.imagenUrl
+                ofertaActual = o
+                idArticulo = ofertaId
             } catch (e: Exception) {
                 error = e.message
             }
@@ -131,18 +139,20 @@ fun FormularioOfertaScreen(
                 }
                 if (!imagenUrl.isNullOrBlank()) body["imagenUrl"] = imagenUrl
 
-                val id = if (esEdicion && ofertaId != null) {
-                    repo.actualizar(ofertaId, body).id
-                    ofertaId
+                val id = if (esEdicion && idArticulo != null) {
+                    repo.actualizar(idArticulo, body).id
+                    idArticulo!!
                 } else {
                     repo.crear(body).id
                 }
+                idArticulo = id
 
                 imagenLocal?.let { uri ->
                     val res = repo.subirImagen(id, uri)
                     imagenUrl = res.imagenUrl
                 }
-                onGuardado()
+                ofertaActual = repo.obtener(id)
+                listoParaSalir = true
             } catch (e: Exception) {
                 error = e.message
             } finally {
@@ -194,8 +204,17 @@ fun FormularioOfertaScreen(
             }
             Spacer(Modifier.height(8.dp))
             OutlinedButton(onClick = { picker.launch("image/*") }, modifier = Modifier.fillMaxWidth()) {
-                Text("Subir foto de la oferta")
+                Text("Subir foto portada")
             }
+            Spacer(Modifier.height(12.dp))
+            GaleriaArticuloEditor(
+                ofertaId = idArticulo,
+                oferta = ofertaActual,
+                onOfertaActualizada = {
+                    ofertaActual = it
+                    imagenUrl = it.imagenUrl
+                }
+            )
             Spacer(Modifier.height(12.dp))
 
             OutlinedTextField(titulo, { titulo = it }, label = { Text("Título") }, modifier = Modifier.fillMaxWidth())
@@ -246,7 +265,7 @@ fun FormularioOfertaScreen(
 
             Spacer(Modifier.height(16.dp))
             BotonPiku(
-                texto = if (cargando) "Guardando…" else if (esEdicion) "Guardar cambios" else "Crear oferta",
+                texto = if (cargando) "Guardando…" else "Guardar artículo",
                 onClick = {
                     if (titulo.isBlank()) error = "El título es obligatorio"
                     else guardar()
@@ -254,6 +273,16 @@ fun FormularioOfertaScreen(
                 modifier = Modifier.fillMaxWidth(),
                 habilitado = !cargando
             )
+            if (listoParaSalir) {
+                Spacer(Modifier.height(8.dp))
+                BotonPiku(
+                    texto = "Volver al catálogo",
+                    onClick = onGuardado,
+                    modifier = Modifier.fillMaxWidth(),
+                    estilo = EstiloBotonPiku.CONTORNO,
+                    habilitado = !cargando
+                )
+            }
             Spacer(Modifier.height(32.dp))
         }
     }

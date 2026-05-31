@@ -105,6 +105,7 @@ fun ComercioBottomSheet(
                         ArticuloCatalogoRow(
                             articulo = oferta,
                             photoUrl = oferta.photoUrl(cloud),
+                            cantidadFotos = oferta.todasLasFotos(cloud).size,
                             onClick = { onVerDetalle(oferta.id) }
                         )
                     }

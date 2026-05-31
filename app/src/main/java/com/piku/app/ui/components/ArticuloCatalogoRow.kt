@@ -1,6 +1,7 @@
 package com.piku.app.ui.components
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -26,7 +27,8 @@ fun ArticuloCatalogoRow(
     articulo: RecompensaPublica,
     photoUrl: String,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    cantidadFotos: Int = 1
 ) {
     Row(
         modifier = modifier
@@ -35,15 +37,21 @@ fun ArticuloCatalogoRow(
             .padding(vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        PikuPhotoImage(
-            url = photoUrl,
-            contentDescription = articulo.nombre,
-            modifier = Modifier
-                .size(72.dp)
-                .clip(RoundedCornerShape(12.dp)),
-            cornerRadius = 12.dp,
-            contentScale = ContentScale.Crop
-        )
+        Box {
+            PikuPhotoImage(
+                url = photoUrl,
+                contentDescription = articulo.nombre,
+                modifier = Modifier
+                    .size(72.dp)
+                    .clip(RoundedCornerShape(12.dp)),
+                cornerRadius = 12.dp,
+                contentScale = ContentScale.Crop
+            )
+            IndicadorFotosBadge(
+                cantidad = cantidadFotos,
+                modifier = Modifier.align(Alignment.BottomEnd)
+            )
+        }
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
             Text(articulo.nombre, style = MaterialTheme.typography.titleMedium)

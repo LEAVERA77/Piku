@@ -5,9 +5,9 @@ En Piku, cada **artículo publicado** es una fila en `piku_recompensas` (nombre,
 ## Comercio: publicar
 
 1. Login **comercio** (ej. `cafe@martinez.com` / `comercio123` tras el seed).
-2. Panel → **Publicar artículos**.
-3. **+** → completar título, descripción, **foto** (galería), tipo (descuento %, 2x1, producto gratis), **puntos** para canjear, vigencia.
-4. Guardar → el artículo queda activo y visible en el mapa para clientes.
+2. Pestañas inferiores: **Panel** | **Catálogo** | **Más** (QR, envíos, notificaciones).
+3. En **Catálogo** → **+** → título, descripción, **galería de fotos** (portada + más imágenes), tipo, puntos, vigencia.
+4. **Guardar artículo** → sumar fotos en galería → **Volver al catálogo**. Queda visible en el mapa.
 
 ## Cliente: mapa y catálogo
 

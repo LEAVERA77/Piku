@@ -17,6 +17,8 @@ import com.piku.app.data.model.ComercioDetalleResponse
 import com.piku.app.data.model.ComerciosResponse
 import com.piku.app.data.model.OfertasComercioResponse
 import com.piku.app.data.model.RecompensaDetalleResponse
+import com.piku.app.data.model.RecompensaImagenesResponse
+import com.piku.app.data.model.RecompensaImagenUploadResponse
 import com.piku.app.data.model.EventoRequest
 import com.piku.app.data.model.HistorialResponse
 import com.piku.app.data.model.RecompensasDisponiblesResponse
@@ -142,6 +144,29 @@ interface PikuApiService {
         @Path("id") id: String,
         @Part file: MultipartBody.Part
     ): ImagenUploadResponse
+
+    @GET("api/comercio/recompensas/{id}/imagenes")
+    suspend fun listarImagenesGaleria(@Path("id") id: String): RecompensaImagenesResponse
+
+    @Multipart
+    @POST("api/comercio/recompensas/{id}/imagenes")
+    suspend fun subirImagenGaleria(
+        @Path("id") id: String,
+        @Part file: MultipartBody.Part,
+        @retrofit2.http.Query("portada") portada: Int? = null
+    ): RecompensaImagenUploadResponse
+
+    @DELETE("api/comercio/recompensas/{id}/imagenes/{imagenId}")
+    suspend fun eliminarImagenGaleria(
+        @Path("id") id: String,
+        @Path("imagenId") imagenId: String
+    ): RecompensaSingleResponse
+
+    @PUT("api/comercio/recompensas/{id}/portada")
+    suspend fun establecerPortada(
+        @Path("id") id: String,
+        @Body body: Map<String, @JvmSuppressWildcards Any?>
+    ): RecompensaSingleResponse
 
     @POST("api/qr/validar")
     suspend fun validarEscaneo(@Body body: ValidarQrRequest): ValidarQrResponse

@@ -6,6 +6,7 @@ const {
   selectRecompensasPublicas,
 } = require('../utils/comercio.sql.util');
 const { columnasTabla } = require('../utils/schema.util');
+const { adjuntarImagenesARecompensa } = require('../utils/recompensa.imagenes.util');
 const { RUBROS } = require('../constants/rubros');
 
 function parseBbox(req) {
@@ -120,9 +121,13 @@ async function detalleComercio(req, res) {
       recompensas = await query(recQuery.sql, [id]);
     }
 
+    const recompensasConImagenes = await Promise.all(
+      recompensas.rows.map((r) => adjuntarImagenesARecompensa(r))
+    );
+
     return res.json({
       comercio: result.rows[0],
-      recompensas: recompensas.rows,
+      recompensas: recompensasConImagenes,
     });
   } catch (error) {
     console.error('detalleComercio:', error);
@@ -139,7 +144,8 @@ async function ofertasComercio(req, res) {
     const recQuery = await selectRecompensasPublicas();
     if (!recQuery.sql) return res.json({ ofertas: [] });
     const recompensas = await query(recQuery.sql, [id]);
-    return res.json({ ofertas: recompensas.rows });
+    const ofertas = await Promise.all(recompensas.rows.map((r) => adjuntarImagenesARecompensa(r)));
+    return res.json({ ofertas });
   } catch (error) {
     console.error('ofertasComercio:', error);
     return responderError(res, 500, 'Error al listar ofertas', { detail: error.message });
@@ -171,8 +177,10 @@ async function detalleRecompensa(req, res) {
       [meta.rows[0].comercio_id]
     );
 
+    const recompensaConImagenes = await adjuntarImagenesARecompensa(recompensa);
+
     return res.json({
-      recompensa,
+      recompensa: recompensaConImagenes,
       comercio: cRes.rows[0] || null,
     });
   } catch (error) {

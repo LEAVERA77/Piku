@@ -46,4 +46,22 @@ class OfertaRepository(private val context: Context) {
         val part = MultipartBody.Part.createFormData("file", "oferta.jpg", body)
         return api.subirImagenOferta(ofertaId, part)
     }
+
+    suspend fun listarImagenesGaleria(ofertaId: String) = api.listarImagenesGaleria(ofertaId)
+
+    suspend fun subirImagenGaleria(ofertaId: String, uri: Uri, comoPortada: Boolean): OfertaComercio {
+        val bytes = ImageUploadHelper.comprimirImagen(context, uri)
+        val body = bytes.toRequestBody("image/jpeg".toMediaTypeOrNull())
+        val part = MultipartBody.Part.createFormData("file", "oferta.jpg", body)
+        val res = api.subirImagenGaleria(ofertaId, part, if (comoPortada) 1 else null)
+        return res.recompensa ?: throw IllegalStateException("Respuesta sin recompensa")
+    }
+
+    suspend fun eliminarImagenGaleria(ofertaId: String, imagenId: String): OfertaComercio =
+        api.eliminarImagenGaleria(ofertaId, imagenId).recompensa
+            ?: throw IllegalStateException("Respuesta sin recompensa")
+
+    suspend fun establecerPortada(ofertaId: String, imagenId: String): OfertaComercio =
+        api.establecerPortada(ofertaId, mapOf("imagenId" to imagenId)).recompensa
+            ?: throw IllegalStateException("Respuesta sin recompensa")
 }

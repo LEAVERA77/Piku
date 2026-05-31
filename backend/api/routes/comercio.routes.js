@@ -26,6 +26,10 @@ router.post('/recompensas/:id/duplicar', comercioController.duplicateRecompensa)
 router.put('/recompensas/:id', comercioController.updateRecompensa);
 router.delete('/recompensas/:id', comercioController.deleteRecompensa);
 router.post('/recompensas/:id/imagen', upload.single('file'), comercioController.uploadImagenRecompensa);
+router.get('/recompensas/:id/imagenes', comercioController.listarImagenesRecompensa);
+router.post('/recompensas/:id/imagenes', upload.single('file'), comercioController.uploadImagenGaleria);
+router.delete('/recompensas/:id/imagenes/:imagenId', comercioController.eliminarImagenGaleria);
+router.put('/recompensas/:id/portada', comercioController.establecerPortadaRecompensa);
 router.post('/generar-qr', comercioController.generarQR);
 router.get('/estadisticas', comercioController.getEstadisticas);
 router.get('/envios', comercioController.getConfigEnvios);

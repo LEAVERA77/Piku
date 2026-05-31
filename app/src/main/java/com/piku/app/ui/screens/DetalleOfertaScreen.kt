@@ -43,6 +43,7 @@ import com.piku.app.data.datastore.AuthDataStore
 import com.piku.app.data.model.RecompensaDetalleResponse
 import com.piku.app.data.repository.MapaRepository
 import com.piku.app.data.repository.UsuarioRepository
+import com.piku.app.ui.components.ArticuloFotoCarousel
 import com.piku.app.ui.components.ComercioEnvioContactoCard
 import com.piku.app.ui.components.PikuPhotoImage
 import com.piku.app.ui.theme.VerdePiku
@@ -129,16 +130,24 @@ fun DetalleOfertaScreen(
                         .verticalScroll(rememberScrollState())
                         .padding(16.dp)
                 ) {
-                    PikuPhotoImage(
-                        url = oferta.photoUrl(cloud),
-                        contentDescription = oferta.nombre,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(220.dp)
-                            .clip(RoundedCornerShape(16.dp)),
-                        cornerRadius = 16.dp,
-                        contentScale = ContentScale.Crop
-                    )
+                    val fotos = oferta.todasLasFotos(cloud)
+                    if (fotos.size > 1) {
+                        ArticuloFotoCarousel(
+                            fotos = fotos,
+                            contentDescription = oferta.nombre
+                        )
+                    } else {
+                        PikuPhotoImage(
+                            url = fotos.first(),
+                            contentDescription = oferta.nombre,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(220.dp)
+                                .clip(RoundedCornerShape(16.dp)),
+                            cornerRadius = 16.dp,
+                            contentScale = ContentScale.Crop
+                        )
+                    }
                     Spacer(Modifier.height(16.dp))
                     Text(oferta.nombre, style = MaterialTheme.typography.headlineMedium)
                     val beneficio = oferta.resumenBeneficio()

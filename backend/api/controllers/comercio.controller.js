@@ -12,6 +12,12 @@ const {
   TIPOS_VALIDOS,
   insertRecompensa,
 } = require('../utils/recompensa.helpers');
+const {
+  adjuntarImagenesARecompensa,
+  listarImagenesGaleria,
+  siguienteOrdenGaleria,
+  tablaImagenesDisponible,
+} = require('../utils/recompensa.imagenes.util');
 
 function getComercioId(req) {
   return req.user.comercio_id;
@@ -106,7 +112,8 @@ async function getRecompensas(req, res) {
       'SELECT * FROM piku_recompensas WHERE comercio_id = $1 ORDER BY created_at DESC',
       [comercioId]
     );
-    return res.json({ recompensas: result.rows });
+    const recompensas = await Promise.all(result.rows.map((r) => adjuntarImagenesARecompensa(r)));
+    return res.json({ recompensas });
   } catch (error) {
     console.error('getRecompensas:', error);
     return responderError(res, 500, 'Error al listar recompensas');
@@ -125,7 +132,8 @@ async function getRecompensa(req, res) {
       [id, comercioId]
     );
     if (!result.rows.length) return responderError(res, 404, 'Recompensa no encontrada');
-    return res.json({ recompensa: result.rows[0] });
+    const recompensa = await adjuntarImagenesARecompensa(result.rows[0]);
+    return res.json({ recompensa });
   } catch (error) {
     console.error('getRecompensa:', error);
     return responderError(res, 500, 'Error al obtener recompensa');
@@ -357,10 +365,168 @@ async function uploadImagenRecompensa(req, res) {
       [url, id]
     );
 
-    return res.json({ mensaje: 'Imagen actualizada', imagen_url: url, recompensa: updated.rows[0] });
+    const recompensa = await adjuntarImagenesARecompensa(updated.rows[0]);
+    return res.json({ mensaje: 'Portada actualizada', imagen_url: url, recompensa });
   } catch (error) {
     console.error('uploadImagenRecompensa:', error);
     return responderError(res, 500, 'Error al subir imagen', { detail: error.message });
+  }
+}
+
+async function listarImagenesRecompensa(req, res) {
+  try {
+    const comercioId = getComercioId(req);
+    const { id } = req.params;
+    const existe = await query(
+      'SELECT id, imagen_url FROM piku_recompensas WHERE id = $1 AND comercio_id = $2',
+      [id, comercioId]
+    );
+    if (!existe.rows.length) return responderError(res, 404, 'Recompensa no encontrada');
+    const imagenes = await listarImagenesGaleria(id);
+    return res.json({
+      imagenes,
+      portada_url: existe.rows[0].imagen_url,
+      recompensa_id: id,
+    });
+  } catch (error) {
+    console.error('listarImagenesRecompensa:', error);
+    return responderError(res, 500, 'Error al listar imágenes');
+  }
+}
+
+async function uploadImagenGaleria(req, res) {
+  try {
+    const comercioId = getComercioId(req);
+    const { id } = req.params;
+    if (!req.file) return responderError(res, 400, 'Archivo de imagen requerido');
+    if (!cloudinaryOk) return responderError(res, 503, 'Cloudinary no configurado en el servidor');
+    if (!(await tablaImagenesDisponible())) {
+      return responderError(res, 503, 'Galería no disponible (ejecutá migraciones)');
+    }
+
+    const rec = await query(
+      'SELECT id, imagen_url FROM piku_recompensas WHERE id = $1 AND comercio_id = $2',
+      [id, comercioId]
+    );
+    if (!rec.rows.length) return responderError(res, 404, 'Recompensa no encontrada');
+
+    const dataUri = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
+    const { url } = await uploadImage(dataUri, 'ofertas');
+    const orden = await siguienteOrdenGaleria(id);
+    const insert = await query(
+      `INSERT INTO piku_recompensa_imagenes (recompensa_id, imagen_url, orden)
+       VALUES ($1, $2, $3) RETURNING *`,
+      [id, url, orden]
+    );
+
+    const comoPortada =
+      req.body?.comoPortada === true ||
+      req.body?.comoPortada === 'true' ||
+      req.query?.portada === '1' ||
+      !rec.rows[0].imagen_url;
+
+    if (comoPortada) {
+      await query('UPDATE piku_recompensas SET imagen_url = $1, updated_at = NOW() WHERE id = $2', [
+        url,
+        id,
+      ]);
+    }
+
+    const recompensa = await adjuntarImagenesARecompensa(
+      (
+        await query('SELECT * FROM piku_recompensas WHERE id = $1', [id])
+      ).rows[0]
+    );
+
+    return res.status(201).json({
+      mensaje: 'Foto agregada a la galería',
+      imagen: insert.rows[0],
+      recompensa,
+    });
+  } catch (error) {
+    console.error('uploadImagenGaleria:', error);
+    return responderError(res, 500, 'Error al subir foto', { detail: error.message });
+  }
+}
+
+async function eliminarImagenGaleria(req, res) {
+  try {
+    const comercioId = getComercioId(req);
+    const { id, imagenId } = req.params;
+    if (!(await tablaImagenesDisponible())) {
+      return responderError(res, 503, 'Galería no disponible');
+    }
+
+    const rec = await query(
+      'SELECT id, imagen_url FROM piku_recompensas WHERE id = $1 AND comercio_id = $2',
+      [id, comercioId]
+    );
+    if (!rec.rows.length) return responderError(res, 404, 'Recompensa no encontrada');
+
+    const img = await query(
+      'SELECT * FROM piku_recompensa_imagenes WHERE id = $1 AND recompensa_id = $2',
+      [imagenId, id]
+    );
+    if (!img.rows.length) return responderError(res, 404, 'Imagen no encontrada');
+
+    await query('DELETE FROM piku_recompensa_imagenes WHERE id = $1', [imagenId]);
+
+    let portada = rec.rows[0].imagen_url;
+    if (portada === img.rows[0].imagen_url) {
+      const rest = await listarImagenesGaleria(id);
+      portada = rest[0]?.imagen_url || null;
+      await query('UPDATE piku_recompensas SET imagen_url = $1, updated_at = NOW() WHERE id = $2', [
+        portada,
+        id,
+      ]);
+    }
+
+    const recompensa = await adjuntarImagenesARecompensa(
+      (
+        await query('SELECT * FROM piku_recompensas WHERE id = $1', [id])
+      ).rows[0]
+    );
+
+    return res.json({ mensaje: 'Imagen eliminada', recompensa });
+  } catch (error) {
+    console.error('eliminarImagenGaleria:', error);
+    return responderError(res, 500, 'Error al eliminar imagen');
+  }
+}
+
+async function establecerPortadaRecompensa(req, res) {
+  try {
+    const comercioId = getComercioId(req);
+    const { id } = req.params;
+    const imagenId = req.body?.imagenId ?? req.body?.imagen_id;
+    const imagenUrlDirecta = sanitizarInput(req.body?.imagenUrl ?? req.body?.imagen_url, 500);
+
+    const rec = await query(
+      'SELECT * FROM piku_recompensas WHERE id = $1 AND comercio_id = $2',
+      [id, comercioId]
+    );
+    if (!rec.rows.length) return responderError(res, 404, 'Recompensa no encontrada');
+
+    let url = imagenUrlDirecta;
+    if (imagenId) {
+      const img = await query(
+        'SELECT imagen_url FROM piku_recompensa_imagenes WHERE id = $1 AND recompensa_id = $2',
+        [imagenId, id]
+      );
+      if (!img.rows.length) return responderError(res, 404, 'Imagen de galería no encontrada');
+      url = img.rows[0].imagen_url;
+    }
+    if (!url) return responderError(res, 400, 'imagenId o imagenUrl requerido');
+
+    const updated = await query(
+      'UPDATE piku_recompensas SET imagen_url = $1, updated_at = NOW() WHERE id = $2 RETURNING *',
+      [url, id]
+    );
+    const recompensa = await adjuntarImagenesARecompensa(updated.rows[0]);
+    return res.json({ mensaje: 'Portada actualizada', recompensa });
+  } catch (error) {
+    console.error('establecerPortadaRecompensa:', error);
+    return responderError(res, 500, 'Error al establecer portada');
   }
 }
 
@@ -753,6 +919,10 @@ module.exports = {
   updateRecompensa,
   deleteRecompensa,
   uploadImagenRecompensa,
+  listarImagenesRecompensa,
+  uploadImagenGaleria,
+  eliminarImagenGaleria,
+  establecerPortadaRecompensa,
   generarQR: generarQRComercio,
   getEstadisticas,
   getConfigEnvios,

@@ -124,6 +124,7 @@ fun DetalleComercioScreen(
                             ArticuloCatalogoRow(
                                 articulo = r,
                                 photoUrl = r.photoUrl(cloud),
+                                cantidadFotos = r.todasLasFotos(cloud).size,
                                 onClick = { onVerArticulo(r.id) },
                                 modifier = Modifier.padding(horizontal = 12.dp)
                             )

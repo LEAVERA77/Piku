@@ -1,6 +1,7 @@
 package com.piku.app.ui.screens.admin
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -25,9 +26,12 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import com.piku.app.ui.components.IndicadorFotosBadge
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -54,7 +58,8 @@ import kotlinx.coroutines.launch
 fun GestionOfertasScreen(
     onBack: () -> Unit,
     onNuevaOferta: () -> Unit,
-    onEditarOferta: (String) -> Unit
+    onEditarOferta: (String) -> Unit,
+    modoTab: Boolean = false
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -85,12 +90,17 @@ fun GestionOfertasScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Mis artículos") },
+                title = { Text("Catálogo") },
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
+                    if (!modoTab) {
+                        IconButton(onClick = onBack) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
+                        }
                     }
-                }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface
+                )
             )
         },
         floatingActionButton = {
@@ -111,8 +121,14 @@ fun GestionOfertasScreen(
             mensaje?.let {
                 Text(it, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(8.dp))
             }
+            Text(
+                "Publicá artículos con foto, descuentos y puntos para canje.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
             if (cargando) {
-                Text("Cargando ofertas…", modifier = Modifier.padding(16.dp))
+                Text("Cargando catálogo…", modifier = Modifier.padding(16.dp))
             } else {
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     item {
@@ -226,21 +242,27 @@ private fun OfertaAdminCard(
     onToggleActiva: () -> Unit,
     onStats: () -> Unit
 ) {
-    Card(Modifier.fillMaxWidth()) {
+    Card(Modifier.fillMaxWidth(), shape = RoundedCornerShape(14.dp)) {
         Row(
             Modifier
                 .fillMaxWidth()
                 .padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            PikuPhotoImage(
-                url = oferta.photoUrl(),
-                contentDescription = null,
-                modifier = Modifier
-                    .size(64.dp)
-                    .clip(RoundedCornerShape(12.dp)),
-                cornerRadius = 12.dp
-            )
+            Box {
+                PikuPhotoImage(
+                    url = oferta.photoUrl(),
+                    contentDescription = null,
+                    modifier = Modifier
+                        .size(64.dp)
+                        .clip(RoundedCornerShape(12.dp)),
+                    cornerRadius = 12.dp
+                )
+                IndicadorFotosBadge(
+                    cantidad = oferta.cantidadFotos,
+                    modifier = Modifier.align(Alignment.BottomEnd)
+                )
+            }
             Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
                 Text(oferta.nombre, style = MaterialTheme.typography.titleMedium)
                 Text("${oferta.puntosRequeridos} pts · ${oferta.tipo ?: "oferta"}", style = MaterialTheme.typography.bodySmall)

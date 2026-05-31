@@ -13,6 +13,9 @@ data class OfertaComercio(
     @SerializedName("monto_maximo_descuento") val montoMaximoDescuento: Double? = null,
     @SerializedName("producto_nombre") val productoNombre: String? = null,
     @SerializedName("imagen_url") val imagenUrl: String? = null,
+    val imagenes: List<RecompensaImagen>? = null,
+    @SerializedName("imagenes_urls") val imagenesUrls: List<String>? = null,
+    @SerializedName("imagenes_extra") val imagenesExtra: Int? = null,
     @SerializedName("fecha_inicio") val fechaInicio: String? = null,
     @SerializedName("fecha_fin") val fechaFin: String? = null,
     @SerializedName("max_usos_por_usuario") val maxUsosPorUsuario: Int? = 1,
@@ -22,6 +25,20 @@ data class OfertaComercio(
     val icono: String? = null
 ) {
     fun photoUrl(): String = com.piku.app.ui.media.PikuImages.resolve(imagenUrl, id, nombre)
+
+    fun todasLasFotos(): List<String> {
+        val urls = imagenesUrls?.filter { it.isNotBlank() }?.toMutableList() ?: mutableListOf()
+        if (urls.isEmpty()) {
+            imagenes?.map { it.imagenUrl }?.filter { it.isNotBlank() }?.let { urls.addAll(it) }
+        }
+        val portada = imagenUrl?.takeIf { it.isNotBlank() }
+        if (portada != null && !urls.contains(portada)) urls.add(0, portada)
+        if (urls.isEmpty() && portada != null) urls.add(portada)
+        if (urls.isEmpty()) urls.add(photoUrl())
+        return urls.distinct()
+    }
+
+    val cantidadFotos: Int get() = todasLasFotos().size
 
     val vigente: Boolean
         get() = activo

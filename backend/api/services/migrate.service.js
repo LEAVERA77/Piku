@@ -13,6 +13,7 @@ const MIGRATION_FILES = [
   'migration_comercio_envios.sql',
   'migration_radio_metros.sql',
   'migration_reglas_puntos_extend.sql',
+  'migration_recompensa_imagenes.sql',
   'migration_notificaciones.sql',
   'migration_fcm_token.sql',
 ];
@@ -71,6 +72,14 @@ const CRITICAL_ALTERS = [
   'ALTER TABLE piku_reglas_puntos ADD COLUMN IF NOT EXISTS puntos_fijos INTEGER NOT NULL DEFAULT 0',
   'ALTER TABLE piku_reglas_puntos ADD COLUMN IF NOT EXISTS max_puntos_por_dia INTEGER NOT NULL DEFAULT 500',
   'ALTER TABLE piku_reglas_puntos ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()',
+  `CREATE TABLE IF NOT EXISTS piku_recompensa_imagenes (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    recompensa_id UUID NOT NULL REFERENCES piku_recompensas(id) ON DELETE CASCADE,
+    imagen_url TEXT NOT NULL,
+    orden INTEGER NOT NULL DEFAULT 0,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  )`,
+  'CREATE INDEX IF NOT EXISTS idx_piku_recompensa_imagenes_rec ON piku_recompensa_imagenes(recompensa_id, orden)',
   'CREATE INDEX IF NOT EXISTS idx_piku_comercios_envios ON piku_comercios(realiza_envios)',
   'ALTER TABLE piku_usuarios ADD COLUMN IF NOT EXISTS fcm_token TEXT',
 ];
