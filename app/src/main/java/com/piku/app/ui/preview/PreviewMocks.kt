@@ -24,6 +24,9 @@ object PreviewMocks {
         iconoEmoji = "☕",
         puntosMinCanje = 100,
         cantidadOfertas = 2,
+        realizaEnvios = true,
+        envioGratis = true,
+        telefonoContacto = "3434567890",
         distanciaMetros = 420
     )
 

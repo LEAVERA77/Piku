@@ -10,6 +10,7 @@ const {
   resolverDireccionRegistro,
   agregarCamposDireccionUsuario,
 } = require('../utils/direccion.registro.util');
+const { validarTelefonoComercio } = require('../utils/telefono.util');
 
 /**
  * Publica el comercio como Note en OSM (no bloquea el registro si falla).
@@ -174,6 +175,10 @@ async function registroComercio(req, res) {
       return responderError(res, e.status || 400, e.message);
     }
 
+    const telCheck = validarTelefonoComercio(req.body.telefono);
+    if (!telCheck.ok) return responderError(res, 400, telCheck.mensaje);
+    const telefonoComercio = telCheck.normalizado;
+
     const existe = await query('SELECT id FROM piku_usuarios WHERE LOWER(email) = $1', [email]);
     if (existe.rows.length) {
       return responderError(
@@ -230,10 +235,11 @@ async function registroComercio(req, res) {
       addComercio('categoria', tipoInfo.categoria);
       addComercio('tipo_comercio', tipoInfo.id);
       addComercio('icono_emoji', tipoInfo.emoji);
+      addComercio('telefono_contacto', telefonoComercio);
 
       const comercioPlaceholders = comercioVals.map((_, i) => `$${i + 1}`).join(', ');
       const comercioReturning = ['id', 'nombre'];
-      for (const c of ['direccion', 'lat', 'lon', 'categoria', 'tipo_comercio', 'icono_emoji']) {
+      for (const c of ['direccion', 'lat', 'lon', 'categoria', 'tipo_comercio', 'icono_emoji', 'telefono_contacto']) {
         if (tiene(colsComercio, c)) comercioReturning.push(c);
       }
 
@@ -249,7 +255,7 @@ async function registroComercio(req, res) {
       const usuarioVals = [email, hash, nombre, 'comercio'];
       if (tiene(colsUsuario, 'telefono')) {
         usuarioCampos.push('telefono');
-        usuarioVals.push(sanitizarInput(req.body.telefono, 50) || null);
+        usuarioVals.push(telefonoComercio);
       }
       if (tiene(colsUsuario, 'comercio_id')) {
         usuarioCampos.push('comercio_id');
@@ -397,6 +403,10 @@ async function registroComercioGoogle(req, res) {
       return responderError(res, e.status || 400, e.message);
     }
 
+    const telCheck = validarTelefonoComercio(req.body.telefono);
+    if (!telCheck.ok) return responderError(res, 400, telCheck.mensaje);
+    const telefonoComercio = telCheck.normalizado;
+
     const selectCols = (await camposUsuario()).join(', ');
     const existente = await query(
       `SELECT ${selectCols} FROM piku_usuarios WHERE LOWER(email) = $1 LIMIT 1`,
@@ -469,10 +479,11 @@ async function registroComercioGoogle(req, res) {
       addComercio('categoria', tipoInfo.categoria);
       addComercio('tipo_comercio', tipoInfo.id);
       addComercio('icono_emoji', tipoInfo.emoji);
+      addComercio('telefono_contacto', telefonoComercio);
 
       const comercioPlaceholders = comercioVals.map((_, i) => `$${i + 1}`).join(', ');
       const comercioReturning = ['id', 'nombre'];
-      for (const c of ['direccion', 'lat', 'lon', 'categoria', 'tipo_comercio', 'icono_emoji']) {
+      for (const c of ['direccion', 'lat', 'lon', 'categoria', 'tipo_comercio', 'icono_emoji', 'telefono_contacto']) {
         if (tiene(colsComercio, c)) comercioReturning.push(c);
       }
 
@@ -488,7 +499,7 @@ async function registroComercioGoogle(req, res) {
       const usuarioVals = [google.email, hash, nombre, 'comercio'];
       if (tiene(colsUsuario, 'telefono')) {
         usuarioCampos.push('telefono');
-        usuarioVals.push(sanitizarInput(req.body.telefono, 50) || null);
+        usuarioVals.push(telefonoComercio);
       }
       if (tiene(colsUsuario, 'comercio_id')) {
         usuarioCampos.push('comercio_id');

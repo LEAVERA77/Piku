@@ -30,12 +30,11 @@ import com.piku.app.data.TipoComercio
 import com.piku.app.data.config.ConfigLoader
 import com.piku.app.data.model.Comercio
 import com.piku.app.data.model.RecompensaPublica
-import com.piku.app.ui.media.PikuImages
 import com.piku.app.ui.theme.VerdePiku
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun OfertasBottomSheet(
+fun ComercioBottomSheet(
     comercio: Comercio,
     ofertas: List<RecompensaPublica>,
     cargando: Boolean,
@@ -46,14 +45,16 @@ fun OfertasBottomSheet(
     val cloud = ConfigLoader.cloudinaryCloudName(context)
     val emoji = TipoComercio.emojiPara(comercio)
     val tipoLabel = TipoComercio.desdeId(comercio.tipoComercio ?: comercio.categoria).etiqueta
+    val envioTexto = comercio.textoEnvio()
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     ) {
         Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp)) {
+            val tituloEmoji = if (comercio.realizaEnvios) "$emoji 🚲" else emoji
             Text(
-                text = "$emoji  ${comercio.nombre}",
+                text = "$tituloEmoji  ${comercio.nombre}",
                 style = MaterialTheme.typography.headlineSmall
             )
             Text(
@@ -61,6 +62,21 @@ fun OfertasBottomSheet(
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.primary
             )
+            envioTexto?.let {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.secondary,
+                    modifier = Modifier.padding(top = 6.dp)
+                )
+                comercio.telefonoContacto?.let { tel ->
+                    Text(
+                        text = "📞 Contacto: $tel",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
             if (comercio.cantidadOfertas > 0) {
                 Text(
                     text = "🔥 ${comercio.cantidadOfertas} oferta(s) activa(s)",
@@ -69,11 +85,21 @@ fun OfertasBottomSheet(
                     modifier = Modifier.padding(top = 4.dp)
                 )
             }
+            comercio.direccion?.let {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 4.dp)
+                )
+            }
             Spacer(Modifier.height(16.dp))
+            Text("Ofertas", style = MaterialTheme.typography.titleMedium)
+            Spacer(Modifier.height(8.dp))
             when {
                 cargando -> CircularProgressIndicator(Modifier.align(Alignment.CenterHorizontally))
                 ofertas.isEmpty() -> Text(
-                    "Este comercio no tiene ofertas activas por ahora.",
+                    "Sin ofertas activas por ahora.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -98,9 +124,9 @@ fun OfertasBottomSheet(
                             Spacer(Modifier.width(12.dp))
                             Column(Modifier.weight(1f)) {
                                 Text(oferta.nombre, style = MaterialTheme.typography.titleMedium)
-                                oferta.tipo?.let {
+                                oferta.tipo?.let { t ->
                                     Text(
-                                        it.replace('_', ' '),
+                                        t.replace('_', ' '),
                                         style = MaterialTheme.typography.labelMedium,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )

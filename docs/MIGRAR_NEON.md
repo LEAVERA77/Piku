@@ -29,6 +29,14 @@ ALTER TABLE piku_comercios ADD COLUMN IF NOT EXISTS tipo_comercio VARCHAR(50);
 ALTER TABLE piku_comercios ADD COLUMN IF NOT EXISTS icono_emoji VARCHAR(10);
 ALTER TABLE piku_recompensas ADD COLUMN IF NOT EXISTS condiciones TEXT;
 CREATE INDEX IF NOT EXISTS idx_piku_comercios_coords ON piku_comercios(lat, lon);
+
+-- Envíos a domicilio (comercios)
+ALTER TABLE piku_comercios ADD COLUMN IF NOT EXISTS realiza_envios BOOLEAN DEFAULT false;
+ALTER TABLE piku_comercios ADD COLUMN IF NOT EXISTS envio_gratis BOOLEAN DEFAULT false;
+ALTER TABLE piku_comercios ADD COLUMN IF NOT EXISTS costo_envio DECIMAL(10,2) DEFAULT 0;
+ALTER TABLE piku_comercios ADD COLUMN IF NOT EXISTS envio_minimo_compra DECIMAL(10,2);
+ALTER TABLE piku_comercios ADD COLUMN IF NOT EXISTS telefono_contacto VARCHAR(20);
+CREATE INDEX IF NOT EXISTS idx_piku_comercios_envios ON piku_comercios(realiza_envios);
 ```
 
 ## Opción B — Redeploy en Render

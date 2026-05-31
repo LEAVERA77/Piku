@@ -28,6 +28,7 @@ import com.piku.app.ui.media.PikuImages
 @Composable
 fun AdminDashboardScreen(
     onOfertas: () -> Unit,
+    onConfigEnvios: () -> Unit = {},
     onGenerarQr: () -> Unit,
     onCerrarSesion: () -> Unit
 ) {
@@ -63,6 +64,8 @@ fun AdminDashboardScreen(
         Spacer(Modifier.height(24.dp))
         Button(onClick = onOfertas, modifier = Modifier.fillMaxWidth()) { Text("Gestionar ofertas") }
         Spacer(Modifier.height(8.dp))
+        Button(onClick = onConfigEnvios, modifier = Modifier.fillMaxWidth()) { Text("Configurar envíos") }
+        Spacer(Modifier.height(8.dp))
         Button(onClick = onGenerarQr, modifier = Modifier.fillMaxWidth()) { Text("Generar QR") }
         Spacer(Modifier.height(8.dp))
         Button(onClick = onCerrarSesion, modifier = Modifier.fillMaxWidth()) { Text("Cerrar sesión") }
@@ -75,6 +78,7 @@ fun PreviewDashboardComercioScreen() {
     PikuTheme {
         AdminDashboardScreen(
             onOfertas = {},
+            onConfigEnvios = {},
             onGenerarQr = {},
             onCerrarSesion = {}
         )

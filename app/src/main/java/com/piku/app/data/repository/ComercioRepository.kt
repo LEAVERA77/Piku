@@ -3,7 +3,11 @@ package com.piku.app.data.repository
 import android.content.Context
 import com.piku.app.data.model.Comercio
 import com.piku.app.data.model.ComercioDetalleResponse
+import com.piku.app.data.model.ConfiguracionEnvios
+import com.piku.app.data.model.ConfiguracionEnviosRequest
+import com.piku.app.data.network.ApiErrorParser
 import com.piku.app.data.network.RetrofitInstance
+import retrofit2.HttpException
 import com.piku.app.utils.DistanceCalculator
 
 class ComercioRepository(private val context: Context) {
@@ -23,4 +27,20 @@ class ComercioRepository(private val context: Context) {
 
     suspend fun detalleComercio(id: String): ComercioDetalleResponse =
         api.detalleComercio(id)
+
+    suspend fun obtenerConfigEnvios(): ConfiguracionEnvios {
+        try {
+            return api.obtenerConfigEnvios().envios
+        } catch (e: HttpException) {
+            throw Exception(ApiErrorParser.mensaje(e), e)
+        }
+    }
+
+    suspend fun guardarConfigEnvios(request: ConfiguracionEnviosRequest): ConfiguracionEnvios {
+        try {
+            return api.actualizarConfigEnvios(request).envios
+        } catch (e: HttpException) {
+            throw Exception(ApiErrorParser.mensaje(e), e)
+        }
+    }
 }

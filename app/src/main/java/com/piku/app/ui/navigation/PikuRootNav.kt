@@ -13,6 +13,7 @@ import com.piku.app.ui.screens.LoginScreen
 import com.piku.app.ui.screens.SplashScreen
 import com.piku.app.ui.screens.admin.AdminDashboardScreen
 import com.piku.app.ui.screens.admin.AdminGenerarQrScreen
+import com.piku.app.ui.screens.comercio.ConfiguracionEnvioScreen
 import com.piku.app.ui.screens.admin.FormularioOfertaScreen
 import com.piku.app.ui.screens.admin.GestionOfertasScreen
 import kotlinx.coroutines.CoroutineScope
@@ -87,6 +88,7 @@ fun PikuRootNav() {
         composable(PikuRutasRoot.Admin) {
             AdminDashboardScreen(
                 onOfertas = { navController.navigate(PikuRutasRoot.AdminGestionOfertas) },
+                onConfigEnvios = { navController.navigate(PikuRutasRoot.AdminConfigEnvios) },
                 onGenerarQr = { navController.navigate(PikuRutasRoot.AdminQr) },
                 onCerrarSesion = {
                     CoroutineScope(Dispatchers.Main).launch {
@@ -124,6 +126,9 @@ fun PikuRootNav() {
         }
         composable(PikuRutasRoot.AdminQr) {
             AdminGenerarQrScreen(onBack = { navController.popBackStack() })
+        }
+        composable(PikuRutasRoot.AdminConfigEnvios) {
+            ConfiguracionEnvioScreen(onBack = { navController.popBackStack() })
         }
     }
 }

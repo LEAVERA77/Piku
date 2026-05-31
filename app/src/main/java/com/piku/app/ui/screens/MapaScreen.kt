@@ -46,7 +46,7 @@ import com.piku.app.ui.components.MapaPanelCompacto
 import com.piku.app.data.model.RecompensaPublica
 import com.piku.app.data.repository.MapaRepository
 import com.piku.app.ui.components.MarkerInfoBottomSheet
-import com.piku.app.ui.components.OfertasBottomSheet
+import com.piku.app.ui.components.ComercioBottomSheet
 import com.piku.app.ui.components.OsmdroidMapView
 import com.piku.app.ui.viewmodel.MapaViewModel
 
@@ -221,7 +221,7 @@ fun MapaScreen(
                 onVerOfertas = {}
             )
         } else {
-            OfertasBottomSheet(
+            ComercioBottomSheet(
                 comercio = comercio,
                 ofertas = ofertasPin,
                 cargando = cargandoOfertas,

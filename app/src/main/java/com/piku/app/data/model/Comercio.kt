@@ -16,12 +16,54 @@ data class Comercio(
     @SerializedName("icono_emoji") val iconoEmoji: String? = null,
     @SerializedName("puntos_min_canje") val puntosMinCanje: Int? = null,
     @SerializedName("cantidad_ofertas") val cantidadOfertas: Int = 0,
+    @SerializedName("realiza_envios") val realizaEnvios: Boolean = false,
+    @SerializedName("envio_gratis") val envioGratis: Boolean = false,
+    @SerializedName("costo_envio") val costoEnvio: Double? = null,
+    @SerializedName("envio_minimo_compra") val envioMinimoCompra: Double? = null,
+    @SerializedName("telefono_contacto") val telefonoContacto: String? = null,
     @SerializedName("created_at") val createdAt: String? = null,
     /** Distancia en metros desde el usuario (calculada en app). */
     val distanciaMetros: Int? = null
 ) {
     fun esOpenStreetMap(): Boolean = id.startsWith("osm:")
+
+    fun textoEnvio(): String? {
+        if (!realizaEnvios) return null
+        if (envioGratis) return "📦 Envíos gratis"
+        val min = envioMinimoCompra
+        if (min != null && min > 0) {
+            val minFmt = if (min % 1.0 == 0.0) min.toInt().toString() else "%.2f".format(min)
+            return "📦 Envío gratis desde $$minFmt"
+        }
+        val costo = costoEnvio
+        if (costo != null && costo > 0) {
+            val cFmt = if (costo % 1.0 == 0.0) costo.toInt().toString() else "%.2f".format(costo)
+            return "📦 Envíos desde $$cFmt"
+        }
+        return "📦 Hace envíos a domicilio"
+    }
 }
+
+data class ConfiguracionEnvios(
+    @SerializedName("realiza_envios") val realizaEnvios: Boolean = false,
+    @SerializedName("envio_gratis") val envioGratis: Boolean = false,
+    @SerializedName("costo_envio") val costoEnvio: Double = 0.0,
+    @SerializedName("envio_minimo_compra") val envioMinimoCompra: Double? = null,
+    @SerializedName("telefono_contacto") val telefonoContacto: String? = null
+)
+
+data class ConfiguracionEnviosRequest(
+    @SerializedName("realiza_envios") val realizaEnvios: Boolean,
+    @SerializedName("envio_gratis") val envioGratis: Boolean = false,
+    @SerializedName("costo_envio") val costoEnvio: Double? = null,
+    @SerializedName("envio_minimo_compra") val envioMinimoCompra: Double? = null,
+    @SerializedName("telefono_contacto") val telefonoContacto: String? = null
+)
+
+data class ConfiguracionEnviosResponse(
+    val envios: ConfiguracionEnvios,
+    val mensaje: String? = null
+)
 
 data class ComercioDetalleResponse(
     val comercio: Comercio,

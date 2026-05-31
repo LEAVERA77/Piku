@@ -10,6 +10,7 @@ const MIGRATION_FILES = [
   'migration_usuario_envio.sql',
   'migration_comercio_osm_note.sql',
   'migration_registro_mapa_ofertas.sql',
+  'migration_comercio_envios.sql',
 ];
 
 /** Columnas críticas que la API necesita (por si falla el SQL completo). */
@@ -55,6 +56,12 @@ const CRITICAL_ALTERS = [
   'ALTER TABLE piku_recompensas ADD COLUMN IF NOT EXISTS vigencia_desde TIMESTAMPTZ',
   'ALTER TABLE piku_recompensas ADD COLUMN IF NOT EXISTS vigencia_hasta TIMESTAMPTZ',
   'CREATE INDEX IF NOT EXISTS idx_piku_comercios_coords ON piku_comercios(lat, lon)',
+  'ALTER TABLE piku_comercios ADD COLUMN IF NOT EXISTS realiza_envios BOOLEAN DEFAULT false',
+  'ALTER TABLE piku_comercios ADD COLUMN IF NOT EXISTS envio_gratis BOOLEAN DEFAULT false',
+  'ALTER TABLE piku_comercios ADD COLUMN IF NOT EXISTS costo_envio DECIMAL(10,2) DEFAULT 0',
+  'ALTER TABLE piku_comercios ADD COLUMN IF NOT EXISTS envio_minimo_compra DECIMAL(10,2)',
+  'ALTER TABLE piku_comercios ADD COLUMN IF NOT EXISTS telefono_contacto VARCHAR(20)',
+  'CREATE INDEX IF NOT EXISTS idx_piku_comercios_envios ON piku_comercios(realiza_envios)',
 ];
 
 /**

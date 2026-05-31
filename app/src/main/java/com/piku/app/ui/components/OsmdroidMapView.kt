@@ -130,7 +130,8 @@ fun OsmdroidMapView(
                 context = context,
                 emoji = emoji,
                 nombre = comercio.nombre,
-                cantidadOfertas = comercio.cantidadOfertas
+                cantidadOfertas = comercio.cantidadOfertas,
+                realizaEnvios = comercio.realizaEnvios
             )
             val marker = Marker(mapView).apply {
                 position = GeoPoint(lat, lon)

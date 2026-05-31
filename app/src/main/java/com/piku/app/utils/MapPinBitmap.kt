@@ -15,10 +15,12 @@ object MapPinBitmap {
         context: Context,
         emoji: String,
         nombre: String? = null,
-        cantidadOfertas: Int = 0
+        cantidadOfertas: Int = 0,
+        realizaEnvios: Boolean = false
     ): BitmapDrawable {
         val ancho = 96
         val alto = if (nombre.isNullOrBlank()) 72 else 96
+        val emojiPin = if (realizaEnvios) "$emoji🚲" else emoji
         val bitmap = Bitmap.createBitmap(ancho, alto, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)
 
@@ -39,7 +41,9 @@ object MapPinBitmap {
             textSize = 32f
             textAlign = Paint.Align.CENTER
         }
-        canvas.drawText(emoji, ancho / 2f, 44f, emojiPaint)
+        val emojiSize = if (realizaEnvios) 24f else 32f
+        emojiPaint.textSize = emojiSize
+        canvas.drawText(emojiPin, ancho / 2f, 44f, emojiPaint)
 
         if (!nombre.isNullOrBlank()) {
             val nombrePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {

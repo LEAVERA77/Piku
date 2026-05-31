@@ -24,5 +24,7 @@ router.delete('/recompensas/:id', comercioController.deleteRecompensa);
 router.post('/recompensas/:id/imagen', upload.single('file'), comercioController.uploadImagenRecompensa);
 router.post('/generar-qr', comercioController.generarQR);
 router.get('/estadisticas', comercioController.getEstadisticas);
+router.get('/envios', comercioController.getConfigEnvios);
+router.put('/envios', comercioController.updateConfigEnvios);
 
 module.exports = router;

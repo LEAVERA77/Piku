@@ -67,6 +67,7 @@ import androidx.compose.material3.ExposedDropdownMenu
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import com.piku.app.utils.BiometricHelper
+import com.piku.app.utils.TelefonoUtil
 import com.piku.app.utils.GoogleAuthHelper
 import com.piku.app.utils.GoogleSignInHelper
 import kotlinx.coroutines.launch
@@ -95,6 +96,11 @@ private fun validarNombreApellido(nombre: String, apellido: String): String? {
 
 private fun nombreCompleto(nombre: String, apellido: String): String =
     "${nombre.trim()} ${apellido.trim()}"
+
+private fun validarTelefonoRegistro(telefono: String, esComercio: Boolean): String? {
+    if (!esComercio) return null
+    return TelefonoUtil.validarComercio(telefono)
+}
 
 private fun validarDireccion(form: DireccionFormState): String? {
     if (form.calle.trim().length < 2) return "Ingresá la calle"
@@ -211,6 +217,10 @@ fun AuthScreen(
                 return
             }
             validarDireccion(direccionForm)?.let {
+                error = it
+                return
+            }
+            validarTelefonoRegistro(telefono, esComercio = true)?.let {
                 error = it
                 return
             }
@@ -573,8 +583,16 @@ fun AuthScreen(
                 Spacer(modifier = Modifier.height(10.dp))
                 OutlinedTextField(
                     value = telefono,
-                    onValueChange = { telefono = it },
-                    label = { Text("Teléfono (opcional)") },
+                    onValueChange = { telefono = it.filter { c -> c.isDigit() || c == '+' || c == ' ' || c == '-' } },
+                    label = {
+                        Text(
+                            if (rolRegistro == RolRegistro.COMERCIO) {
+                                "Teléfono * (ej: 3434567890)"
+                            } else {
+                                "Teléfono (opcional)"
+                            }
+                        )
+                    },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                     shape = fieldShape,
@@ -617,6 +635,8 @@ fun AuthScreen(
                                 error = "Ingresá el código de invitación del comercio"
                             validarDireccion(direccionForm) != null ->
                                 error = validarDireccion(direccionForm)
+                            validarTelefonoRegistro(telefono, rolRegistro == RolRegistro.COMERCIO) != null ->
+                                error = validarTelefonoRegistro(telefono, rolRegistro == RolRegistro.COMERCIO)
                             else -> ejecutar {
                                 val nombreEnvio = nombreCompleto(nombre, apellido)
                                 val dir = direccionForm

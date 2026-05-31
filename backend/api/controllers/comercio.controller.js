@@ -1,6 +1,9 @@
 const { query } = require('../services/neon.service');
 const { uploadImage, configurado: cloudinaryOk } = require('../services/cloudinary.service');
 const { sanitizarInput, responderError } = require('../utils/helpers');
+const { columnasTabla, tiene } = require('../utils/schema.util');
+const { validarTelefonoComercio } = require('../utils/telefono.util');
+const { selectComerciosColumnas, invalidarCacheComerciosSelect } = require('../utils/comercio.sql.util');
 const {
   parseFecha,
   parseIntOrNull,
@@ -428,6 +431,126 @@ async function getEstadisticas(req, res) {
   }
 }
 
+/**
+ * Obtiene configuración de envíos del comercio autenticado.
+ */
+async function getConfigEnvios(req, res) {
+  try {
+    const comercioId = getComercioId(req);
+    if (!comercioId) return responderError(res, 403, 'Sin comercio asociado');
+
+    const columnas = await selectComerciosColumnas();
+    const result = await query(
+      `SELECT ${columnas} FROM piku_comercios c WHERE c.id = $1`,
+      [comercioId]
+    );
+    if (!result.rows.length) return responderError(res, 404, 'Comercio no encontrado');
+
+    const c = result.rows[0];
+    return res.json({
+      envios: {
+        realiza_envios: Boolean(c.realiza_envios),
+        envio_gratis: Boolean(c.envio_gratis),
+        costo_envio: c.costo_envio != null ? parseFloat(c.costo_envio) : 0,
+        envio_minimo_compra:
+          c.envio_minimo_compra != null ? parseFloat(c.envio_minimo_compra) : null,
+        telefono_contacto: c.telefono_contacto || null,
+      },
+      comercio: c,
+    });
+  } catch (error) {
+    console.error('getConfigEnvios:', error);
+    return responderError(res, 500, 'Error al obtener envíos', { detail: error.message });
+  }
+}
+
+/**
+ * Actualiza configuración de envíos del comercio.
+ */
+async function updateConfigEnvios(req, res) {
+  try {
+    const comercioId = getComercioId(req);
+    if (!comercioId) return responderError(res, 403, 'Sin comercio asociado');
+
+    const cols = await columnasTabla('piku_comercios');
+    const realizaEnvios = Boolean(
+      req.body.realiza_envios ?? req.body.realizaEnvios ?? false
+    );
+
+    const sets = [];
+    const vals = [];
+    let idx = 1;
+
+    const addSet = (col, val) => {
+      if (tiene(cols, col)) {
+        sets.push(`${col} = $${idx++}`);
+        vals.push(val);
+      }
+    };
+
+    addSet('realiza_envios', realizaEnvios);
+
+    if (!realizaEnvios) {
+      addSet('envio_gratis', false);
+      addSet('costo_envio', 0);
+      addSet('envio_minimo_compra', null);
+    } else {
+      const envioGratis = Boolean(req.body.envio_gratis ?? req.body.envioGratis ?? false);
+      const costoRaw = req.body.costo_envio ?? req.body.costoEnvio;
+      const minimoRaw = req.body.envio_minimo_compra ?? req.body.envioMinimoCompra;
+      const costo =
+        costoRaw != null && costoRaw !== '' ? parseFloat(costoRaw) : 0;
+      const minimo =
+        minimoRaw != null && minimoRaw !== '' ? parseFloat(minimoRaw) : null;
+
+      addSet('envio_gratis', envioGratis);
+      addSet('costo_envio', Number.isFinite(costo) ? costo : 0);
+      addSet('envio_minimo_compra', Number.isFinite(minimo) ? minimo : null);
+
+      const telBody = req.body.telefono_contacto ?? req.body.telefonoContacto ?? req.body.telefono;
+      if (telBody) {
+        const tel = validarTelefonoComercio(telBody);
+        if (!tel.ok) return responderError(res, 400, tel.mensaje);
+        addSet('telefono_contacto', tel.normalizado);
+      }
+    }
+
+    if (!sets.length) {
+      return responderError(res, 400, 'Sin columnas de envío en la base de datos');
+    }
+
+    vals.push(comercioId);
+    await query(
+      `UPDATE piku_comercios SET ${sets.join(', ')} WHERE id = $${idx}`,
+      vals
+    );
+
+    invalidarCacheComerciosSelect();
+
+    const columnas = await selectComerciosColumnas();
+    const updated = await query(
+      `SELECT ${columnas} FROM piku_comercios c WHERE c.id = $1`,
+      [comercioId]
+    );
+
+    const c = updated.rows[0];
+    return res.json({
+      mensaje: 'Configuración de envíos guardada',
+      envios: {
+        realiza_envios: Boolean(c.realiza_envios),
+        envio_gratis: Boolean(c.envio_gratis),
+        costo_envio: c.costo_envio != null ? parseFloat(c.costo_envio) : 0,
+        envio_minimo_compra:
+          c.envio_minimo_compra != null ? parseFloat(c.envio_minimo_compra) : null,
+        telefono_contacto: c.telefono_contacto || null,
+      },
+    });
+  } catch (error) {
+    console.error('updateConfigEnvios:', error);
+    return responderError(res, 500, 'Error al guardar envíos', { detail: error.message });
+  }
+}
+
 module.exports = {
   getReglasPuntos,
   updateReglasPuntos,
@@ -441,4 +564,6 @@ module.exports = {
   uploadImagenRecompensa,
   generarQR: generarQRComercio,
   getEstadisticas,
+  getConfigEnvios,
+  updateConfigEnvios,
 };

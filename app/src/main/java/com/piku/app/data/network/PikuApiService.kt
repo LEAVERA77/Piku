@@ -6,6 +6,8 @@ import com.piku.app.data.model.AvatarUploadResponse
 import com.piku.app.data.model.ChatPikuRequest
 import com.piku.app.data.model.PerfilResponse
 import com.piku.app.data.model.ChatPikuResponse
+import com.piku.app.data.model.ConfiguracionEnviosRequest
+import com.piku.app.data.model.ConfiguracionEnviosResponse
 import com.piku.app.data.model.ComercioDetalleResponse
 import com.piku.app.data.model.ComerciosResponse
 import com.piku.app.data.model.OfertasComercioResponse
@@ -125,4 +127,10 @@ interface PikuApiService {
 
     @GET("api/comercio/estadisticas")
     suspend fun estadisticasComercio(): Map<String, Any>
+
+    @GET("api/comercio/envios")
+    suspend fun obtenerConfigEnvios(): ConfiguracionEnviosResponse
+
+    @PUT("api/comercio/envios")
+    suspend fun actualizarConfigEnvios(@Body body: ConfiguracionEnviosRequest): ConfiguracionEnviosResponse
 }

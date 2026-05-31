@@ -70,9 +70,37 @@ async function selectComerciosColumnas() {
     ? 'c.suscripcion_activa'
     : 'TRUE AS suscripcion_activa';
 
+  const envioPartes = [];
+  if (tiene(colsComercio, 'realiza_envios')) {
+    envioPartes.push('COALESCE(c.realiza_envios, FALSE) AS realiza_envios');
+  } else {
+    envioPartes.push('FALSE AS realiza_envios');
+  }
+  if (tiene(colsComercio, 'envio_gratis')) {
+    envioPartes.push('COALESCE(c.envio_gratis, FALSE) AS envio_gratis');
+  } else {
+    envioPartes.push('FALSE AS envio_gratis');
+  }
+  if (tiene(colsComercio, 'costo_envio')) {
+    envioPartes.push('c.costo_envio');
+  } else {
+    envioPartes.push('NULL::numeric AS costo_envio');
+  }
+  if (tiene(colsComercio, 'envio_minimo_compra')) {
+    envioPartes.push('c.envio_minimo_compra');
+  } else {
+    envioPartes.push('NULL::numeric AS envio_minimo_compra');
+  }
+  if (tiene(colsComercio, 'telefono_contacto')) {
+    envioPartes.push('c.telefono_contacto');
+  } else {
+    envioPartes.push('NULL::varchar AS telefono_contacto');
+  }
+
   cacheSelect = `
     c.id, c.usuario_id, c.nombre, c.direccion, c.lat, c.lon, c.logo_url,
     ${suscripcion}, ${categoriaSql}, ${tipoComercioSql}, ${iconoEmojiSql},
+    ${envioPartes.join(', ')},
     c.created_at, ${puntosMin}, ${cantidadOfertas}
   `.trim();
 
