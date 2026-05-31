@@ -21,6 +21,16 @@ if (!fs.existsSync(ENV_PATH)) {
 
 require('dotenv').config({ path: ENV_PATH });
 
+/** Typo frecuente al copiar Neon: @dep- en lugar de @ep- */
+function corregirDatabaseUrlNeon() {
+  const url = process.env.DATABASE_URL || '';
+  if (/@dep-/i.test(url)) {
+    process.env.DATABASE_URL = url.replace(/@dep-/gi, '@ep-');
+    console.warn('⚠️ Se corrigió @dep- → @ep- en DATABASE_URL (revisá tu .env para dejarlo bien escrito).');
+  }
+}
+corregirDatabaseUrlNeon();
+
 const bcrypt = require('bcryptjs');
 const { pool, query } = require('../services/neon.service');
 const { normalizarTipoComercio } = require('../constants/tipos_comercio');
@@ -266,13 +276,6 @@ function validarDatabaseUrl() {
   if (placeholders.some((p) => url.toLowerCase().includes(p.toLowerCase()))) {
     console.error('❌ DATABASE_URL parece un ejemplo. Pegá la cadena real de Neon/Render.');
     console.error(`   Host detectado: ${host}`);
-    process.exit(1);
-  }
-
-  if (host.startsWith('dep-')) {
-    console.error('❌ El host empieza con "dep-". En Neon suele ser "ep-" (con e).');
-    console.error(`   Host detectado: ${host}`);
-    console.error('   Revisá que no falte la "e" al copiar la URL.');
     process.exit(1);
   }
 
