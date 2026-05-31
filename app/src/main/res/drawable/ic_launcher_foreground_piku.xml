@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- PNG por API: nodpi ~20% (API 30-) y nodpi-v31 ~32% (API 31+). Launcher y splash comparten recurso. -->
+<!-- PNG por API: nodpi ~18% (API 33-) y nodpi-v34 ~32% (API 34+, ej. Samsung A16). -->
 <bitmap xmlns:android="http://schemas.android.com/apk/res/android"
     android:gravity="center"
     android:src="@drawable/piku_logo_icon_adaptive" />
