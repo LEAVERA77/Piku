@@ -5,7 +5,10 @@ import android.graphics.drawable.BitmapDrawable
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableDoubleStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
@@ -32,6 +35,7 @@ import android.util.Log
 import org.osmdroid.views.overlay.Marker
 import org.osmdroid.views.overlay.Polygon
 import org.osmdroid.views.overlay.infowindow.InfoWindow
+import kotlin.math.abs
 
 @Composable
 fun OsmdroidMapView(
@@ -47,6 +51,8 @@ fun OsmdroidMapView(
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
+    var mapZoom by remember { mutableDoubleStateOf(zoomLevel) }
+
     val userIcon = remember {
         ContextCompat.getDrawable(context, R.drawable.ic_map_user_location)?.let { drawable ->
             BitmapDrawable(context.resources, drawable.toBitmap(48, 48))
@@ -81,7 +87,6 @@ fun OsmdroidMapView(
     }
 
     DisposableEffect(mapView, onViewportChanged) {
-        if (onViewportChanged == null) return@DisposableEffect onDispose {}
         val listener = object : MapListener {
             override fun onScroll(event: ScrollEvent?): Boolean {
                 notifyViewport(mapView, onViewportChanged)
@@ -89,11 +94,16 @@ fun OsmdroidMapView(
             }
 
             override fun onZoom(event: ZoomEvent?): Boolean {
+                val z = mapView.zoomLevelDouble
+                if (abs(z - mapZoom) > 0.04) {
+                    mapZoom = z
+                }
                 notifyViewport(mapView, onViewportChanged)
                 return false
             }
         }
         mapView.addMapListener(listener)
+        mapZoom = mapView.zoomLevelDouble
         mapView.post { notifyViewport(mapView, onViewportChanged) }
         onDispose { mapView.removeMapListener(listener) }
     }
@@ -101,15 +111,19 @@ fun OsmdroidMapView(
     LaunchedEffect(centerLat, centerLon, zoomLevel) {
         mapView.controller.setZoom(zoomLevel)
         mapView.controller.animateTo(GeoPoint(centerLat, centerLon))
+        mapZoom = zoomLevel
     }
 
-    LaunchedEffect(comercios, userLat, userLon, userIcon) {
+    LaunchedEffect(comercios, userLat, userLon, userIcon, mapZoom) {
         data class PinOverlay(
             val comercio: Comercio,
             val icon: BitmapDrawable,
             val anchorY: Float,
             val snippet: String
         )
+
+        val zoomScale = MapPinBitmap.escalaDesdeZoom(mapZoom)
+        val mostrarEtiqueta = MapPinBitmap.mostrarEtiqueta(mapZoom)
 
         val pins = withContext(Dispatchers.Default) {
             comercios.mapNotNull { comercio ->
@@ -125,12 +139,16 @@ fun OsmdroidMapView(
                         cantidadOfertas = comercio.cantidadOfertas,
                         ofertasNuevas = comercio.ofertasNuevas,
                         realizaEnvios = comercio.realizaEnvios,
-                        destacado = comercio.destacado && !comercio.esOpenStreetMap()
+                        destacado = comercio.destacado && !comercio.esOpenStreetMap(),
+                        zoomScale = zoomScale,
+                        mostrarEtiqueta = mostrarEtiqueta
                     ),
                     anchorY = MapPinBitmap.anchorY(
-                        comercio.nombre,
-                        comercio.ofertasNuevas,
-                        comercio.cantidadOfertas
+                        nombre = comercio.nombre,
+                        ofertasNuevas = comercio.ofertasNuevas,
+                        cantidadOfertas = comercio.cantidadOfertas,
+                        zoomScale = zoomScale,
+                        mostrarEtiqueta = mostrarEtiqueta
                     ),
                     snippet = when {
                         comercio.ofertasNuevas > 0 && comercio.cantidadOfertas > 0 ->
@@ -145,15 +163,15 @@ fun OsmdroidMapView(
             }
         }
 
-        Log.d(TAG, "Agregando ${pins.size} pines al mapa (comercios=${comercios.size})")
+        Log.d(TAG, "Pines: ${pins.size} (zoom=${"%.1f".format(mapZoom)}, escala=${"%.2f".format(zoomScale)})")
 
         mapView.overlays.clear()
         if (userLat != null && userLon != null) {
             val userPoint = GeoPoint(userLat, userLon)
             val precision = Polygon(mapView).apply {
                 points = Polygon.pointsAsCircle(userPoint, RADIO_UBICACION_METROS)
-                fillPaint.color = Color.parseColor("#3300A86B")
-                outlinePaint.color = Color.parseColor("#00A86B")
+                fillPaint.color = Color.parseColor("#330D9488")
+                outlinePaint.color = Color.parseColor("#0D9488")
                 outlinePaint.strokeWidth = 2f
             }
             mapView.overlays.add(precision)
@@ -197,8 +215,9 @@ private const val RADIO_UBICACION_METROS = 15.0
 
 private fun notifyViewport(
     mapView: MapView,
-    onViewportChanged: (minLat: Double, maxLat: Double, minLon: Double, maxLon: Double) -> Unit
+    onViewportChanged: ((minLat: Double, maxLat: Double, minLon: Double, maxLon: Double) -> Unit)?
 ) {
+    if (onViewportChanged == null) return
     val bb: BoundingBox = mapView.boundingBox ?: return
     onViewportChanged(bb.latSouth, bb.latNorth, bb.lonWest, bb.lonEast)
 }
