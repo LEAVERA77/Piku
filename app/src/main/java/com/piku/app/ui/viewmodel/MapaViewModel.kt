@@ -9,6 +9,7 @@ import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
 import com.google.android.gms.tasks.CancellationTokenSource
 import android.util.Log
+import com.piku.app.data.CerritoGeo
 import com.piku.app.data.ComerciosCerritoDemo
 import com.piku.app.data.model.Comercio
 import com.piku.app.data.model.Rubro
@@ -35,8 +36,8 @@ data class MapaUiState(
     val rubros: List<Rubro> = emptyList(),
     val rubrosSeleccionados: Set<String> = emptySet(),
     val busquedaNombre: String = "",
-    val mapCenterLat: Double = CERRITO_LAT,
-    val mapCenterLon: Double = CERRITO_LON,
+    val mapCenterLat: Double = CerritoGeo.CENTRO_LAT,
+    val mapCenterLon: Double = CerritoGeo.CENTRO_LON,
     val gpsLat: Double? = null,
     val gpsLon: Double? = null,
     val tieneUbicacionReal: Boolean = false,
@@ -74,10 +75,11 @@ data class MapaUiState(
     val refLon: Double get() = gpsLon ?: mapCenterLon
 }
 
-private const val CERRITO_LAT = -31.9189
-private const val CERRITO_LON = -60.6085
-private const val ZOOM_UBICACION = 18.0
+private const val CERRITO_LAT = CerritoGeo.CENTRO_LAT
+private const val CERRITO_LON = CerritoGeo.CENTRO_LON
+private const val ZOOM_UBICACION = 17.0
 private const val ZOOM_DEFAULT = 15.0
+private const val ZOOM_CERRITO_CERCA = 16.5
 
 private const val TAG = "MapaViewModel"
 
@@ -144,29 +146,39 @@ class MapaViewModel(application: Application) : AndroidViewModel(application) {
                 }
 
                 if (location != null) {
+                    val lat = location.latitude
+                    val lon = location.longitude
+                    val enCerrito = CerritoGeo.enZonaCerrito(lat, lon)
                     _uiState.update {
                         it.copy(
-                            gpsLat = location.latitude,
-                            gpsLon = location.longitude,
-                            tieneUbicacionReal = true
+                            gpsLat = lat,
+                            gpsLon = lon,
+                            tieneUbicacionReal = true,
+                            mapCenterLat = if (enCerrito) lat else it.mapCenterLat,
+                            mapCenterLon = if (enCerrito) lon else it.mapCenterLon,
+                            zoomMapa = if (enCerrito) ZOOM_CERRITO_CERCA else it.zoomMapa
                         )
                     }
-                    aplicarCalleInferida(location.latitude, location.longitude)
+                    aplicarCalleInferida(lat, lon)
                 }
 
                 val s = _uiState.value
                 val refLat = s.refLat
                 val refLon = s.refLon
+                val enCerrito = CerritoGeo.enZonaCerrito(refLat, refLon)
                 val comercios = try {
-                    repo.listarComerciosInicial(refLat, refLon).let { lista ->
-                        if (lista.isEmpty()) {
-                            Log.w(TAG, "API sin comercios; usando demo Cerrito (${ComerciosCerritoDemo.lista.size})")
-                            ComerciosCerritoDemo.lista
-                        } else lista
+                    val desdeApi = repo.listarComerciosInicial(refLat, refLon)
+                    val merged = CerritoGeo.mergeComerciosCerrito(desdeApi)
+                    val lista = if (enCerrito) {
+                        CerritoGeo.filtrarCercaDeUsuario(refLat, refLon, merged)
+                            .ifEmpty { CerritoGeo.conDistanciaDesde(refLat, refLon, merged) }
+                    } else {
+                        merged.ifEmpty { ComerciosCerritoDemo.lista }
                     }
+                    if (lista.isEmpty()) ComerciosCerritoDemo.lista else lista
                 } catch (e: Exception) {
                     Log.w(TAG, "Error API comercios; usando demo Cerrito", e)
-                    ComerciosCerritoDemo.lista
+                    CerritoGeo.conDistanciaDesde(refLat, refLon, ComerciosCerritoDemo.lista)
                 }
                 comercios.forEach { c ->
                     Log.d(TAG, "Comercio: ${c.nombre} en (${c.lat}, ${c.lon}) emoji=${c.iconoEmoji}")
@@ -226,8 +238,13 @@ class MapaViewModel(application: Application) : AndroidViewModel(application) {
         }
         val lat = _uiState.value.gpsLat ?: return
         val lon = _uiState.value.gpsLon ?: return
+        val enCerrito = CerritoGeo.enZonaCerrito(lat, lon)
         _uiState.update {
-            it.copy(mapCenterLat = lat, mapCenterLon = lon, zoomMapa = ZOOM_UBICACION)
+            it.copy(
+                mapCenterLat = lat,
+                mapCenterLon = lon,
+                zoomMapa = if (enCerrito) ZOOM_CERRITO_CERCA else ZOOM_UBICACION
+            )
         }
     }
 

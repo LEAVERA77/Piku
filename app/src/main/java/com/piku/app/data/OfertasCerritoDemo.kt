@@ -35,10 +35,16 @@ object OfertasCerritoDemo {
         oferta("demo-of-11", "2x1 en productos seleccionados", 300, "2x1", "🛒")
     )
 
+    private val moda = listOf(
+        oferta("demo-of-12", "15% OFF en toda la tienda", 500, "descuento", "👕", 15),
+        oferta("demo-of-13", "Envío gratis", 200, "envio_gratis", "👕")
+    )
+
     private val porComercio = mapOf(
         "demo:cafe-martinez" to cafe,
         "demo:pizzeria-don-juan" to pizzeria,
         "demo:farmacia-cerrito" to farmacia,
+        "demo:moda-urbana" to moda,
         "demo:super-el-ahorro" to supermercado
     )
 

@@ -8,9 +8,6 @@ import com.piku.app.data.model.Comercio
  */
 object ComerciosCerritoDemo {
 
-    const val LAT = -31.9189
-    const val LON = -60.6085
-
     val lista: List<Comercio> = listOf(
         Comercio(
             id = "demo:cafe-martinez",
@@ -42,6 +39,17 @@ object ComerciosCerritoDemo {
             lon = -60.6092,
             tipoComercio = "farmacia",
             iconoEmoji = "💊",
+            realizaEnvios = true,
+            cantidadOfertas = 2
+        ),
+        Comercio(
+            id = "demo:moda-urbana",
+            nombre = "Moda Urbana",
+            direccion = "Rivadavia 567, Cerrito, Entre Ríos",
+            lat = -31.9168,
+            lon = -60.6065,
+            tipoComercio = "ropa",
+            iconoEmoji = "👕",
             realizaEnvios = true,
             cantidadOfertas = 2
         ),

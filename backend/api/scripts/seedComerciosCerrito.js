@@ -194,7 +194,29 @@ async function upsertComercio(hash, data) {
   if (existente.rows.length) {
     usuarioId = existente.rows[0].usuario_id;
     comercioId = existente.rows[0].comercio_id || existente.rows[0].comercio_pk;
-    console.log(`↪ Ya existe: ${data.nombre} (${email})`);
+    await query(
+      `UPDATE piku_comercios SET
+         nombre = $1, direccion = $2, lat = $3, lon = $4,
+         categoria = $5, tipo_comercio = $6, icono_emoji = $7,
+         realiza_envios = $8, costo_envio = $9, envio_minimo_compra = $10,
+         telefono_contacto = $11, suscripcion_activa = TRUE, activo = TRUE, updated_at = NOW()
+       WHERE id = $12`,
+      [
+        data.nombre,
+        data.direccion,
+        data.lat,
+        data.lon,
+        tipoInfo.categoria,
+        tipoInfo.id,
+        tipoInfo.emoji,
+        data.realiza_envios,
+        data.costo_envio,
+        data.envio_minimo_compra,
+        TELEFONO,
+        comercioId,
+      ]
+    );
+    console.log(`↪ Actualizado en Cerrito: ${data.nombre} (${data.lat}, ${data.lon})`);
   } else {
     const comercioInsert = await query(
       `INSERT INTO piku_comercios (
