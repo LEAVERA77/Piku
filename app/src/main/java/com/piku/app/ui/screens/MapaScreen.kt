@@ -82,20 +82,20 @@ fun MapaScreen(
     }
 
     Box(modifier = modifier.fillMaxSize()) {
-        if (uiState.cargando) {
+        OsmdroidMapView(
+            comercios = uiState.comerciosVisibles,
+            centerLat = uiState.userLat,
+            centerLon = uiState.userLon,
+            userLat = if (uiState.tieneUbicacionReal) uiState.userLat else null,
+            userLon = if (uiState.tieneUbicacionReal) uiState.userLon else null,
+            onComercioClick = { viewModel.seleccionarComercio(it) },
+            onViewportChanged = viewModel::onViewportChanged,
+            zoomLevel = uiState.zoomMapa,
+            modifier = Modifier.fillMaxSize()
+        )
+
+        if (uiState.cargando && uiState.comercios.isEmpty()) {
             CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
-        } else {
-            OsmdroidMapView(
-                comercios = uiState.comerciosVisibles,
-                centerLat = uiState.userLat,
-                centerLon = uiState.userLon,
-                userLat = if (uiState.tieneUbicacionReal) uiState.userLat else null,
-                userLon = if (uiState.tieneUbicacionReal) uiState.userLon else null,
-                onComercioClick = { viewModel.seleccionarComercio(it) },
-                onViewportChanged = viewModel::onViewportChanged,
-                zoomLevel = uiState.zoomMapa,
-                modifier = Modifier.fillMaxSize()
-            )
         }
 
         if (uiState.cargandoViewport) {
@@ -118,7 +118,6 @@ fun MapaScreen(
                 busquedaNombre = uiState.busquedaNombre,
                 busquedaDireccion = uiState.busquedaDireccion,
                 contadorVisibles = uiState.contadorVisibles,
-                buscandoOsm = uiState.buscandoComerciosOsm,
                 rubros = uiState.rubros,
                 rubrosSeleccionados = uiState.rubrosSeleccionados,
                 expandido = uiState.panelExpandido,

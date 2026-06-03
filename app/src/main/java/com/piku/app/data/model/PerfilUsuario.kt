@@ -3,7 +3,19 @@ package com.piku.app.data.model
 import com.google.gson.annotations.SerializedName
 
 data class PerfilResponse(
-    val usuario: PerfilUsuarioDto
+    val usuario: PerfilUsuarioDto,
+    val comercio: ComercioPerfilDto? = null
+)
+
+data class ComercioPerfilDto(
+    val id: String,
+    val nombre: String,
+    @SerializedName("logo_url") val logoUrl: String? = null
+)
+
+data class LogoUploadResponse(
+    @SerializedName("logo_url") val logoUrl: String,
+    val mensaje: String? = null
 )
 
 data class PerfilUsuarioDto(

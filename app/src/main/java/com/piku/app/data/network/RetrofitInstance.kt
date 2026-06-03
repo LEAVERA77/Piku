@@ -4,7 +4,10 @@ import android.content.Context
 import com.piku.app.BuildConfig
 import com.piku.app.data.config.ConfigLoader
 import com.piku.app.data.datastore.AuthDataStore
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
@@ -26,7 +29,7 @@ object RetrofitInstance {
         appContext = context.applicationContext
 
         val authInterceptor = Interceptor { chain ->
-            val token = runBlocking { AuthDataStore.token(appContext) }
+            val token = AuthDataStore.tokenSync()
             val request = if (!token.isNullOrBlank()) {
                 chain.request().newBuilder()
                     .header("Authorization", "Bearer $token")
@@ -62,6 +65,10 @@ object RetrofitInstance {
             .addConverterFactory(GsonConverterFactory.create())
             .build()
             .create(PikuApiService::class.java)
+
+        CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
+            AuthDataStore.warmCache(appContext)
+        }
     }
 
     val api: PikuApiService

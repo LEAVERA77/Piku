@@ -52,6 +52,7 @@ async function selectComerciosColumnas() {
   const colPuntos = columnaPuntosRecompensa(colsRecomp);
   let puntosMin = 'NULL::int AS puntos_min_canje';
   let cantidadOfertas = '0::int AS cantidad_ofertas';
+  let ofertasNuevas = '0::int AS ofertas_nuevas';
   if (colsRecomp.size > 0 && colPuntos) {
     const filtro = filtrosRecompensaVigente(colsRecomp);
     puntosMin = `(SELECT MIN(r.${colPuntos})
@@ -60,11 +61,21 @@ async function selectComerciosColumnas() {
     cantidadOfertas = `(SELECT COUNT(*)::int
       FROM piku_recompensas r
       WHERE ${filtro}) AS cantidad_ofertas`;
+    if (tiene(colsRecomp, 'created_at')) {
+      ofertasNuevas = `(SELECT COUNT(*)::int
+        FROM piku_recompensas r
+        WHERE ${filtro} AND r.created_at > NOW() - INTERVAL '14 days') AS ofertas_nuevas`;
+    }
   } else if (colsRecomp.size > 0) {
     const filtro = filtrosRecompensaVigente(colsRecomp);
     cantidadOfertas = `(SELECT COUNT(*)::int
       FROM piku_recompensas r
       WHERE ${filtro}) AS cantidad_ofertas`;
+    if (tiene(colsRecomp, 'created_at')) {
+      ofertasNuevas = `(SELECT COUNT(*)::int
+        FROM piku_recompensas r
+        WHERE ${filtro} AND r.created_at > NOW() - INTERVAL '14 days') AS ofertas_nuevas`;
+    }
   }
 
   const suscripcion = tiene(colsComercio, 'suscripcion_activa')
@@ -102,7 +113,7 @@ async function selectComerciosColumnas() {
     c.id, c.usuario_id, c.nombre, c.direccion, c.lat, c.lon, c.logo_url,
     ${suscripcion}, ${categoriaSql}, ${tipoComercioSql}, ${iconoEmojiSql},
     ${envioPartes.join(', ')},
-    c.created_at, ${puntosMin}, ${cantidadOfertas}
+    c.created_at, ${puntosMin}, ${cantidadOfertas}, ${ofertasNuevas}
   `.trim();
 
   return cacheSelect;

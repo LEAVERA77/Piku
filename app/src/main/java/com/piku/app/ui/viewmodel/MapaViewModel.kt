@@ -27,19 +27,17 @@ import kotlinx.coroutines.tasks.await
 data class MensajeChat(val rol: String, val texto: String)
 
 data class MapaUiState(
-    val cargando: Boolean = true,
+    val cargando: Boolean = false,
     val cargandoViewport: Boolean = false,
     val comercios: List<Comercio> = emptyList(),
-    val comerciosOsmBusqueda: List<Comercio> = emptyList(),
-    val buscandoComerciosOsm: Boolean = false,
     val rubros: List<Rubro> = emptyList(),
     val rubrosSeleccionados: Set<String> = emptySet(),
     val busquedaNombre: String = "",
-    val userLat: Double = -34.6037,
-    val userLon: Double = -58.3816,
+    val userLat: Double = CERRITO_LAT,
+    val userLon: Double = CERRITO_LON,
     val tieneUbicacionReal: Boolean = false,
-    val zoomMapa: Double = 13.0,
-    val panelExpandido: Boolean = false,
+    val zoomMapa: Double = ZOOM_DEFAULT,
+    val panelExpandido: Boolean = true,
     val busquedaDireccion: String = "",
     val direccionEditadaPorUsuario: Boolean = false,
     val contextoDireccion: NominatimAddress? = null,
@@ -61,17 +59,18 @@ data class MapaUiState(
             }
             val q = busquedaNombre.trim()
             if (q.length >= 2) {
-                val piku = lista.filter { it.nombre.contains(q, ignoreCase = true) }
-                val osm = comerciosOsmBusqueda.filter { osm ->
-                    piku.none { it.nombre.equals(osm.nombre, ignoreCase = true) }
-                }
-                lista = (piku + osm).sortedBy { it.distanciaMetros ?: Int.MAX_VALUE }
+                lista = lista.filter { it.nombre.contains(q, ignoreCase = true) }
             }
             return lista
         }
 
     val contadorVisibles: Int get() = comerciosVisibles.size
 }
+
+private const val CERRITO_LAT = -31.9189
+private const val CERRITO_LON = -60.6085
+private const val ZOOM_UBICACION = 20.5
+private const val ZOOM_DEFAULT = 14.0
 
 private fun coincideRubro(comercio: Comercio, catalogo: List<Rubro>, seleccionados: Set<String>): Boolean {
     val cat = comercio.categoria?.lowercase()?.trim()?.replace("é", "e") ?: "otros"
@@ -89,13 +88,9 @@ class MapaViewModel(application: Application) : AndroidViewModel(application) {
     private val repo = MapaRepository(application)
     private val nominatim = NominatimRepository(application)
 
-    companion object {
-        private const val ZOOM_UBICACION = 18.0
-        private const val ZOOM_DEFAULT = 13.0
-    }
     private var viewportJob: Job? = null
-    private var busquedaComercioJob: Job? = null
     private var ultimoViewport: Viewport? = null
+    private var omitirProximoViewport = true
 
     private val _uiState = MutableStateFlow(MapaUiState())
     val uiState: StateFlow<MapaUiState> = _uiState.asStateFlow()
@@ -111,29 +106,33 @@ class MapaViewModel(application: Application) : AndroidViewModel(application) {
                 // rubros opcionales
             }
         }
+        cargarUbicacionYComercios(conUbicacion = false)
     }
 
     @SuppressLint("MissingPermission")
     fun cargarUbicacionYComercios(conUbicacion: Boolean = false) {
         viewModelScope.launch {
-            _uiState.update { it.copy(cargando = true, error = null) }
+            _uiState.update { it.copy(cargando = it.comercios.isEmpty(), error = null) }
             try {
                 val fused = LocationServices.getFusedLocationProviderClient(getApplication())
-                val location: Location? = if (conUbicacion) {
+                var location: Location? = null
+                if (conUbicacion) {
                     try {
-                        fused.getCurrentLocation(
-                            Priority.PRIORITY_HIGH_ACCURACY,
-                            CancellationTokenSource().token
-                        ).await()
-                            ?: fused.lastLocation.await()
+                        location = fused.lastLocation.await()
                     } catch (_: Exception) {
+                        // sin lastLocation
+                    }
+                    if (location == null) {
                         try {
-                            fused.lastLocation.await()
+                            location = fused.getCurrentLocation(
+                                Priority.PRIORITY_BALANCED_POWER_ACCURACY,
+                                CancellationTokenSource().token
+                            ).await()
                         } catch (_: Exception) {
-                            null
+                            // GPS lento: seguimos con última posición conocida
                         }
                     }
-                } else null
+                }
 
                 val lat = location?.latitude ?: _uiState.value.userLat
                 val lon = location?.longitude ?: _uiState.value.userLon
@@ -143,10 +142,11 @@ class MapaViewModel(application: Application) : AndroidViewModel(application) {
                         userLat = lat,
                         userLon = lon,
                         tieneUbicacionReal = conGps,
-                        zoomMapa = if (conGps) ZOOM_UBICACION else ZOOM_DEFAULT
+                        zoomMapa = if (conGps) ZOOM_UBICACION else it.zoomMapa
                     )
                 }
                 if (conGps) aplicarCalleInferida(lat, lon)
+
                 val comercios = repo.listarComerciosInicial(lat, lon)
                 _uiState.update {
                     it.copy(cargando = false, comercios = comercios, error = null)
@@ -164,6 +164,10 @@ class MapaViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun onViewportChanged(minLat: Double, maxLat: Double, minLon: Double, maxLon: Double) {
+        if (omitirProximoViewport) {
+            omitirProximoViewport = false
+            return
+        }
         val vp = Viewport(minLat, maxLat, minLon, maxLon)
         if (ultimoViewport != null && ultimoViewport == vp) return
         ultimoViewport = vp
@@ -176,7 +180,13 @@ class MapaViewModel(application: Application) : AndroidViewModel(application) {
                 val lista = repo.listarComerciosEnViewport(
                     s.userLat, s.userLon, minLat, maxLat, minLon, maxLon
                 )
-                _uiState.update { it.copy(comercios = lista, cargandoViewport = false) }
+                val merged = (s.comercios + lista).associateBy { it.id }.values.toList()
+                _uiState.update {
+                    it.copy(
+                        comercios = if (merged.isEmpty()) s.comercios else merged,
+                        cargandoViewport = false
+                    )
+                }
             } catch (_: Exception) {
                 _uiState.update { it.copy(cargandoViewport = false) }
             }
@@ -229,25 +239,8 @@ class MapaViewModel(application: Application) : AndroidViewModel(application) {
 
     fun setBusquedaNombre(q: String) {
         _uiState.update { it.copy(busquedaNombre = q) }
-        busquedaComercioJob?.cancel()
-        val texto = q.trim()
-        if (texto.length < 2) {
-            _uiState.update { it.copy(comerciosOsmBusqueda = emptyList(), buscandoComerciosOsm = false) }
-            return
-        }
-        viewModelScope.launch { repo.registrarEvento("busqueda") }
-        busquedaComercioJob = viewModelScope.launch {
-            delay(400)
-            val s = _uiState.value
-            _uiState.update { it.copy(buscandoComerciosOsm = true) }
-            try {
-                val osm = nominatim.buscarComerciosEnZona(s.userLat, s.userLon, texto)
-                _uiState.update {
-                    it.copy(comerciosOsmBusqueda = osm, buscandoComerciosOsm = false)
-                }
-            } catch (_: Exception) {
-                _uiState.update { it.copy(comerciosOsmBusqueda = emptyList(), buscandoComerciosOsm = false) }
-            }
+        if (q.trim().length >= 2) {
+            viewModelScope.launch { repo.registrarEvento("busqueda") }
         }
     }
 

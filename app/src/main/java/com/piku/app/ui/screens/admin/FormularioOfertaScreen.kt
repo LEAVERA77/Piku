@@ -1,8 +1,8 @@
 package com.piku.app.ui.screens.admin
 
 import android.net.Uri
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
+import com.piku.app.ui.media.PikuImages
+import com.piku.app.utils.rememberImagePicker
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -48,7 +48,6 @@ import com.piku.app.ui.components.BotonPiku
 import com.piku.app.ui.components.EstiloBotonPiku
 import com.piku.app.ui.components.GaleriaArticuloEditor
 import com.piku.app.ui.components.PikuPhotoImage
-import com.piku.app.ui.media.PikuImages
 import kotlinx.coroutines.launch
 import java.util.Calendar
 
@@ -89,9 +88,7 @@ fun FormularioOfertaScreen(
     var ofertaActual by remember { mutableStateOf<OfertaComercio?>(null) }
     var listoParaSalir by remember { mutableStateOf(esEdicion) }
 
-    val picker = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent()
-    ) { uri -> if (uri != null) imagenLocal = uri }
+    val elegirPortada = rememberImagePicker { uri -> imagenLocal = uri }
 
     LaunchedEffect(ofertaId) {
         if (esEdicion && ofertaId != null) {
@@ -204,8 +201,8 @@ fun FormularioOfertaScreen(
                 )
             }
             Spacer(Modifier.height(8.dp))
-            OutlinedButton(onClick = { picker.launch("image/*") }, modifier = Modifier.fillMaxWidth()) {
-                Text("Subir foto portada")
+            OutlinedButton(onClick = elegirPortada, modifier = Modifier.fillMaxWidth()) {
+                Text("Foto portada (cámara o galería)")
             }
             Spacer(Modifier.height(12.dp))
             GaleriaArticuloEditor(

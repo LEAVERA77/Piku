@@ -1,5 +1,7 @@
 package com.piku.app.ui.screens.admin
 
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -9,6 +11,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -25,11 +28,13 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import android.widget.Toast
 import com.piku.app.data.network.ComercioRealtimeClient
 import com.piku.app.data.network.RetrofitInstance
 import com.piku.app.data.repository.ComercioRepository
@@ -38,6 +43,7 @@ import com.piku.app.ui.media.PikuImages
 import com.piku.app.ui.theme.NaranjaPiku
 import com.piku.app.ui.theme.PikuTheme
 import com.piku.app.ui.theme.VerdePiku
+import com.piku.app.utils.rememberImagePicker
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -50,8 +56,26 @@ fun AdminDashboardScreen(
     val context = LocalContext.current
     var stats by remember { mutableStateOf<Map<String, Any>?>(null) }
     var notificacionesNoLeidas by remember { mutableIntStateOf(0) }
+    var logoUrl by remember { mutableStateOf<String?>(null) }
+    var nombreComercio by remember { mutableStateOf<String?>(null) }
+    var subiendoLogo by remember { mutableStateOf(false) }
     val repo = remember { ComercioRepository(context) }
     val scope = rememberCoroutineScope()
+
+    val elegirLogo = rememberImagePicker { uri ->
+        scope.launch {
+            subiendoLogo = true
+            try {
+                val url = withContext(Dispatchers.IO) { repo.subirLogo(uri) }
+                logoUrl = url
+                Toast.makeText(context, "Logo actualizado", Toast.LENGTH_SHORT).show()
+            } catch (e: Exception) {
+                Toast.makeText(context, e.message ?: "Error al subir logo", Toast.LENGTH_LONG).show()
+            } finally {
+                subiendoLogo = false
+            }
+        }
+    }
 
     fun refrescarBadge() {
         scope.launch {
@@ -70,6 +94,13 @@ fun AdminDashboardScreen(
             stats = RetrofitInstance.api.estadisticasComercio()
         } catch (_: Exception) {
             stats = null
+        }
+        try {
+            val perfil = withContext(Dispatchers.IO) { repo.obtenerPerfil() }
+            logoUrl = perfil.comercio?.logoUrl
+            nombreComercio = perfil.comercio?.nombre
+        } catch (_: Exception) {
+            // sin perfil comercio
         }
         refrescarBadge()
     }
@@ -96,17 +127,36 @@ fun AdminDashboardScreen(
                 .padding(padding)
                 .padding(horizontal = 20.dp, vertical = 12.dp)
         ) {
-            PikuPhotoImage(
-                url = PikuImages.comercioDefault,
-                contentDescription = null,
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(120.dp),
-                cornerRadius = 16.dp,
-                contentScale = ContentScale.Crop
-            )
+                    .height(120.dp)
+                    .clickable(enabled = !subiendoLogo) { elegirLogo() },
+                contentAlignment = Alignment.Center
+            ) {
+                PikuPhotoImage(
+                    url = logoUrl?.takeIf { it.isNotBlank() } ?: PikuImages.comercioDefault,
+                    contentDescription = "Logo del comercio",
+                    modifier = Modifier.fillMaxWidth(),
+                    cornerRadius = 16.dp,
+                    contentScale = ContentScale.Crop
+                )
+                if (subiendoLogo) {
+                    CircularProgressIndicator(color = NaranjaPiku)
+                }
+            }
+            OutlinedButton(
+                onClick = { elegirLogo() },
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !subiendoLogo
+            ) {
+                Text("Cambiar logo del comercio")
+            }
             Spacer(Modifier.height(12.dp))
-            Text("Tu negocio en Piku", style = MaterialTheme.typography.headlineSmall)
+            Text(
+                nombreComercio ?: "Tu negocio en Piku",
+                style = MaterialTheme.typography.headlineSmall
+            )
             Text(
                 "Usá la pestaña Catálogo para publicar artículos con varias fotos.",
                 style = MaterialTheme.typography.bodyMedium,

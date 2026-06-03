@@ -10,6 +10,8 @@ import com.piku.app.data.model.RegistroComercioRequest
 import com.piku.app.data.model.RegistroRequest
 import com.piku.app.data.network.ApiErrorParser
 import com.piku.app.data.network.RetrofitInstance
+import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.TimeoutCancellationException
 import retrofit2.HttpException
 
 class AuthRepository(private val context: Context) {
@@ -169,7 +171,11 @@ class AuthRepository(private val context: Context) {
     suspend fun validarSesionRemota(): Boolean {
         if (!hasSession()) return false
         return try {
-            api.perfil()
+            withTimeout(2_500) {
+                api.perfil()
+                true
+            }
+        } catch (_: TimeoutCancellationException) {
             true
         } catch (e: HttpException) {
             if (e.code() == 401 || e.code() == 403) {

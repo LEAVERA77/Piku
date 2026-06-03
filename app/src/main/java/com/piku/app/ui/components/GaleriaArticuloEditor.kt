@@ -1,8 +1,7 @@
 package com.piku.app.ui.components
 
 import android.net.Uri
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
+import com.piku.app.utils.rememberImagePicker
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -83,10 +82,8 @@ fun GaleriaArticuloEditor(
         }
     }
 
-    val picker = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent()
-    ) { uri: Uri? ->
-        if (uri == null || ofertaId.isNullOrBlank() || ofertaId == "new") return@rememberLauncherForActivityResult
+    val elegirFoto = rememberImagePicker { uri ->
+        if (ofertaId.isNullOrBlank() || ofertaId == "new") return@rememberImagePicker
         scope.launch {
             cargando = true
             mensaje = null
@@ -187,7 +184,7 @@ fun GaleriaArticuloEditor(
                             .size(96.dp)
                             .clip(RoundedCornerShape(12.dp))
                             .border(2.dp, VerdePiku.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
-                            .clickable { picker.launch("image/*") },
+                            .clickable { elegirFoto() },
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(Icons.Default.Add, contentDescription = "Agregar foto", tint = VerdePiku)
@@ -197,7 +194,7 @@ fun GaleriaArticuloEditor(
 
             Spacer(Modifier.height(8.dp))
             OutlinedButton(
-                onClick = { picker.launch("image/*") },
+                onClick = { elegirFoto() },
                 modifier = Modifier.fillMaxWidth(),
                 enabled = !cargando
             ) {

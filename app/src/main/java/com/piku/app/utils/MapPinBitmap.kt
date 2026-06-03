@@ -16,6 +16,7 @@ object MapPinBitmap {
         emoji: String,
         nombre: String? = null,
         cantidadOfertas: Int = 0,
+        ofertasNuevas: Int = 0,
         realizaEnvios: Boolean = false
     ): BitmapDrawable {
         val ancho = 96
@@ -29,16 +30,19 @@ object MapPinBitmap {
             style = Paint.Style.FILL
         }
         val borde = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = if (cantidadOfertas > 0) Color.parseColor("#FF6B35") else Color.parseColor("#00A86B")
+            color = when {
+                ofertasNuevas > 0 -> Color.parseColor("#7C4DFF")
+                cantidadOfertas > 0 -> Color.parseColor("#FF6B35")
+                else -> Color.parseColor("#00A86B")
+            }
             style = Paint.Style.STROKE
-            strokeWidth = 4f
+            strokeWidth = if (ofertasNuevas > 0) 5f else 4f
         }
         val rect = RectF(6f, 6f, ancho - 6f, alto - 6f)
         canvas.drawRoundRect(rect, 16f, 16f, fondo)
         canvas.drawRoundRect(rect, 16f, 16f, borde)
 
         val emojiPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            textSize = 32f
             textAlign = Paint.Align.CENTER
         }
         val emojiSize = if (realizaEnvios) 24f else 32f
@@ -56,7 +60,20 @@ object MapPinBitmap {
             canvas.drawText(corto, ancho / 2f, 68f, nombrePaint)
         }
 
-        if (cantidadOfertas > 0) {
+        if (ofertasNuevas > 0) {
+            val badge = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = Color.parseColor("#7C4DFF")
+                style = Paint.Style.FILL
+            }
+            canvas.drawCircle(14f, 14f, 12f, badge)
+            val texto = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = Color.WHITE
+                textSize = 11f
+                typeface = Typeface.DEFAULT_BOLD
+                textAlign = Paint.Align.CENTER
+            }
+            canvas.drawText("N", 14f, 18f, texto)
+        } else if (cantidadOfertas > 0) {
             val badge = Paint(Paint.ANTI_ALIAS_FLAG).apply {
                 color = Color.parseColor("#FF6B35")
                 style = Paint.Style.FILL

@@ -908,6 +908,33 @@ async function registrarFcmToken(req, res) {
   }
 }
 
+async function uploadLogoComercio(req, res) {
+  try {
+    const comercioId = getComercioId(req);
+    if (!req.file) return responderError(res, 400, 'Archivo de imagen requerido');
+    if (!cloudinaryOk) return responderError(res, 503, 'Cloudinary no configurado en el servidor');
+
+    const dataUri = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
+    const { url } = await uploadImage(dataUri, 'logos');
+
+    const updated = await query(
+      'UPDATE piku_comercios SET logo_url = $1, updated_at = NOW() WHERE id = $2 RETURNING id, nombre, logo_url',
+      [url, comercioId]
+    );
+    if (!updated.rows.length) return responderError(res, 404, 'Comercio no encontrado');
+
+    invalidarCacheComerciosSelect();
+    return res.json({
+      mensaje: 'Logo actualizado',
+      logo_url: updated.rows[0].logo_url,
+      comercio: updated.rows[0],
+    });
+  } catch (error) {
+    console.error('uploadLogoComercio:', error);
+    return responderError(res, 500, 'Error al subir logo', { detail: error.message });
+  }
+}
+
 module.exports = {
   getReglasPuntos,
   updateReglasPuntos,
@@ -932,4 +959,5 @@ module.exports = {
   marcarNotificacionLeida,
   obtenerHistorialCanjes,
   registrarFcmToken,
+  uploadLogoComercio,
 };

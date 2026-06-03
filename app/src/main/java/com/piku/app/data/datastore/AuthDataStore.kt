@@ -15,6 +15,9 @@ private val Context.authDataStore: DataStore<Preferences> by preferencesDataStor
 
 object AuthDataStore {
 
+    @Volatile
+    var cachedToken: String? = null
+
     private val KEY_TOKEN = stringPreferencesKey("auth_token")
     private val KEY_EMAIL = stringPreferencesKey("user_email")
     private val KEY_ROL = stringPreferencesKey("user_rol")
@@ -36,14 +39,24 @@ object AuthDataStore {
             prefs[KEY_NOMBRE] = nombre
             prefs[KEY_BIOMETRIC] = biometricEnabled
         }
+        cachedToken = token
     }
 
     suspend fun setBiometricEnabled(context: Context, enabled: Boolean) {
         context.authDataStore.edit { it[KEY_BIOMETRIC] = enabled }
     }
 
-    suspend fun token(context: Context): String? =
-        context.authDataStore.data.first()[KEY_TOKEN]
+    suspend fun token(context: Context): String? {
+        val t = context.authDataStore.data.first()[KEY_TOKEN]
+        cachedToken = t
+        return t
+    }
+
+    suspend fun warmCache(context: Context) {
+        token(context)
+    }
+
+    fun tokenSync(): String? = cachedToken
 
     suspend fun rol(context: Context): String? =
         context.authDataStore.data.first()[KEY_ROL]
@@ -59,5 +72,6 @@ object AuthDataStore {
 
     suspend fun clear(context: Context) {
         context.authDataStore.edit { it.clear() }
+        cachedToken = null
     }
 }

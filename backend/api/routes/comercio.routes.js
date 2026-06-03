@@ -47,5 +47,6 @@ router.put(
 );
 router.get('/canjes', comercioCanjesLimiter, comercioController.obtenerHistorialCanjes);
 router.put('/dispositivo/fcm', comercioController.registrarFcmToken);
+router.post('/logo', upload.single('file'), comercioController.uploadLogoComercio);
 
 module.exports = router;

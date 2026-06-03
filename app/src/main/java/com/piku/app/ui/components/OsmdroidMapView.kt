@@ -131,6 +131,7 @@ fun OsmdroidMapView(
                 emoji = emoji,
                 nombre = comercio.nombre,
                 cantidadOfertas = comercio.cantidadOfertas,
+                ofertasNuevas = comercio.ofertasNuevas,
                 realizaEnvios = comercio.realizaEnvios
             )
             val marker = Marker(mapView).apply {

@@ -5,7 +5,6 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.fragment.app.FragmentActivity
-import com.piku.app.ui.components.SolicitudUbicacionAlInicio
 import com.piku.app.ui.navigation.PikuRootNav
 import com.piku.app.ui.theme.PikuTheme
 
@@ -16,7 +15,6 @@ class MainActivity : FragmentActivity() {
         enableEdgeToEdge()
         setContent {
             PikuTheme {
-                SolicitudUbicacionAlInicio()
                 PikuRootNav()
             }
         }

@@ -16,6 +16,7 @@ data class Comercio(
     @SerializedName("icono_emoji") val iconoEmoji: String? = null,
     @SerializedName("puntos_min_canje") val puntosMinCanje: Int? = null,
     @SerializedName("cantidad_ofertas") val cantidadOfertas: Int = 0,
+    @SerializedName("ofertas_nuevas") val ofertasNuevas: Int = 0,
     @SerializedName("realiza_envios") val realizaEnvios: Boolean = false,
     @SerializedName("envio_gratis") val envioGratis: Boolean = false,
     @SerializedName("costo_envio") val costoEnvio: Double? = null,

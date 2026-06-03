@@ -1,6 +1,7 @@
 package com.piku.app.data.repository
 
 import android.content.Context
+import android.net.Uri
 import com.piku.app.data.model.Comercio
 import com.piku.app.data.model.ComercioDetalleResponse
 import com.piku.app.data.model.ConfiguracionEnvios
@@ -9,8 +10,13 @@ import com.piku.app.data.model.CanjeComercioItem
 import com.piku.app.data.model.GenerarQrRequest
 import com.piku.app.data.model.GenerarQrResponse
 import com.piku.app.data.model.NotificacionComercio
+import com.piku.app.data.model.PerfilResponse
 import com.piku.app.data.network.ApiErrorParser
 import com.piku.app.data.network.RetrofitInstance
+import com.piku.app.utils.ImageUploadHelper
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.MultipartBody
+import okhttp3.RequestBody.Companion.toRequestBody
 import retrofit2.HttpException
 import com.piku.app.utils.DistanceCalculator
 
@@ -31,6 +37,25 @@ class ComercioRepository(private val context: Context) {
 
     suspend fun detalleComercio(id: String): ComercioDetalleResponse =
         api.detalleComercio(id)
+
+    suspend fun obtenerPerfil(): PerfilResponse {
+        try {
+            return api.perfil()
+        } catch (e: HttpException) {
+            throw Exception(ApiErrorParser.mensaje(e), e)
+        }
+    }
+
+    suspend fun subirLogo(uri: Uri): String {
+        try {
+            val bytes = ImageUploadHelper.comprimirImagen(context, uri)
+            val body = bytes.toRequestBody("image/jpeg".toMediaTypeOrNull())
+            val part = MultipartBody.Part.createFormData("file", "logo.jpg", body)
+            return api.subirLogoComercio(part).logoUrl
+        } catch (e: HttpException) {
+            throw Exception(ApiErrorParser.mensaje(e), e)
+        }
+    }
 
     suspend fun obtenerConfigEnvios(): ConfiguracionEnvios {
         try {

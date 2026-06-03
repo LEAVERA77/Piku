@@ -41,6 +41,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import android.widget.Toast
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -48,6 +49,7 @@ import com.piku.app.ui.theme.PikuTheme
 import com.piku.app.data.model.OfertaComercio
 import com.piku.app.data.repository.OfertaRepository
 import com.piku.app.ui.components.PikuPhotoImage
+import com.piku.app.ui.media.PikuImages
 import com.piku.app.ui.theme.NaranjaPiku
 import com.piku.app.ui.theme.VerdePiku
 import kotlinx.coroutines.launch
@@ -153,6 +155,11 @@ fun GestionOfertasScreen(
                                 scope.launch {
                                     try {
                                         repo.actualizar(oferta.id, mapOf("activo" to false))
+                                        Toast.makeText(
+                                            context,
+                                            "Publicación pausada",
+                                            Toast.LENGTH_SHORT
+                                        ).show()
                                         recargar()
                                     } catch (e: Exception) {
                                         mensaje = e.message
@@ -195,6 +202,11 @@ fun GestionOfertasScreen(
                                     scope.launch {
                                         try {
                                             repo.actualizar(oferta.id, mapOf("activo" to true))
+                                            Toast.makeText(
+                                                context,
+                                                "Publicación activada",
+                                                Toast.LENGTH_SHORT
+                                            ).show()
                                             recargar()
                                         } catch (e: Exception) {
                                             mensaje = e.message

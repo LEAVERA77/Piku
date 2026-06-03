@@ -27,6 +27,7 @@ import com.piku.app.data.model.SaldoApiResponse
 import com.piku.app.data.model.GoogleLoginRequest
 import com.piku.app.data.model.ImagenUploadResponse
 import com.piku.app.data.model.LoginRequest
+import com.piku.app.data.model.LogoUploadResponse
 import com.piku.app.data.model.LoginResponse
 import com.piku.app.data.model.OfertaStatsResponse
 import com.piku.app.data.model.RegistroComercioGoogleRequest
@@ -176,6 +177,10 @@ interface PikuApiService {
 
     @GET("api/comercio/estadisticas")
     suspend fun estadisticasComercio(): Map<String, Any>
+
+    @Multipart
+    @POST("api/comercio/logo")
+    suspend fun subirLogoComercio(@Part file: MultipartBody.Part): LogoUploadResponse
 
     @GET("api/comercio/envios")
     suspend fun obtenerConfigEnvios(): ConfiguracionEnviosResponse
