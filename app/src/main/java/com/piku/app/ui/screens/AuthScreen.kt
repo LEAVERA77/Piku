@@ -45,7 +45,13 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.piku.app.R
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.ui.text.font.FontWeight
+import com.piku.app.data.model.PlanSuscripcion
+import com.piku.app.ui.theme.NaranjaPiku
 import com.piku.app.ui.theme.PikuTheme
+import com.piku.app.ui.theme.VerdePiku
 import androidx.fragment.app.FragmentActivity
 import com.piku.app.data.config.ConfigLoader
 import com.piku.app.data.datastore.AppPreferences
@@ -153,6 +159,7 @@ fun AuthScreen(
     var codigoInvitacion by remember {
         mutableStateOf(ConfigLoader.codigoInvitacionComercio(context).orEmpty())
     }
+    var planComercio by remember { mutableStateOf("gratuito") }
     var error by remember { mutableStateOf<String?>(null) }
     var cargando by remember { mutableStateOf(false) }
     var puedeHuella by remember { mutableStateOf(false) }
@@ -246,7 +253,8 @@ fun AuthScreen(
                     lat = mapLat,
                     lon = mapLon,
                     tipoComercio = tipoComercioId,
-                    codigoInvitacion = codigoInvitacion
+                    codigoInvitacion = codigoInvitacion,
+                    plan = planComercio
                 )
             } else {
                 repo.loginGoogle(idToken)
@@ -560,6 +568,89 @@ fun AuthScreen(
                             mapLon = lo
                         }
                     )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        "Requisitos para comerciantes",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        "• Código de invitación válido\n" +
+                            "• Teléfono de contacto del local\n" +
+                            "• Dirección completa y pin en el mapa\n" +
+                            "• Tipo de comercio acorde a tu rubro",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        "Elegí tu plan inicial",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    val planesRegistro = remember {
+                        listOf(
+                            PlanSuscripcion("gratuito", "Gratuito", 0.0, 500, 2, false),
+                            PlanSuscripcion("basico", "Básico", 5.0, 5000, 10, false),
+                            PlanSuscripcion("pro", "Pro", 15.0, null, null, true)
+                        )
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        planesRegistro.forEach { plan ->
+                            FilterChip(
+                                selected = planComercio == plan.id,
+                                onClick = { planComercio = plan.id },
+                                label = { Text(plan.nombre) },
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                    }
+                    val planSel = planesRegistro.first { it.id == planComercio }
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 8.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+                        )
+                    ) {
+                        Column(Modifier.padding(12.dp)) {
+                            Text(
+                                planSel.nombre,
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            val precio = if (planSel.precioUsd <= 0) "\$0/mes" else "\$${planSel.precioUsd.toInt()} USD/mes"
+                            Text(precio, color = NaranjaPiku, style = MaterialTheme.typography.bodyMedium)
+                            Text(
+                                "• ${planSel.puntosMes?.let { "$it PP/mes" } ?: "Puntos ilimitados"}",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                            Text(
+                                "• ${planSel.ofertasActivas?.let { "$it ofertas activas" } ?: "Ofertas ilimitadas"}",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                            if (planSel.destacado) {
+                                Text(
+                                    "• Destacado en el mapa",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = VerdePiku
+                                )
+                            }
+                            Text(
+                                "Podés cambiar de plan cuando quieras desde Herramientas → Suscripción.",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(top = 6.dp)
+                            )
+                        }
+                    }
                 }
             }
 
@@ -664,7 +755,8 @@ fun AuthScreen(
                                         lat = mapLat,
                                         lon = mapLon,
                                         tipoComercio = tipoComercioId,
-                                        codigoInvitacion = codigoInvitacion
+                                        codigoInvitacion = codigoInvitacion,
+                                        plan = planComercio
                                     )
                                 } else {
                                     AuthRepository(context).registro(

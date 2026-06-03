@@ -1,7 +1,10 @@
 require('dotenv').config();
 const http = require('http');
+const path = require('path');
+const fs = require('fs');
 const express = require('express');
 const cors = require('cors');
+const { UPLOAD_ROOT } = require('./utils/uploadImagen.util');
 
 const authRoutes = require('./routes/auth.routes');
 const usuarioRoutes = require('./routes/usuario.routes');
@@ -26,6 +29,9 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json({ limit: '2mb' }));
 app.use(express.urlencoded({ extended: true }));
+
+fs.mkdirSync(UPLOAD_ROOT, { recursive: true });
+app.use('/uploads', express.static(UPLOAD_ROOT));
 
 app.get('/health', (req, res) => {
   res.json({
@@ -56,8 +62,14 @@ app.use((req, res) => {
 });
 
 app.use((err, req, res, _next) => {
+  if (err?.code === 'LIMIT_FILE_SIZE') {
+    return res.status(400).json({ error: 'Imagen demasiado grande (máx. 5 MB)' });
+  }
+  if (err?.name === 'MulterError') {
+    return res.status(400).json({ error: err.message || 'Error al subir archivo' });
+  }
   console.error('Error no controlado:', err);
-  res.status(500).json({ error: 'Error interno del servidor' });
+  res.status(500).json({ error: 'Error interno del servidor', detail: err?.message });
 });
 
 async function start() {

@@ -16,6 +16,7 @@ object ComerciosCerritoDemo {
             lat = -31.5830,
             lon = -60.0660,
             tipoComercio = "cafeteria",
+            categoria = TipoComercio.CAFETERIA.categoria,
             iconoEmoji = "☕",
             realizaEnvios = true,
             cantidadOfertas = 3
@@ -27,6 +28,7 @@ object ComerciosCerritoDemo {
             lat = -31.5840,
             lon = -60.0655,
             tipoComercio = "restaurante",
+            categoria = TipoComercio.RESTAURANTE.categoria,
             iconoEmoji = "🍽️",
             realizaEnvios = true,
             cantidadOfertas = 3
@@ -38,6 +40,7 @@ object ComerciosCerritoDemo {
             lat = -31.5825,
             lon = -60.0675,
             tipoComercio = "farmacia",
+            categoria = TipoComercio.FARMACIA.categoria,
             iconoEmoji = "💊",
             realizaEnvios = true,
             cantidadOfertas = 2
@@ -49,6 +52,7 @@ object ComerciosCerritoDemo {
             lat = -31.5820,
             lon = -60.0658,
             tipoComercio = "ropa",
+            categoria = TipoComercio.ROPA.categoria,
             iconoEmoji = "👕",
             realizaEnvios = true,
             cantidadOfertas = 2
@@ -60,6 +64,7 @@ object ComerciosCerritoDemo {
             lat = -31.5845,
             lon = -60.0680,
             tipoComercio = "supermercado",
+            categoria = TipoComercio.SUPERMERCADO.categoria,
             iconoEmoji = "🛒",
             realizaEnvios = true,
             cantidadOfertas = 3

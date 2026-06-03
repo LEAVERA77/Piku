@@ -216,6 +216,16 @@ async function upsertComercio(hash, data) {
         comercioId,
       ]
     );
+    if (usuarioId && comercioId) {
+      await query('UPDATE piku_usuarios SET comercio_id = $1, updated_at = NOW() WHERE id = $2', [
+        comercioId,
+        usuarioId,
+      ]);
+      await query('UPDATE piku_comercios SET usuario_id = $1, updated_at = NOW() WHERE id = $2', [
+        usuarioId,
+        comercioId,
+      ]);
+    }
     console.log(`↪ Actualizado en Cerrito: ${data.nombre} (${data.lat}, ${data.lon})`);
   } else {
     const comercioInsert = await query(

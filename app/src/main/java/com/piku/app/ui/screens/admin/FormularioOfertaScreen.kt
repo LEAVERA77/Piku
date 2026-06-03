@@ -22,6 +22,8 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -87,6 +89,7 @@ fun FormularioOfertaScreen(
     var idArticulo by remember { mutableStateOf(ofertaId?.takeIf { it != "new" }) }
     var ofertaActual by remember { mutableStateOf<OfertaComercio?>(null) }
     var listoParaSalir by remember { mutableStateOf(esEdicion) }
+    var confirmEliminar by remember { mutableStateOf(false) }
 
     val elegirPortada = rememberImagePicker { uri -> imagenLocal = uri }
 
@@ -271,6 +274,16 @@ fun FormularioOfertaScreen(
                 modifier = Modifier.fillMaxWidth(),
                 habilitado = !cargando
             )
+            if (esEdicion && idArticulo != null) {
+                Spacer(Modifier.height(8.dp))
+                BotonPiku(
+                    texto = "Eliminar publicación",
+                    onClick = { confirmEliminar = true },
+                    modifier = Modifier.fillMaxWidth(),
+                    estilo = EstiloBotonPiku.CONTORNO,
+                    habilitado = !cargando
+                )
+            }
             if (listoParaSalir) {
                 Spacer(Modifier.height(8.dp))
                 BotonPiku(
@@ -283,6 +296,40 @@ fun FormularioOfertaScreen(
             }
             Spacer(Modifier.height(32.dp))
         }
+    }
+
+    if (confirmEliminar && idArticulo != null) {
+        AlertDialog(
+            onDismissRequest = { confirmEliminar = false },
+            title = { Text("Eliminar publicación") },
+            text = { Text("¿Eliminar este artículo del catálogo? Esta acción no se puede deshacer.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        val id = idArticulo!!
+                        confirmEliminar = false
+                        scope.launch {
+                            cargando = true
+                            try {
+                                repo.eliminar(id)
+                                onGuardado()
+                            } catch (e: Exception) {
+                                error = e.message
+                            } finally {
+                                cargando = false
+                            }
+                        }
+                    }
+                ) {
+                    Text("Eliminar", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmEliminar = false }) {
+                    Text("Cancelar")
+                }
+            }
+        )
     }
 }
 

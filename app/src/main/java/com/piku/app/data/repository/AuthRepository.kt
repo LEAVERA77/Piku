@@ -76,7 +76,8 @@ class AuthRepository(private val context: Context) {
         lat: Double? = null,
         lon: Double? = null,
         tipoComercio: String,
-        codigoInvitacion: String? = null
+        codigoInvitacion: String? = null,
+        plan: String = "gratuito"
     ): LoginResponse {
         val tipo = com.piku.app.data.TipoComercio.desdeId(tipoComercio)
         val response = apiCall {
@@ -96,7 +97,8 @@ class AuthRepository(private val context: Context) {
                     lon = lon,
                     tipoComercio = tipo.id,
                     categoria = tipo.categoria,
-                    codigoInvitacion = codigoInvitacion?.trim()?.ifEmpty { null }
+                    codigoInvitacion = codigoInvitacion?.trim()?.ifEmpty { null },
+                    plan = plan
                 )
             )
         }
@@ -117,7 +119,8 @@ class AuthRepository(private val context: Context) {
         lat: Double? = null,
         lon: Double? = null,
         tipoComercio: String,
-        codigoInvitacion: String? = null
+        codigoInvitacion: String? = null,
+        plan: String = "gratuito"
     ): LoginResponse {
         val tipo = com.piku.app.data.TipoComercio.desdeId(tipoComercio)
         val response = apiCall {
@@ -136,7 +139,8 @@ class AuthRepository(private val context: Context) {
                     lon = lon,
                     tipoComercio = tipo.id,
                     categoria = tipo.categoria,
-                    codigoInvitacion = codigoInvitacion?.trim()?.ifEmpty { null }
+                    codigoInvitacion = codigoInvitacion?.trim()?.ifEmpty { null },
+                    plan = plan
                 )
             )
         }

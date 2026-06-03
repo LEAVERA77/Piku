@@ -13,6 +13,8 @@ const {
 const { validarTelefonoComercio } = require('../utils/telefono.util');
 const { otorgarBonoBienvenida, procesarInvitacionAmigo, asegurarCodigoReferido, saldoSeguro } = require('../services/puntos.service');
 const { verificarIdTokenGoogle } = require('../utils/google.token.util');
+const { normalizarPlan } = require('../constants/planes.constants');
+const { cambiarPlanComercio } = require('../services/suscripcion.service');
 
 /**
  * Publica el comercio como Note en OSM (no bloquea el registro si falla).
@@ -161,6 +163,7 @@ async function registroComercio(req, res) {
     const codigoInvitacion = sanitizarInput(req.body.codigoInvitacion || req.body.codigo_invitacion, 64);
     const tipoRaw = req.body.tipoComercio || req.body.tipo_comercio || req.body.categoria;
     const tipoInfo = normalizarTipoComercio(tipoRaw);
+    const planElegido = normalizarPlan(req.body.plan || req.body.planSuscripcion);
 
     if (!validarEmail(email)) return responderError(res, 400, 'Email inválido');
     if (password.length < 6) return responderError(res, 400, 'La contraseña debe tener al menos 6 caracteres');
@@ -239,6 +242,7 @@ async function registroComercio(req, res) {
       addComercio('tipo_comercio', tipoInfo.id);
       addComercio('icono_emoji', tipoInfo.emoji);
       addComercio('telefono_contacto', telefonoComercio);
+      addComercio('plan', planElegido);
 
       const comercioPlaceholders = comercioVals.map((_, i) => `$${i + 1}`).join(', ');
       const comercioReturning = ['id', 'nombre'];
@@ -311,6 +315,12 @@ async function registroComercio(req, res) {
 
       return { usuario, comercio };
     });
+
+    try {
+      await cambiarPlanComercio(resultado.comercio.id, planElegido);
+    } catch (planErr) {
+      console.warn('Plan inicial comercio:', planErr.message);
+    }
 
     const token = signToken({
       userId: resultado.usuario.id,
@@ -391,6 +401,7 @@ async function registroComercioGoogle(req, res) {
     const codigoInvitacion = sanitizarInput(req.body.codigoInvitacion || req.body.codigo_invitacion, 64);
     const tipoRaw = req.body.tipoComercio || req.body.tipo_comercio || req.body.categoria;
     const tipoInfo = normalizarTipoComercio(tipoRaw);
+    const planElegido = normalizarPlan(req.body.plan || req.body.planSuscripcion);
 
     if (!nombre || !nombreComercio) {
       return responderError(res, 400, 'Nombre del responsable y del comercio son requeridos');
@@ -483,6 +494,7 @@ async function registroComercioGoogle(req, res) {
       addComercio('tipo_comercio', tipoInfo.id);
       addComercio('icono_emoji', tipoInfo.emoji);
       addComercio('telefono_contacto', telefonoComercio);
+      addComercio('plan', planElegido);
 
       const comercioPlaceholders = comercioVals.map((_, i) => `$${i + 1}`).join(', ');
       const comercioReturning = ['id', 'nombre'];
@@ -563,6 +575,12 @@ async function registroComercioGoogle(req, res) {
 
       return { usuario, comercio };
     });
+
+    try {
+      await cambiarPlanComercio(resultado.comercio.id, planElegido);
+    } catch (planErr) {
+      console.warn('Plan inicial comercio (Google):', planErr.message);
+    }
 
     const token = signToken({
       userId: resultado.usuario.id,

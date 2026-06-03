@@ -11,6 +11,7 @@ import com.google.android.gms.tasks.CancellationTokenSource
 import android.util.Log
 import com.piku.app.data.CerritoGeo
 import com.piku.app.data.ComerciosCerritoDemo
+import com.piku.app.data.TipoComercio
 import com.piku.app.data.model.Comercio
 import com.piku.app.data.model.Rubro
 import com.piku.app.data.nominatim.NominatimAddress
@@ -87,14 +88,22 @@ private const val ZOOM_CERRITO_CERCA = 17.0
 
 private const val TAG = "MapaViewModel"
 
+private fun normalizarRubro(valor: String?): String =
+    valor?.trim()?.lowercase()?.replace("é", "e")?.replace("í", "i") ?: ""
+
 private fun coincideRubro(comercio: Comercio, catalogo: List<Rubro>, seleccionados: Set<String>): Boolean {
-    val cat = comercio.categoria?.lowercase()?.trim()?.replace("é", "e") ?: "otros"
+    val tipoCanon = TipoComercio.desdeId(comercio.tipoComercio ?: comercio.categoria)
+    val cat = normalizarRubro(comercio.categoria).ifBlank { normalizarRubro(tipoCanon.categoria) }
+    val tipoId = normalizarRubro(comercio.tipoComercio).ifBlank { normalizarRubro(tipoCanon.id) }
     val rubrosActivos = catalogo.filter { seleccionados.contains(it.id) }
     return rubrosActivos.any { rubro ->
-        rubro.categorias.any { c ->
-            val norm = c.lowercase().replace("é", "e")
-            cat == norm || cat.contains(norm)
-        }
+        rubro.id == tipoId ||
+            rubro.id == cat ||
+            rubro.categorias.any { c ->
+                val norm = normalizarRubro(c)
+                cat == norm || cat.contains(norm) || norm.contains(cat) ||
+                    tipoId == norm || tipoId.contains(norm) || norm.contains(tipoId)
+            }
     }
 }
 

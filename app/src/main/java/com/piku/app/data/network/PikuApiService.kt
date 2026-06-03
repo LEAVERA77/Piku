@@ -40,6 +40,8 @@ import com.piku.app.data.model.RegistroComercioRequest
 import com.piku.app.data.model.GenerarQrRequest
 import com.piku.app.data.model.GenerarQrResponse
 import com.piku.app.data.model.RegistroRequest
+import com.piku.app.data.model.ReglasPuntosResponse
+import com.piku.app.data.model.ReglasPuntosUpdateResponse
 import com.piku.app.data.model.ValidarQrRequest
 import com.piku.app.data.model.ValidarQrResponse
 import com.piku.app.data.model.RecompensaSingleResponse
@@ -238,4 +240,10 @@ interface PikuApiService {
 
     @PUT("api/comercio/suscripcion/plan")
     suspend fun cambiarPlanSuscripcion(@Body body: CambiarPlanRequest): CambiarPlanResponse
+
+    @GET("api/comercio/reglas")
+    suspend fun obtenerReglasPuntos(): ReglasPuntosResponse
+
+    @PUT("api/comercio/reglas")
+    suspend fun actualizarReglasPuntos(@Body body: Map<String, @JvmSuppressWildcards Any?>): ReglasPuntosUpdateResponse
 }

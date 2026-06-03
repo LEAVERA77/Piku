@@ -18,6 +18,8 @@ import com.piku.app.data.model.SuscripcionEstadoResponse
 import com.piku.app.data.model.GenerarQrRequest
 import com.piku.app.data.model.GenerarQrResponse
 import com.piku.app.data.model.NotificacionComercio
+import com.piku.app.data.model.ReglasPuntos
+import com.piku.app.data.model.ReglasPuntosResponse
 import com.piku.app.data.model.PerfilResponse
 import com.piku.app.data.network.ApiErrorParser
 import com.piku.app.data.network.RetrofitInstance
@@ -192,6 +194,34 @@ class ComercioRepository(private val context: Context) {
     suspend fun cambiarPlan(plan: String): CambiarPlanResponse {
         try {
             return api.cambiarPlanSuscripcion(CambiarPlanRequest(plan))
+        } catch (e: HttpException) {
+            throw Exception(ApiErrorParser.mensaje(e), e)
+        }
+    }
+
+    suspend fun obtenerReglasPuntos(): ReglasPuntosResponse {
+        try {
+            return api.obtenerReglasPuntos()
+        } catch (e: HttpException) {
+            throw Exception(ApiErrorParser.mensaje(e), e)
+        }
+    }
+
+    suspend fun guardarReglasPuntos(
+        montoMinimo: Double,
+        puntosFijos: Int,
+        maxPuntosPorDia: Int,
+        activo: Boolean
+    ): ReglasPuntos {
+        try {
+            val body = mapOf(
+                "montoMinimo" to montoMinimo,
+                "puntosFijos" to puntosFijos,
+                "maxPuntosPorDia" to maxPuntosPorDia,
+                "activo" to activo
+            )
+            return api.actualizarReglasPuntos(body).reglas
+                ?: throw Exception("Respuesta inválida del servidor")
         } catch (e: HttpException) {
             throw Exception(ApiErrorParser.mensaje(e), e)
         }

@@ -2,6 +2,7 @@ package com.piku.app.data
 
 import com.piku.app.data.model.Comercio
 import com.piku.app.utils.DistanceCalculator
+import com.piku.app.data.TipoComercio
 
 /** Geografía de prueba: Cerrito, Entre Ríos. */
 object CerritoGeo {
@@ -50,8 +51,13 @@ object CerritoGeo {
                     logoUrl = api.logoUrl,
                     realizaEnvios = api.realizaEnvios,
                     tipoComercio = api.tipoComercio ?: demo.tipoComercio,
+                    categoria = api.categoria
+                        ?: demo.categoria
+                        ?: TipoComercio.desdeId(demo.tipoComercio).categoria,
                     iconoEmoji = api.iconoEmoji ?: demo.iconoEmoji,
-                    puntosMinCanje = api.puntosMinCanje
+                    puntosMinCanje = api.puntosMinCanje,
+                    plan = api.plan ?: demo.plan,
+                    destacado = api.destacado || demo.destacado
                 )
             }
         }

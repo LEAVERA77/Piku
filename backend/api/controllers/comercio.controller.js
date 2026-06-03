@@ -1,5 +1,5 @@
 const { query } = require('../services/neon.service');
-const { uploadImage, configurado: cloudinaryOk } = require('../services/cloudinary.service');
+const { subirImagenBuffer } = require('../utils/uploadImagen.util');
 const { sanitizarInput, responderError } = require('../utils/helpers');
 const { columnasTabla, tiene } = require('../utils/schema.util');
 const { validarTelefonoComercio } = require('../utils/telefono.util');
@@ -29,6 +29,18 @@ const { PLAN_IDS } = require('../constants/planes.constants');
 
 function getComercioId(req) {
   return req.comercioId || req.user?.comercio_id || null;
+}
+
+async function updateRecompensaPortada(id, url) {
+  const cols = await columnasTabla('piku_recompensas');
+  let sql = 'UPDATE piku_recompensas SET imagen_url = $1';
+  if (tiene(cols, 'updated_at')) sql += ', updated_at = NOW()';
+  sql += ' WHERE id = $2 RETURNING *';
+  return query(sql, [url, id]);
+}
+
+async function subirArchivoOferta(req, folder = 'ofertas') {
+  return subirImagenBuffer(req.file.buffer, req.file.mimetype, folder);
 }
 
 function debeActualizarCampo(val) {
@@ -95,17 +107,22 @@ async function updateReglasPuntos(req, res) {
     const maxDia = req.body.maxPuntosPorDia ?? req.body.max_puntos_por_dia ?? 500;
     const activo = req.body.activo !== false;
 
+    const cols = await columnasTabla('piku_reglas_puntos');
+    const sets = [
+      'puntos_por_peso = EXCLUDED.puntos_por_peso',
+      'monto_minimo = EXCLUDED.monto_minimo',
+      'puntos_fijos = EXCLUDED.puntos_fijos',
+      'max_puntos_por_dia = EXCLUDED.max_puntos_por_dia',
+      'activo = EXCLUDED.activo',
+    ];
+    if (tiene(cols, 'updated_at')) sets.push('updated_at = NOW()');
+
     const result = await query(
       `INSERT INTO piku_reglas_puntos
-       (comercio_id, puntos_por_peso, monto_minimo, puntos_fijos, max_puntos_por_dia, activo, updated_at)
-       VALUES ($1, $2, $3, $4, $5, $6, NOW())
+       (comercio_id, puntos_por_peso, monto_minimo, puntos_fijos, max_puntos_por_dia, activo)
+       VALUES ($1, $2, $3, $4, $5, $6)
        ON CONFLICT (comercio_id) DO UPDATE SET
-         puntos_por_peso = EXCLUDED.puntos_por_peso,
-         monto_minimo = EXCLUDED.monto_minimo,
-         puntos_fijos = EXCLUDED.puntos_fijos,
-         max_puntos_por_dia = EXCLUDED.max_puntos_por_dia,
-         activo = EXCLUDED.activo,
-         updated_at = NOW()
+         ${sets.join(', ')}
        RETURNING *`,
       [comercioId, 1, montoMinimo, puntosFijos, maxDia, activo]
     );
@@ -401,7 +418,6 @@ async function uploadImagenRecompensa(req, res) {
     const comercioId = getComercioId(req);
     const { id } = req.params;
     if (!req.file) return responderError(res, 400, 'Archivo de imagen requerido');
-    if (!cloudinaryOk) return responderError(res, 503, 'Cloudinary no configurado en el servidor');
 
     const existe = await query(
       'SELECT id FROM piku_recompensas WHERE id = $1 AND comercio_id = $2',
@@ -409,13 +425,8 @@ async function uploadImagenRecompensa(req, res) {
     );
     if (!existe.rows.length) return responderError(res, 404, 'Recompensa no encontrada');
 
-    const dataUri = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
-    const { url } = await uploadImage(dataUri, 'ofertas');
-
-    const updated = await query(
-      'UPDATE piku_recompensas SET imagen_url = $1, updated_at = NOW() WHERE id = $2 RETURNING *',
-      [url, id]
-    );
+    const url = await subirArchivoOferta(req);
+    const updated = await updateRecompensaPortada(id, url);
 
     const recompensa = await adjuntarImagenesARecompensa(updated.rows[0]);
     return res.json({ mensaje: 'Portada actualizada', imagen_url: url, recompensa });
@@ -451,7 +462,6 @@ async function uploadImagenGaleria(req, res) {
     const comercioId = getComercioId(req);
     const { id } = req.params;
     if (!req.file) return responderError(res, 400, 'Archivo de imagen requerido');
-    if (!cloudinaryOk) return responderError(res, 503, 'Cloudinary no configurado en el servidor');
     if (!(await tablaImagenesDisponible())) {
       return responderError(res, 503, 'Galería no disponible (ejecutá migraciones)');
     }
@@ -462,8 +472,7 @@ async function uploadImagenGaleria(req, res) {
     );
     if (!rec.rows.length) return responderError(res, 404, 'Recompensa no encontrada');
 
-    const dataUri = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
-    const { url } = await uploadImage(dataUri, 'ofertas');
+    const url = await subirArchivoOferta(req);
     const orden = await siguienteOrdenGaleria(id);
     const insert = await query(
       `INSERT INTO piku_recompensa_imagenes (recompensa_id, imagen_url, orden)
@@ -478,10 +487,7 @@ async function uploadImagenGaleria(req, res) {
       !rec.rows[0].imagen_url;
 
     if (comoPortada) {
-      await query('UPDATE piku_recompensas SET imagen_url = $1, updated_at = NOW() WHERE id = $2', [
-        url,
-        id,
-      ]);
+      await updateRecompensaPortada(id, url);
     }
 
     const recompensa = await adjuntarImagenesARecompensa(
@@ -527,10 +533,7 @@ async function eliminarImagenGaleria(req, res) {
     if (portada === img.rows[0].imagen_url) {
       const rest = await listarImagenesGaleria(id);
       portada = rest[0]?.imagen_url || null;
-      await query('UPDATE piku_recompensas SET imagen_url = $1, updated_at = NOW() WHERE id = $2', [
-        portada,
-        id,
-      ]);
+      await updateRecompensaPortada(id, portada);
     }
 
     const recompensa = await adjuntarImagenesARecompensa(
@@ -570,10 +573,7 @@ async function establecerPortadaRecompensa(req, res) {
     }
     if (!url) return responderError(res, 400, 'imagenId o imagenUrl requerido');
 
-    const updated = await query(
-      'UPDATE piku_recompensas SET imagen_url = $1, updated_at = NOW() WHERE id = $2 RETURNING *',
-      [url, id]
-    );
+    const updated = await updateRecompensaPortada(id, url);
     const recompensa = await adjuntarImagenesARecompensa(updated.rows[0]);
     return res.json({ mensaje: 'Portada actualizada', recompensa });
   } catch (error) {
@@ -1041,15 +1041,15 @@ async function uploadLogoComercio(req, res) {
     const comercioId = getComercioId(req);
     if (!comercioId) return responderError(res, 403, 'Sin comercio asociado a tu cuenta');
     if (!req.file) return responderError(res, 400, 'Archivo de imagen requerido');
-    if (!cloudinaryOk) return responderError(res, 503, 'Cloudinary no configurado en el servidor');
 
-    const dataUri = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
-    const { url } = await uploadImage(dataUri, 'logos');
+    const url = await subirImagenBuffer(req.file.buffer, req.file.mimetype, 'logos');
 
-    const updated = await query(
-      'UPDATE piku_comercios SET logo_url = $1, updated_at = NOW() WHERE id = $2 RETURNING id, nombre, logo_url',
-      [url, comercioId]
-    );
+    const cols = await columnasTabla('piku_comercios');
+    let sql = 'UPDATE piku_comercios SET logo_url = $1';
+    if (tiene(cols, 'updated_at')) sql += ', updated_at = NOW()';
+    sql += ' WHERE id = $2 RETURNING id, nombre, logo_url';
+
+    const updated = await query(sql, [url, comercioId]);
     if (!updated.rows.length) return responderError(res, 404, 'Comercio no encontrado');
 
     invalidarCacheComerciosSelect();

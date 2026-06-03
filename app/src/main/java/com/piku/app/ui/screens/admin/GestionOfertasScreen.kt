@@ -23,6 +23,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.AlertDialog
@@ -81,6 +82,7 @@ fun GestionOfertasScreen(
     var mensaje by remember { mutableStateOf<String?>(null) }
     var cargando by remember { mutableStateOf(true) }
     var statsDialog by remember { mutableStateOf<StatsDialogState?>(null) }
+    var confirmEliminar by remember { mutableStateOf<OfertaComercio?>(null) }
 
     fun recargar() {
         scope.launch {
@@ -112,7 +114,6 @@ fun GestionOfertasScreen(
 
     val activas = lista.filter { it.activo }
     val inactivas = lista.filter { !it.activo }
-
     statsDialog?.let { dialog ->
         AlertDialog(
             onDismissRequest = { statsDialog = null },
@@ -138,6 +139,40 @@ fun GestionOfertasScreen(
             confirmButton = {
                 TextButton(onClick = { statsDialog = null }) {
                     Text("Cerrar")
+                }
+            }
+        )
+    }
+
+    confirmEliminar?.let { oferta ->
+        AlertDialog(
+            onDismissRequest = { confirmEliminar = null },
+            title = { Text("Eliminar publicación") },
+            text = {
+                Text("¿Eliminar «${oferta.nombre}»? Esta acción no se puede deshacer.")
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        val id = oferta.id
+                        confirmEliminar = null
+                        scope.launch {
+                            try {
+                                repo.eliminar(id)
+                                Toast.makeText(context, "Publicación eliminada", Toast.LENGTH_SHORT).show()
+                                recargar()
+                            } catch (e: Exception) {
+                                mensaje = e.message
+                            }
+                        }
+                    }
+                ) {
+                    Text("Eliminar", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmEliminar = null }) {
+                    Text("Cancelar")
                 }
             }
         )
@@ -217,7 +252,8 @@ fun GestionOfertasScreen(
                                     }
                                 }
                             },
-                            onEstadisticas = { mostrarEstadisticas(oferta) }
+                            onEstadisticas = { mostrarEstadisticas(oferta) },
+                            onEliminar = { confirmEliminar = oferta }
                         )
                     }
                     if (inactivas.isNotEmpty()) {
@@ -251,7 +287,8 @@ fun GestionOfertasScreen(
                                         }
                                     }
                                 },
-                                onEstadisticas = { mostrarEstadisticas(oferta) }
+                                onEstadisticas = { mostrarEstadisticas(oferta) },
+                                onEliminar = { confirmEliminar = oferta }
                             )
                         }
                     }
@@ -287,7 +324,8 @@ private fun OfertaAdminCard(
     onEditar: () -> Unit,
     onDuplicar: () -> Unit,
     onToggleActiva: () -> Unit,
-    onEstadisticas: () -> Unit
+    onEstadisticas: () -> Unit,
+    onEliminar: () -> Unit
 ) {
     val tipoLabel = when (oferta.tipo) {
         "descuento_porcentaje" -> "Descuento ${oferta.porcentajeDescuento ?: 0}%"
@@ -344,6 +382,15 @@ private fun OfertaAdminCard(
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                    val vigenciaInicio = oferta.fechaInicio?.take(10)
+                    val vigenciaFin = oferta.fechaFin?.take(10)
+                    if (!vigenciaInicio.isNullOrBlank() || !vigenciaFin.isNullOrBlank()) {
+                        Text(
+                            "Vigencia: ${vigenciaInicio ?: "—"} → ${vigenciaFin ?: "—"}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                     oferta.descripcion?.takeIf { it.isNotBlank() }?.let { desc ->
                         Spacer(Modifier.height(2.dp))
                         Text(
@@ -404,6 +451,16 @@ private fun OfertaAdminCard(
                         if (oferta.activo) "Pausar" else "Activar",
                         color = NaranjaPiku
                     )
+                }
+                TextButton(onClick = onEliminar) {
+                    Icon(
+                        Icons.Default.Delete,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                        tint = MaterialTheme.colorScheme.error
+                    )
+                    Spacer(Modifier.width(4.dp))
+                    Text("Eliminar", color = MaterialTheme.colorScheme.error)
                 }
             }
         }

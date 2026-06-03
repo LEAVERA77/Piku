@@ -31,7 +31,8 @@ data class RegistroComercioRequest(
     val lon: Double? = null,
     val tipoComercio: String? = null,
     val categoria: String? = null,
-    val codigoInvitacion: String? = null
+    val codigoInvitacion: String? = null,
+    val plan: String? = null
 )
 
 data class RegistroComercioGoogleRequest(
@@ -48,5 +49,6 @@ data class RegistroComercioGoogleRequest(
     val lon: Double? = null,
     val tipoComercio: String? = null,
     val categoria: String? = null,
-    val codigoInvitacion: String? = null
+    val codigoInvitacion: String? = null,
+    val plan: String? = null
 )
