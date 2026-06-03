@@ -44,10 +44,11 @@ import com.piku.app.ui.PikuChatSugerencias
 import com.piku.app.ui.components.CharlaConPikuSheet
 import com.piku.app.ui.components.MapaPanelCompacto
 import com.piku.app.data.model.RecompensaPublica
-import com.piku.app.data.repository.MapaRepository
+import com.piku.app.data.OfertasCerritoDemo
 import com.piku.app.ui.components.MarkerInfoBottomSheet
 import com.piku.app.ui.components.ComercioBottomSheet
 import com.piku.app.ui.components.OsmdroidMapView
+import com.piku.app.data.repository.MapaRepository
 import com.piku.app.ui.viewmodel.MapaViewModel
 
 @OptIn(ExperimentalPermissionsApi::class, ExperimentalMaterial3Api::class)
@@ -203,9 +204,13 @@ fun MapaScreen(
         }
         cargandoOfertas = true
         try {
-            ofertasPin = mapaRepo.ofertasComercio(c.id).ofertas
+            ofertasPin = if (c.esDemo()) {
+                OfertasCerritoDemo.paraComercio(c.id)
+            } else {
+                mapaRepo.ofertasComercio(c.id).ofertas
+            }
         } catch (_: Exception) {
-            ofertasPin = emptyList()
+            ofertasPin = if (c.esDemo()) OfertasCerritoDemo.paraComercio(c.id) else emptyList()
         } finally {
             cargandoOfertas = false
         }

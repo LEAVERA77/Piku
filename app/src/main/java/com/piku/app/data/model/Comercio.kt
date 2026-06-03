@@ -28,6 +28,8 @@ data class Comercio(
 ) {
     fun esOpenStreetMap(): Boolean = id.startsWith("osm:")
 
+    fun esDemo(): Boolean = id.startsWith("demo:")
+
     fun textoEnvio(): String? {
         if (!realizaEnvios) return null
         if (envioGratis) return "📦 Envíos gratis"
