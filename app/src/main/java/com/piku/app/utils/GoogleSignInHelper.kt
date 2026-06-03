@@ -8,6 +8,7 @@ import com.google.android.gms.auth.api.signin.GoogleSignInClient
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.gms.common.api.ApiException
 import com.piku.app.data.config.ConfigLoader
+import kotlinx.coroutines.tasks.await
 
 object GoogleSignInHelper {
 
@@ -34,6 +35,17 @@ object GoogleSignInHelper {
                 )
             )
         return Result.success(createClient(activity, webClientId).signInIntent)
+    }
+
+    /** Reutiliza la sesión de Google del dispositivo sin abrir UI (rápido si ya ingresó antes). */
+    suspend fun silentIdToken(activity: Activity): String? {
+        val webClientId = webClientId(activity) ?: return null
+        return try {
+            val account = createClient(activity, webClientId).silentSignIn().await()
+            account.idToken?.takeIf { it.isNotBlank() }
+        } catch (_: Exception) {
+            null
+        }
     }
 
     fun idTokenFromResult(context: Context, data: Intent?): Result<String> {

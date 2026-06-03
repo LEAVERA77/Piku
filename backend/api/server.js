@@ -61,6 +61,8 @@ app.use((err, req, res, _next) => {
 async function start() {
   try {
     await runStartupMigrations();
+    const { columnasTabla } = require('./utils/schema.util');
+    await columnasTabla('piku_usuarios');
   } catch (error) {
     console.error('⚠️ Migraciones al inicio:', error.message);
   }

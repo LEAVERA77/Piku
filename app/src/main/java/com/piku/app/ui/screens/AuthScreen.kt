@@ -68,7 +68,6 @@ import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import com.piku.app.utils.BiometricHelper
 import com.piku.app.utils.TelefonoUtil
-import com.piku.app.utils.GoogleAuthHelper
 import com.piku.app.utils.GoogleSignInHelper
 import kotlinx.coroutines.launch
 
@@ -205,7 +204,7 @@ fun AuthScreen(
         error = null
         scope.launch {
             try {
-                val res = block()
+                val res = withContext(Dispatchers.IO) { block() }
                 navegarTrasLogin(res)
             } catch (e: Exception) {
                 error = e.message ?: "Error de autenticación"
@@ -303,9 +302,11 @@ fun AuthScreen(
         scope.launch {
             cargando = true
             error = null
-            val cm = GoogleAuthHelper.obtenerIdToken(act)
-            if (cm.isSuccess) {
-                ejecutarGoogle(cm.getOrThrow())
+            val token = withContext(Dispatchers.IO) {
+                GoogleSignInHelper.silentIdToken(act)
+            }
+            if (!token.isNullOrBlank()) {
+                ejecutarGoogle(token)
                 return@launch
             }
             abrirSelectorGoogle()

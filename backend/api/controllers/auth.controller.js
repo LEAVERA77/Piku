@@ -12,6 +12,7 @@ const {
 } = require('../utils/direccion.registro.util');
 const { validarTelefonoComercio } = require('../utils/telefono.util');
 const { otorgarBonoBienvenida } = require('../services/puntos.service');
+const { verificarIdTokenGoogle } = require('../utils/google.token.util');
 
 /**
  * Publica el comercio como Note en OSM (no bloquea el registro si falla).
@@ -50,43 +51,24 @@ async function camposUsuario(permitePassword = false) {
   return lista;
 }
 
+let cacheUsuarioSelectCols = null;
+let cacheUsuarioTieneGoogleId = null;
+
+async function prepararConsultaUsuario() {
+  if (cacheUsuarioSelectCols != null) {
+    return { selectCols: cacheUsuarioSelectCols, tieneGoogleId: cacheUsuarioTieneGoogleId };
+  }
+  const cols = await columnasTabla('piku_usuarios');
+  cacheUsuarioTieneGoogleId = tiene(cols, 'google_id');
+  cacheUsuarioSelectCols = (await camposUsuario()).join(', ');
+  return { selectCols: cacheUsuarioSelectCols, tieneGoogleId: cacheUsuarioTieneGoogleId };
+}
+
 function normalizarUsuario(row) {
   if (!row) return row;
   if (row.puntos_saldo == null) row.puntos_saldo = 0;
   if (row.activo == null) row.activo = true;
   return row;
-}
-
-const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '';
-const GOOGLE_AUDIENCES = [
-  process.env.GOOGLE_CLIENT_ID,
-  process.env.GOOGLE_IOS_CLIENT_ID,
-  process.env.GOOGLE_ANDROID_CLIENT_ID,
-].filter(Boolean);
-
-async function verificarIdTokenGoogle(idToken) {
-  const { data } = await axios.get('https://oauth2.googleapis.com/tokeninfo', {
-    params: { id_token: idToken },
-    timeout: 10000,
-  });
-
-  if (GOOGLE_AUDIENCES.length && !GOOGLE_AUDIENCES.includes(data.aud)) {
-    const err = new Error('Token de Google no válido para esta app');
-    err.status = 401;
-    throw err;
-  }
-
-  const email = String(data.email || '').toLowerCase();
-  const googleId = String(data.sub || '');
-  const nombre = sanitizarInput(data.name || email.split('@')[0], 255);
-
-  if (!email || !googleId) {
-    const err = new Error('No se pudo verificar la cuenta de Google');
-    err.status = 401;
-    throw err;
-  }
-
-  return { email, googleId, nombre, picture: data.picture || null };
 }
 
 /**
@@ -611,21 +593,21 @@ async function loginGoogle(req, res) {
     const nombre = google.nombre;
     const picture = google.picture;
 
+    const { selectCols, tieneGoogleId } = await prepararConsultaUsuario();
     const cols = await columnasTabla('piku_usuarios');
-    const selectCols = (await camposUsuario()).join(', ');
 
     let result = await query(
       `SELECT ${selectCols} FROM piku_usuarios
-       WHERE ${tiene(cols, 'google_id') ? 'google_id = $1 OR ' : ''}LOWER(email) = $${tiene(cols, 'google_id') ? '2' : '1'} LIMIT 1`,
-      tiene(cols, 'google_id') ? [googleId, email] : [email]
+       WHERE ${tieneGoogleId ? 'google_id = $1 OR ' : ''}LOWER(email) = $${tieneGoogleId ? '2' : '1'} LIMIT 1`,
+      tieneGoogleId ? [googleId, email] : [email]
     );
 
     let usuario;
     if (!result.rows.length) {
-      const hash = await bcrypt.hash(`google:${googleId}:${Date.now()}`, 10);
+      const hash = await bcrypt.hash(`google:${googleId}`, 4);
       const insertCampos = ['email', 'password_hash', 'nombre', 'rol'];
       const insertVals = [email, hash, nombre, 'cliente'];
-      if (tiene(cols, 'google_id')) {
+      if (tieneGoogleId) {
         insertCampos.push('google_id');
         insertVals.push(googleId);
       }
@@ -633,40 +615,37 @@ async function loginGoogle(req, res) {
         insertCampos.push('avatar_url');
         insertVals.push(picture || null);
       }
-      const returning = selectCols;
       const insert = await query(
         `INSERT INTO piku_usuarios (${insertCampos.join(', ')})
          VALUES (${insertVals.map((_, i) => `$${i + 1}`).join(', ')})
-         RETURNING ${returning}`,
+         RETURNING ${selectCols}`,
         insertVals
       );
       usuario = normalizarUsuario(insert.rows[0]);
-      try {
-        const bono = await withTransaction(async (client) =>
-          otorgarBonoBienvenida(client, usuario.id)
-        );
-        if (bono.otorgado) {
-          usuario.puntos_saldo = (usuario.puntos_saldo || 0) + bono.puntos;
-        }
-      } catch (e) {
-        console.warn('bono bienvenida loginGoogle:', e.message);
-      }
+      withTransaction(async (client) => otorgarBonoBienvenida(client, usuario.id)).catch((e) => {
+        console.warn('bono bienvenida loginGoogle async:', e.message);
+      });
     } else {
       usuario = normalizarUsuario(result.rows[0]);
       if (!usuario.activo) return responderError(res, 403, 'Cuenta desactivada');
-      if (!usuario.google_id) {
-        await query('UPDATE piku_usuarios SET google_id = $1, updated_at = NOW() WHERE id = $2', [
-          googleId,
-          usuario.id,
-        ]);
+      const updates = [];
+      const vals = [];
+      if (tieneGoogleId && !usuario.google_id) {
+        updates.push(`google_id = $${vals.length + 1}`);
+        vals.push(googleId);
         usuario.google_id = googleId;
       }
-      if (picture && !usuario.avatar_url) {
-        await query('UPDATE piku_usuarios SET avatar_url = $1, updated_at = NOW() WHERE id = $2', [
-          picture,
-          usuario.id,
-        ]);
+      if (picture && !usuario.avatar_url && tiene(cols, 'avatar_url')) {
+        updates.push(`avatar_url = $${vals.length + 1}`);
+        vals.push(picture);
         usuario.avatar_url = picture;
+      }
+      if (updates.length) {
+        vals.push(usuario.id);
+        query(
+          `UPDATE piku_usuarios SET ${updates.join(', ')}, updated_at = NOW() WHERE id = $${vals.length}`,
+          vals
+        ).catch(() => {});
       }
     }
 
