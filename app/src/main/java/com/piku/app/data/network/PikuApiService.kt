@@ -1,5 +1,9 @@
 package com.piku.app.data.network
 
+import com.piku.app.data.model.ComercioInsightsResponse
+import com.piku.app.data.model.CompletarDesafioResponse
+import com.piku.app.data.model.DesafiosResponse
+import com.piku.app.data.model.RankingComerciosResponse
 import com.piku.app.data.model.ActualizarPerfilRequest
 import com.piku.app.data.model.ActualizarPerfilResponse
 import com.piku.app.data.model.AvatarUploadResponse
@@ -95,6 +99,9 @@ interface PikuApiService {
         @Query("maxLon") maxLon: Double? = null
     ): ComerciosResponse
 
+    @GET("api/public/comercios/ranking")
+    suspend fun rankingComercios(): RankingComerciosResponse
+
     @POST("api/chat-piku")
     suspend fun chatPiku(@Body body: ChatPikuRequest): ChatPikuResponse
 
@@ -130,6 +137,12 @@ interface PikuApiService {
 
     @POST("api/usuario/canjear")
     suspend fun canjearRecompensa(@Body body: CanjeRequest): CanjeResponse
+
+    @GET("api/usuario/desafios")
+    suspend fun desafiosUsuario(): DesafiosResponse
+
+    @POST("api/usuario/desafios/{id}/completar")
+    suspend fun completarDesafio(@Path("id") id: String): CompletarDesafioResponse
 
     @GET("api/comercio/recompensas")
     suspend fun recompensasComercioLista(): RecompensasListResponse
@@ -193,6 +206,9 @@ interface PikuApiService {
 
     @GET("api/comercio/estadisticas")
     suspend fun estadisticasComercio(): Map<String, Any>
+
+    @GET("api/comercio/insights")
+    suspend fun insightsComercio(): ComercioInsightsResponse
 
     @Multipart
     @POST("api/comercio/upload-logo")

@@ -22,6 +22,7 @@ import com.piku.app.ui.screens.comercio.HistorialCanjesScreen
 import com.piku.app.ui.screens.comercio.ConfiguracionEnvioScreen
 import com.piku.app.ui.screens.comercio.NotificacionesComercioScreen
 import com.piku.app.ui.screens.comercio.SuscripcionScreen
+import com.piku.app.ui.screens.comercio.InsightsScreen
 import com.piku.app.ui.screens.comercio.ReglasPuntosScreen
 
 private val rutasConBarra = setOf(
@@ -53,7 +54,8 @@ fun AdminComercioNavGraph(
             composable(AdminComercioDestino.Panel.ruta) {
                 AdminDashboardScreen(
                     onCerrarSesion = onCerrarSesion,
-                    onSuscripcion = { navController.navigate(PikuRutasRoot.AdminSuscripcion) }
+                    onSuscripcion = { navController.navigate(PikuRutasRoot.AdminSuscripcion) },
+                    onInsights = { navController.navigate(PikuRutasRoot.AdminInsights) }
                 )
             }
             composable(AdminComercioDestino.Catalogo.ruta) {
@@ -76,7 +78,8 @@ fun AdminComercioNavGraph(
                     onHistorialCanjes = { navController.navigate(PikuRutasRoot.AdminHistorialCanjes) },
                     onUbicacion = { navController.navigate(PikuRutasRoot.AdminUbicacion) },
                     onSuscripcion = { navController.navigate(PikuRutasRoot.AdminSuscripcion) },
-                    onReglasPuntos = { navController.navigate(PikuRutasRoot.AdminReglasPuntos) }
+                    onReglasPuntos = { navController.navigate(PikuRutasRoot.AdminReglasPuntos) },
+                    onInsights = { navController.navigate(PikuRutasRoot.AdminInsights) }
                 )
             }
             composable(
@@ -109,6 +112,9 @@ fun AdminComercioNavGraph(
             }
             composable(PikuRutasRoot.AdminReglasPuntos) {
                 ReglasPuntosScreen(onBack = { navController.popBackStack() })
+            }
+            composable(PikuRutasRoot.AdminInsights) {
+                InsightsScreen(onBack = { navController.popBackStack() })
             }
         }
     }

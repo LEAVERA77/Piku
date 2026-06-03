@@ -7,6 +7,7 @@ import com.piku.app.data.model.Comercio
 import com.piku.app.data.model.OfertasComercioResponse
 import com.piku.app.data.model.RecompensaDetalleResponse
 import com.piku.app.data.model.EventoRequest
+import com.piku.app.data.model.RankingComerciosResponse
 import com.piku.app.data.model.Rubro
 import com.piku.app.data.network.ApiErrorParser
 import com.piku.app.data.network.RetrofitInstance
@@ -86,6 +87,14 @@ class MapaRepository(private val context: Context) {
             api.registrarEvento(EventoRequest(tipo_evento = tipo, comercio_id = comercioId))
         } catch (_: Exception) {
             // registro silencioso
+        }
+    }
+
+    suspend fun obtenerRanking(): RankingComerciosResponse {
+        try {
+            return api.rankingComercios()
+        } catch (e: HttpException) {
+            throw Exception(ApiErrorParser.mensaje(e), e)
         }
     }
 }

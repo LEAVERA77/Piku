@@ -217,6 +217,54 @@ async function listarRecompensasPublicas(req, res) {
   }
 }
 
+const MESES_ES = [
+  'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+  'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre',
+];
+
+/**
+ * Top 10 comercios por canjes en el mes actual (público).
+ */
+async function rankingComercios(req, res) {
+  try {
+    const cols = await columnasTabla('piku_canjes');
+    if (!cols.size) {
+      return res.json({ ranking: [], mes: '' });
+    }
+
+    const rubroExpr = `COALESCE(NULLIF(c.tipo_comercio, ''), NULLIF(c.categoria, ''), 'otro')`;
+
+    const result = await query(
+      `SELECT c.nombre, ${rubroExpr} AS rubro, COUNT(*)::int AS canjes
+       FROM piku_canjes cj
+       INNER JOIN piku_recompensas r ON r.id = cj.recompensa_id
+       INNER JOIN piku_comercios c ON c.id = r.comercio_id
+       WHERE cj.created_at >= date_trunc('month', CURRENT_DATE)
+         AND cj.created_at < date_trunc('month', CURRENT_DATE) + interval '1 month'
+         AND COALESCE(cj.estado, 'confirmado') = 'confirmado'
+         AND COALESCE(c.suscripcion_activa, TRUE) = TRUE
+       GROUP BY c.id, c.nombre, ${rubroExpr}
+       ORDER BY canjes DESC, c.nombre ASC
+       LIMIT 10`,
+      []
+    );
+
+    const now = new Date();
+    const mes = `${MESES_ES[now.getMonth()]} ${now.getFullYear()}`;
+    const ranking = result.rows.map((row, index) => ({
+      posicion: index + 1,
+      nombre: row.nombre,
+      canjes: row.canjes,
+      rubro: row.rubro,
+    }));
+
+    return res.json({ ranking, mes });
+  } catch (error) {
+    console.error('rankingComercios:', error);
+    return responderError(res, 500, 'Error al obtener ranking', { detail: error.message });
+  }
+}
+
 /**
  * Cotización USD blue y reglas Piku Points (público).
  */
@@ -247,6 +295,7 @@ async function getCotizacionPikuPoints(req, res) {
 module.exports = {
   listarComercios,
   comerciosCercanos,
+  rankingComercios,
   detalleComercio,
   ofertasComercio,
   detalleRecompensa,

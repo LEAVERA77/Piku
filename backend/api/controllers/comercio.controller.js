@@ -647,6 +647,130 @@ async function getEstadisticas(req, res) {
 }
 
 /**
+ * Insights del comercio: KPIs, canjes por tipo y recomendaciones.
+ */
+async function getInsights(req, res) {
+  try {
+    const comercioId = getComercioId(req);
+    if (!comercioId) return responderError(res, 403, 'Sin comercio asociado');
+
+    const [puntosMes, puntosMesAnterior, canjesPorTipo, topClientes, clientesMes] =
+      await Promise.all([
+        query(
+          `SELECT COALESCE(SUM(puntos), 0)::int AS total
+           FROM piku_transacciones_puntos
+           WHERE comercio_id = $1 AND tipo = 'ganado'
+             AND created_at >= date_trunc('month', CURRENT_DATE)
+             AND created_at < date_trunc('month', CURRENT_DATE) + interval '1 month'`,
+          [comercioId]
+        ),
+        query(
+          `SELECT COALESCE(SUM(puntos), 0)::int AS total
+           FROM piku_transacciones_puntos
+           WHERE comercio_id = $1 AND tipo = 'ganado'
+             AND created_at >= date_trunc('month', CURRENT_DATE) - interval '1 month'
+             AND created_at < date_trunc('month', CURRENT_DATE)`,
+          [comercioId]
+        ),
+        query(
+          `SELECT COALESCE(r.tipo, 'producto_gratis') AS tipo, COUNT(*)::int AS total
+           FROM piku_canjes c
+           INNER JOIN piku_recompensas r ON r.id = c.recompensa_id
+           WHERE r.comercio_id = $1
+             AND c.created_at >= date_trunc('month', CURRENT_DATE)
+             AND c.created_at < date_trunc('month', CURRENT_DATE) + interval '1 month'
+             AND COALESCE(c.estado, 'confirmado') = 'confirmado'
+           GROUP BY COALESCE(r.tipo, 'producto_gratis')`,
+          [comercioId]
+        ),
+        query(
+          `SELECT u.nombre, u.email, COALESCE(SUM(t.puntos), 0)::int AS puntos_ganados
+           FROM piku_transacciones_puntos t
+           INNER JOIN piku_usuarios u ON u.id = t.usuario_id
+           WHERE t.comercio_id = $1 AND t.tipo = 'ganado'
+             AND t.created_at >= date_trunc('month', CURRENT_DATE)
+             AND t.created_at < date_trunc('month', CURRENT_DATE) + interval '1 month'
+           GROUP BY u.id, u.nombre, u.email
+           ORDER BY puntos_ganados DESC
+           LIMIT 5`,
+          [comercioId]
+        ),
+        query(
+          `SELECT usuario_id, COUNT(*)::int AS visitas
+           FROM piku_transacciones_puntos
+           WHERE comercio_id = $1 AND tipo = 'ganado'
+             AND created_at >= date_trunc('month', CURRENT_DATE)
+             AND created_at < date_trunc('month', CURRENT_DATE) + interval '1 month'
+           GROUP BY usuario_id`,
+          [comercioId]
+        ),
+      ]);
+
+    const puntosEntregadosMes = puntosMes.rows[0]?.total || 0;
+    const puntosEntregadosMesAnterior = puntosMesAnterior.rows[0]?.total || 0;
+    let variacionPuntos = 0;
+    if (puntosEntregadosMesAnterior > 0) {
+      variacionPuntos =
+        Math.round(
+          ((puntosEntregadosMes - puntosEntregadosMesAnterior) / puntosEntregadosMesAnterior) *
+            1000
+        ) / 10;
+    } else if (puntosEntregadosMes > 0) {
+      variacionPuntos = 100;
+    }
+
+    const porTipo = {};
+    let totalCanjes = 0;
+    canjesPorTipo.rows.forEach((row) => {
+      porTipo[row.tipo] = row.total;
+      totalCanjes += row.total;
+    });
+
+    const clientesUnicos = clientesMes.rows.length;
+    const clientesRecurrentes = clientesMes.rows.filter((r) => r.visitas > 1).length;
+    const porcentajeRecurrentes =
+      clientesUnicos > 0
+        ? Math.round((clientesRecurrentes / clientesUnicos) * 1000) / 10
+        : 0;
+
+    let recomendacion = 'Publicá más ofertas para obtener datos este mes.';
+    if (totalCanjes > 0) {
+      const entries = Object.entries(porTipo).sort((a, b) => b[1] - a[1]);
+      const [tipoTop, countTop] = entries[0];
+      const pct = Math.round((countTop / totalCanjes) * 100);
+      const etiquetas = {
+        descuento: 'descuento',
+        producto_gratis: 'producto gratis',
+        '2x1': '2x1',
+        envio_gratis: 'envío gratis',
+      };
+      recomendacion = `Tus clientes prefieren ofertas de tipo ${etiquetas[tipoTop] || tipoTop} (${pct}%)`;
+    }
+
+    return res.json({
+      puntos_entregados_mes: puntosEntregadosMes,
+      puntos_entregados_mes_anterior: puntosEntregadosMesAnterior,
+      variacion_puntos: variacionPuntos,
+      ofertas_canjeadas: {
+        total: totalCanjes,
+        por_tipo: porTipo,
+      },
+      top_clientes: topClientes.rows.map((r) => ({
+        nombre: r.nombre,
+        email: r.email,
+        puntos_ganados: r.puntos_ganados,
+      })),
+      recomendacion,
+      clientes_recurrentes: clientesRecurrentes,
+      porcentaje_recurrentes: porcentajeRecurrentes,
+    });
+  } catch (error) {
+    console.error('getInsights:', error);
+    return responderError(res, 500, 'Error al obtener insights', { detail: error.message });
+  }
+}
+
+/**
  * Obtiene configuración de envíos del comercio autenticado.
  */
 async function getConfigEnvios(req, res) {
@@ -1081,6 +1205,7 @@ module.exports = {
   establecerPortadaRecompensa,
   generarQR: generarQRComercio,
   getEstadisticas,
+  getInsights,
   getConfigEnvios,
   updateConfigEnvios,
   obtenerNotificaciones,

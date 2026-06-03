@@ -2,7 +2,9 @@ package com.piku.app.ui.navigation
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CardGiftcard
+import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Leaderboard
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.QrCodeScanner
@@ -20,7 +22,9 @@ enum class PikuDestino(
     Perfil("perfil", "Perfil"),
     DetalleComercio("detalle_comercio/{comercioId}", "Detalle", mostrarEnBarra = false),
     DetalleOferta("detalle_oferta/{recompensaId}", "Oferta", mostrarEnBarra = false),
-    Configuracion("configuracion", "Ajustes", mostrarEnBarra = false);
+    Configuracion("configuracion", "Ajustes", mostrarEnBarra = false),
+    Ranking("ranking", "Ranking", mostrarEnBarra = false),
+    Desafios("desafios", "Desafíos", mostrarEnBarra = false);
 
     companion object {
         val barraInferior = entries.filter { it.mostrarEnBarra }
@@ -38,6 +42,8 @@ fun PikuDestino.icono(): ImageVector = when (this) {
     PikuDestino.DetalleComercio -> Icons.Default.Map
     PikuDestino.DetalleOferta -> Icons.Default.CardGiftcard
     PikuDestino.Configuracion -> Icons.Default.Person
+    PikuDestino.Ranking -> Icons.Default.Leaderboard
+    PikuDestino.Desafios -> Icons.Default.EmojiEvents
 }
 
 object PikuRutasRoot {
@@ -56,6 +62,7 @@ object PikuRutasRoot {
     const val AdminUbicacion = "admin_ubicacion"
     const val AdminSuscripcion = "admin_suscripcion"
     const val AdminReglasPuntos = "admin_reglas_puntos"
+    const val AdminInsights = "admin_insights"
 
     fun adminFormOferta(ofertaId: String = "new") = "admin_form_oferta/$ofertaId"
 }

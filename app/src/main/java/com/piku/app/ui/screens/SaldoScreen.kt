@@ -16,6 +16,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.EmojiEvents
+import androidx.compose.material.icons.filled.Leaderboard
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.CardGiftcard
@@ -58,6 +60,8 @@ import com.piku.app.utils.CompartirLogro
 fun SaldoScreen(
     onEscanearClick: () -> Unit,
     onCanjearClick: () -> Unit,
+    onRankingClick: () -> Unit = {},
+    onDesafiosClick: () -> Unit = {},
     modifier: Modifier = Modifier,
     viewModel: SaldoViewModel = viewModel()
 ) {
@@ -194,6 +198,28 @@ fun SaldoScreen(
                 estilo = EstiloBotonPiku.CONTORNO,
                 icono = Icons.Default.CardGiftcard
             )
+        }
+
+        item {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                BotonPiku(
+                    texto = "RANKING",
+                    onClick = onRankingClick,
+                    modifier = Modifier.weight(1f),
+                    estilo = EstiloBotonPiku.CONTORNO,
+                    icono = Icons.Default.Leaderboard
+                )
+                BotonPiku(
+                    texto = "DESAFÍOS",
+                    onClick = onDesafiosClick,
+                    modifier = Modifier.weight(1f),
+                    estilo = EstiloBotonPiku.CONTORNO,
+                    icono = Icons.Default.EmojiEvents
+                )
+            }
         }
 
         item {

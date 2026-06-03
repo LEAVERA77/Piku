@@ -17,6 +17,7 @@ import androidx.compose.material.icons.filled.LocalShipping
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.QrCode
 import androidx.compose.material.icons.filled.Loyalty
+import androidx.compose.material.icons.filled.Analytics
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -51,10 +52,12 @@ fun AdminHerramientasScreen(
     onHistorialCanjes: () -> Unit,
     onUbicacion: () -> Unit,
     onSuscripcion: () -> Unit,
-    onReglasPuntos: () -> Unit
+    onReglasPuntos: () -> Unit,
+    onInsights: () -> Unit
 ) {
     val items = listOf(
         HerramientaItem("Generar QR", "Sumar puntos en caja", Icons.Default.QrCode, onGenerarQr),
+        HerramientaItem("Insights", "KPIs y recomendaciones", Icons.Default.Analytics, onInsights),
         HerramientaItem("Suscripción", "Plan y límites mensuales", Icons.Default.Star, onSuscripcion),
         HerramientaItem("Política de puntos", "Canjes y límites diarios", Icons.Default.Loyalty, onReglasPuntos),
         HerramientaItem("Ubicación", "Marcar local en el mapa", Icons.Default.Place, onUbicacion),

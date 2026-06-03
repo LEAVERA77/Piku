@@ -3,6 +3,8 @@ package com.piku.app.data.repository
 import android.content.Context
 import com.piku.app.data.config.ConfigLoader
 import com.piku.app.data.model.BonificacionResponse
+import com.piku.app.data.model.CompletarDesafioResponse
+import com.piku.app.data.model.DesafioItem
 import com.piku.app.data.model.CanjeRequest
 import com.piku.app.data.model.CanjeResponse
 import com.piku.app.data.model.DesglosePuntosResponse
@@ -82,6 +84,22 @@ class UsuarioRepository(private val context: Context) {
     suspend fun validarEscaneo(codigo: String, lat: Double?, lon: Double?): ValidarQrResponse {
         try {
             return api.validarEscaneo(ValidarQrRequest(codigo = codigo, lat = lat, lon = lon))
+        } catch (e: HttpException) {
+            throw Exception(ApiErrorParser.mensaje(e), e)
+        }
+    }
+
+    suspend fun obtenerDesafios(): List<DesafioItem> {
+        try {
+            return api.desafiosUsuario().desafios
+        } catch (e: HttpException) {
+            throw Exception(ApiErrorParser.mensaje(e), e)
+        }
+    }
+
+    suspend fun completarDesafio(desafioId: String): CompletarDesafioResponse {
+        try {
+            return api.completarDesafio(desafioId)
         } catch (e: HttpException) {
             throw Exception(ApiErrorParser.mensaje(e), e)
         }

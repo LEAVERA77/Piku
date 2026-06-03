@@ -44,6 +44,7 @@ import com.piku.app.ui.theme.NaranjaPiku
 import com.piku.app.ui.theme.PikuTheme
 import com.piku.app.ui.theme.VerdePiku
 import com.piku.app.data.model.SuscripcionEstadoResponse
+import androidx.compose.material.icons.Icons
 import com.piku.app.ui.components.TarjetaSuscripcionProgreso
 import com.piku.app.utils.rememberImagePicker
 import kotlinx.coroutines.Dispatchers
@@ -54,7 +55,8 @@ import kotlinx.coroutines.withContext
 @Composable
 fun AdminDashboardScreen(
     onCerrarSesion: () -> Unit,
-    onSuscripcion: () -> Unit = {}
+    onSuscripcion: () -> Unit = {},
+    onInsights: () -> Unit = {}
 ) {
     val context = LocalContext.current
     var stats by remember { mutableStateOf<Map<String, Any>?>(null) }
@@ -209,6 +211,10 @@ fun AdminDashboardScreen(
                         )
                     }
                 }
+            }
+            Spacer(Modifier.height(12.dp))
+            OutlinedButton(onClick = onInsights, modifier = Modifier.fillMaxWidth()) {
+                Text("Ver insights del mes")
             }
             Spacer(Modifier.weight(1f))
             OutlinedButton(onClick = onCerrarSesion, modifier = Modifier.fillMaxWidth()) {

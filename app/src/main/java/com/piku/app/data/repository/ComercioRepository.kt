@@ -9,6 +9,7 @@ import com.google.android.gms.location.Priority
 import com.google.android.gms.tasks.CancellationTokenSource
 import com.piku.app.data.model.Comercio
 import com.piku.app.data.model.ComercioDetalleResponse
+import com.piku.app.data.model.ComercioInsightsResponse
 import com.piku.app.data.model.ConfiguracionEnvios
 import com.piku.app.data.model.ConfiguracionEnviosRequest
 import com.piku.app.data.model.CambiarPlanRequest
@@ -222,6 +223,14 @@ class ComercioRepository(private val context: Context) {
             )
             return api.actualizarReglasPuntos(body).reglas
                 ?: throw Exception("Respuesta inválida del servidor")
+        } catch (e: HttpException) {
+            throw Exception(ApiErrorParser.mensaje(e), e)
+        }
+    }
+
+    suspend fun obtenerInsights(): ComercioInsightsResponse {
+        try {
+            return api.insightsComercio()
         } catch (e: HttpException) {
             throw Exception(ApiErrorParser.mensaje(e), e)
         }

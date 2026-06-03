@@ -2,14 +2,17 @@ const { query, withTransaction } = require('../services/neon.service');
 const { registrarEvento } = require('../services/eventos.service');
 const { uploadImage, configurado: cloudinaryOk } = require('../services/cloudinary.service');
 const { generarCodigoUnico, responderError } = require('../utils/helpers');
-const {
-  otorgarBonoBienvenida,
+const { otorgarBonoBienvenida,
   otorgarBonoCompartir,
   debitarPuntos,
   asegurarCodigoReferido,
   saldoSeguro,
   resumenSaldoPuntos,
 } = require('../services/puntos.service');
+const {
+  listarDesafiosConProgreso,
+  completarDesafio: completarDesafioService,
+} = require('../services/desafios.service');
 
 async function asegurarBonoInicial(usuarioId) {
   try {
@@ -341,6 +344,35 @@ async function bonificacionCompartir(req, res) {
   }
 }
 
+/**
+ * Desafíos activos con progreso del cliente.
+ */
+async function getDesafios(req, res) {
+  try {
+    const desafios = await listarDesafiosConProgreso(req.user.id);
+    return res.json({ desafios });
+  } catch (error) {
+    console.error('getDesafios:', error);
+    return responderError(res, 500, 'Error al obtener desafíos', { detail: error.message });
+  }
+}
+
+/**
+ * Marca desafío como completado y acredita puntos extra.
+ */
+async function completarDesafio(req, res) {
+  try {
+    const desafioId = req.params.id;
+    const resultado = await completarDesafioService(req.user.id, desafioId);
+    return res.json(resultado);
+  } catch (error) {
+    console.error('completarDesafio:', error);
+    const msg = error.message || 'Error al completar desafío';
+    const code = /insuficiente|Ya completaste|no encontrado/i.test(msg) ? 400 : 500;
+    return responderError(res, code, msg);
+  }
+}
+
 module.exports = {
   getSaldoPuntos,
   getHistorialPuntos,
@@ -350,4 +382,6 @@ module.exports = {
   getRecompensasDisponibles,
   canjearRecompensa,
   uploadAvatar,
+  getDesafios,
+  completarDesafio,
 };

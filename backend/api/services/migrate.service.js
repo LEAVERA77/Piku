@@ -19,6 +19,7 @@ const MIGRATION_FILES = [
   'migration_puntos_estrategia.sql',
   'migration_transacciones_puntos.sql',
   'migration_suscripciones.sql',
+  'migration_desafios.sql',
 ];
 
 /** Columnas críticas que la API necesita (por si falla el SQL completo). */

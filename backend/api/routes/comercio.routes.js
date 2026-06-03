@@ -52,5 +52,6 @@ router.put('/ubicacion', comercioController.updateUbicacionComercio);
 router.get('/suscripcion/estado', comercioController.getEstadoSuscripcion);
 router.put('/suscripcion/plan', comercioController.cambiarPlanSuscripcion);
 router.post('/upload-logo', upload.single('file'), comercioController.uploadLogoComercio);
+router.get('/insights', comercioController.getInsights);
 
 module.exports = router;

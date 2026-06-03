@@ -24,6 +24,8 @@ import com.piku.app.ui.screens.EscanerScreen
 import com.piku.app.ui.screens.MapaScreen
 import com.piku.app.ui.screens.PerfilScreen
 import com.piku.app.ui.screens.SaldoScreen
+import com.piku.app.ui.screens.DesafiosScreen
+import com.piku.app.ui.screens.RankingComerciosScreen
 
 @Composable
 fun PikuClienteNavGraph(
@@ -50,6 +52,12 @@ fun PikuClienteNavGraph(
                     },
                     onCanjearClick = {
                         navController.navigate(PikuDestino.Canjes.ruta) { launchSingleTop = true }
+                    },
+                    onRankingClick = {
+                        navController.navigate(PikuDestino.Ranking.ruta)
+                    },
+                    onDesafiosClick = {
+                        navController.navigate(PikuDestino.Desafios.ruta)
                     }
                 )
             }
@@ -102,6 +110,12 @@ fun PikuClienteNavGraph(
             }
             composable(PikuDestino.Configuracion.ruta) {
                 ConfiguracionScreen(onBack = { navController.popBackStack() })
+            }
+            composable(PikuDestino.Ranking.ruta) {
+                RankingComerciosScreen(onBack = { navController.popBackStack() })
+            }
+            composable(PikuDestino.Desafios.ruta) {
+                DesafiosScreen(onBack = { navController.popBackStack() })
             }
             }
         }

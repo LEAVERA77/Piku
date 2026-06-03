@@ -20,6 +20,8 @@ router.post('/bonificacion/bienvenida', usuarioController.bonificacionBienvenida
 router.post('/bonificacion/compartir', usuarioController.bonificacionCompartir);
 router.get('/recompensas', usuarioController.getRecompensasDisponibles);
 router.post('/canjear', usuarioController.canjearRecompensa);
+router.get('/desafios', usuarioController.getDesafios);
+router.post('/desafios/:id/completar', usuarioController.completarDesafio);
 router.post('/eventos', eventosController.crearEvento);
 router.post('/avatar', upload.single('file'), usuarioController.uploadAvatar);
 
