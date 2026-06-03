@@ -11,7 +11,10 @@ import com.piku.app.data.model.Comercio
 import com.piku.app.data.model.ComercioDetalleResponse
 import com.piku.app.data.model.ConfiguracionEnvios
 import com.piku.app.data.model.ConfiguracionEnviosRequest
+import com.piku.app.data.model.CambiarPlanRequest
+import com.piku.app.data.model.CambiarPlanResponse
 import com.piku.app.data.model.CanjeComercioItem
+import com.piku.app.data.model.SuscripcionEstadoResponse
 import com.piku.app.data.model.GenerarQrRequest
 import com.piku.app.data.model.GenerarQrResponse
 import com.piku.app.data.model.NotificacionComercio
@@ -173,6 +176,22 @@ class ComercioRepository(private val context: Context) {
                 buscar = buscar?.takeIf { it.isNotBlank() }
             )
             return res.canjes to res.total
+        } catch (e: HttpException) {
+            throw Exception(ApiErrorParser.mensaje(e), e)
+        }
+    }
+
+    suspend fun obtenerEstadoSuscripcion(): SuscripcionEstadoResponse {
+        try {
+            return api.estadoSuscripcionComercio()
+        } catch (e: HttpException) {
+            throw Exception(ApiErrorParser.mensaje(e), e)
+        }
+    }
+
+    suspend fun cambiarPlan(plan: String): CambiarPlanResponse {
+        try {
+            return api.cambiarPlanSuscripcion(CambiarPlanRequest(plan))
         } catch (e: HttpException) {
             throw Exception(ApiErrorParser.mensaje(e), e)
         }

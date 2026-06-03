@@ -18,6 +18,7 @@ const { wireNotificationHandlers } = require('./services/notificationBridge.serv
 const { initFcm } = require('./services/fcm.service');
 const { startBirthdayPointsJob } = require('./services/birthdayPoints.job');
 const { refrescarCotizacion } = require('./services/dolar.service');
+const { startResetContadoresMensualesJob } = require('./jobs/resetContadoresMensuales');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -87,6 +88,7 @@ async function start() {
 
   startNotificationRetentionJob();
   startBirthdayPointsJob();
+  startResetContadoresMensualesJob();
 
   refrescarCotizacion()
     .then((valor) => console.log(`💵 Cotización USD blue: $${valor} ARS`))

@@ -82,6 +82,13 @@ async function selectComerciosColumnas() {
     ? 'c.suscripcion_activa'
     : 'TRUE AS suscripcion_activa';
 
+  const planSql = tiene(colsComercio, 'plan')
+    ? 'c.plan'
+    : "'gratuito'::varchar AS plan";
+  const destacadoSql = tiene(colsComercio, 'plan')
+    ? "(COALESCE(c.plan, 'gratuito') = 'pro') AS destacado"
+    : 'FALSE AS destacado';
+
   const envioPartes = [];
   if (tiene(colsComercio, 'realiza_envios')) {
     envioPartes.push('COALESCE(c.realiza_envios, FALSE) AS realiza_envios');
@@ -111,7 +118,7 @@ async function selectComerciosColumnas() {
 
   cacheSelect = `
     c.id, c.usuario_id, c.nombre, c.direccion, c.lat, c.lon, c.logo_url,
-    ${suscripcion}, ${categoriaSql}, ${tipoComercioSql}, ${iconoEmojiSql},
+    ${suscripcion}, ${planSql}, ${destacadoSql}, ${categoriaSql}, ${tipoComercioSql}, ${iconoEmojiSql},
     ${envioPartes.join(', ')},
     c.created_at, ${puntosMin}, ${cantidadOfertas}, ${ofertasNuevas}
   `.trim();

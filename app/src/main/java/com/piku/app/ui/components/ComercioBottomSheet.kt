@@ -51,7 +51,10 @@ fun ComercioBottomSheet(
                 Spacer(Modifier.width(8.dp))
                 Column {
                     Text(
-                        comercio.nombre,
+                        buildString {
+                            if (comercio.destacado && !comercio.esOpenStreetMap()) append("⭐ ")
+                            append(comercio.nombre)
+                        },
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold
                     )

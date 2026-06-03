@@ -18,6 +18,7 @@ const MIGRATION_FILES = [
   'migration_fcm_token.sql',
   'migration_puntos_estrategia.sql',
   'migration_transacciones_puntos.sql',
+  'migration_suscripciones.sql',
 ];
 
 /** Columnas críticas que la API necesita (por si falla el SQL completo). */
@@ -111,6 +112,27 @@ const CRITICAL_ALTERS = [
   'CREATE INDEX IF NOT EXISTS idx_piku_recompensa_imagenes_rec ON piku_recompensa_imagenes(recompensa_id, orden)',
   'CREATE INDEX IF NOT EXISTS idx_piku_comercios_envios ON piku_comercios(realiza_envios)',
   'ALTER TABLE piku_usuarios ADD COLUMN IF NOT EXISTS fcm_token TEXT',
+  'ALTER TABLE piku_comercios ADD COLUMN IF NOT EXISTS plan VARCHAR(20) DEFAULT \'gratuito\'',
+  `CREATE TABLE IF NOT EXISTS piku_uso_mensual (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    comercio_id UUID NOT NULL REFERENCES piku_comercios(id) ON DELETE CASCADE,
+    mes INTEGER NOT NULL,
+    puntos_otorgados INT NOT NULL DEFAULT 0,
+    notificaciones_enviadas INT NOT NULL DEFAULT 0,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE(comercio_id, mes)
+  )`,
+  `CREATE TABLE IF NOT EXISTS piku_suscripciones (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    comercio_id UUID NOT NULL REFERENCES piku_comercios(id) ON DELETE CASCADE,
+    plan VARCHAR(20) NOT NULL DEFAULT 'gratuito',
+    activa BOOLEAN NOT NULL DEFAULT TRUE,
+    fecha_inicio TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    fecha_proximo_pago TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  )`,
 ];
 
 /**

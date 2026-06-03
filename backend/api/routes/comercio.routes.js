@@ -49,6 +49,8 @@ router.put(
 router.get('/canjes', comercioCanjesLimiter, comercioController.obtenerHistorialCanjes);
 router.put('/dispositivo/fcm', comercioController.registrarFcmToken);
 router.put('/ubicacion', comercioController.updateUbicacionComercio);
+router.get('/suscripcion/estado', comercioController.getEstadoSuscripcion);
+router.put('/suscripcion/plan', comercioController.cambiarPlanSuscripcion);
 router.post('/logo', upload.single('file'), comercioController.uploadLogoComercio);
 
 module.exports = router;

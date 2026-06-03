@@ -19,7 +19,8 @@ data class AdminGenerarQrUiState(
     val qr: QrGenerado? = null,
     val expiraEnMinutos: Int? = null,
     val qrBitmap: Bitmap? = null,
-    val error: String? = null
+    val error: String? = null,
+    val limiteAlcanzado: Boolean = false
 )
 
 class AdminGenerarQrViewModel(application: Application) : AndroidViewModel(application) {
@@ -28,11 +29,26 @@ class AdminGenerarQrViewModel(application: Application) : AndroidViewModel(appli
     private val _uiState = MutableStateFlow(AdminGenerarQrUiState())
     val uiState: StateFlow<AdminGenerarQrUiState> = _uiState.asStateFlow()
 
+    init {
+        viewModelScope.launch {
+            runCatching { repo.obtenerEstadoSuscripcion() }
+                .onSuccess { sub ->
+                    _uiState.update { it.copy(limiteAlcanzado = sub.limiteAlcanzado) }
+                }
+        }
+    }
+
     fun onMontoChange(value: String) {
         _uiState.update { it.copy(monto = value, error = null) }
     }
 
     fun generar() {
+        if (_uiState.value.limiteAlcanzado) {
+            _uiState.update {
+                it.copy(error = "Límite de puntos mensual alcanzado. Actualizá tu plan en Más → Suscripción")
+            }
+            return
+        }
         val monto = _uiState.value.monto.toDoubleOrNull()
         if (monto == null || monto < 0) {
             _uiState.update { it.copy(error = "Ingresá un monto válido") }

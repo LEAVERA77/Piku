@@ -11,6 +11,8 @@ data class Comercio(
     val lon: Double? = null,
     @SerializedName("logo_url") val logoUrl: String? = null,
     @SerializedName("suscripcion_activa") val suscripcionActiva: Boolean = true,
+    val plan: String? = null,
+    val destacado: Boolean = false,
     val categoria: String? = null,
     @SerializedName("tipo_comercio") val tipoComercio: String? = null,
     @SerializedName("icono_emoji") val iconoEmoji: String? = null,

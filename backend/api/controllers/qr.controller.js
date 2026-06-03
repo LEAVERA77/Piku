@@ -2,6 +2,10 @@ const { query, withTransaction } = require('../services/neon.service');
 const { calcularDistancia } = require('../services/nominatim.service');
 const { generarCodigoUnico, responderError } = require('../utils/helpers');
 const { calcularPuntosCompra, saldoSeguro, resumenPuntosGanados } = require('../services/puntos.service');
+const {
+  verificarLimitePuntos,
+  incrementarUsoMensual,
+} = require('../services/suscripcion.service');
 
 const MINUTOS_EXPIRACION_QR = parseInt(process.env.QR_EXPIRACION_MINUTOS, 10) || 15;
 
@@ -116,6 +120,13 @@ async function validarEscaneo(req, res) {
       }
       if (puntos <= 0) throw new Error('Alcanzaste el límite de puntos diarios en este comercio');
 
+      const limitePlan = await verificarLimitePuntos(comercio.id, puntos, client);
+      if (!limitePlan.permitido) {
+        throw new Error(
+          'Límite de puntos mensual alcanzado. Actualizá tu plan en Más → Suscripción'
+        );
+      }
+
       const user = await client.query(
         'SELECT puntos_saldo FROM piku_usuarios WHERE id = $1 FOR UPDATE',
         [req.user.id]
@@ -146,6 +157,8 @@ async function validarEscaneo(req, res) {
         ]
       );
 
+      await incrementarUsoMensual(comercio.id, puntos, client);
+
       return { puntos, nuevoSaldo, comercio, distancia: gps.distancia };
     });
 
@@ -163,7 +176,10 @@ async function validarEscaneo(req, res) {
     });
   } catch (error) {
     console.error('validarEscaneo:', error);
-    const status = /QR|ubicación|límite|Comercio/i.test(error.message) ? 400 : 500;
+    const status = /QR|ubicación|límite|Comercio|Suscripción|mensual/i.test(error.message) ? 400 : 500;
+    if (/mensual/i.test(error.message)) {
+      return responderError(res, 403, error.message);
+    }
     return responderError(res, status, error.message);
   }
 }
@@ -173,7 +189,7 @@ async function validarEscaneo(req, res) {
  */
 async function generarQR(req, res) {
   try {
-    const comercioId = req.user.comercio_id;
+    const comercioId = req.comercioId || req.user.comercio_id;
     if (!comercioId) return responderError(res, 403, 'Usuario sin comercio asociado');
 
     const monto = parseFloat(req.body.montoTransaccion ?? req.body.monto ?? 0) || 0;
@@ -186,6 +202,20 @@ async function generarQR(req, res) {
     );
     const reglas = reglasRes.rows[0] || { monto_minimo: 0 };
     const puntosCalculados = await calcularPuntosCompra(monto, reglas);
+
+    const limitePlan = await verificarLimitePuntos(comercioId, puntosCalculados);
+    if (!limitePlan.permitido) {
+      return responderError(
+        res,
+        403,
+        'Límite de puntos mensual alcanzado. Actualizá tu plan en Más → Suscripción',
+        {
+          puntos_usados_mes: limitePlan.puntosUsados,
+          puntos_limite: limitePlan.puntosLimite,
+          plan: limitePlan.plan,
+        }
+      );
+    }
     const codigo = generarCodigoUnico('QR');
     const expiraAt = new Date(Date.now() + MINUTOS_EXPIRACION_QR * 60 * 1000);
 

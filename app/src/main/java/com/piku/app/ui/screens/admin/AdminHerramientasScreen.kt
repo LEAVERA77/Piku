@@ -16,6 +16,7 @@ import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.LocalShipping
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.QrCode
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -47,10 +48,12 @@ fun AdminHerramientasScreen(
     onConfigEnvios: () -> Unit,
     onNotificaciones: () -> Unit,
     onHistorialCanjes: () -> Unit,
-    onUbicacion: () -> Unit
+    onUbicacion: () -> Unit,
+    onSuscripcion: () -> Unit
 ) {
     val items = listOf(
         HerramientaItem("Generar QR", "Sumar puntos en caja", Icons.Default.QrCode, onGenerarQr),
+        HerramientaItem("Suscripción", "Plan y límites mensuales", Icons.Default.Star, onSuscripcion),
         HerramientaItem("Ubicación", "Marcar local en el mapa", Icons.Default.Place, onUbicacion),
         HerramientaItem("Envíos", "Domicilio y teléfono", Icons.Default.LocalShipping, onConfigEnvios),
         HerramientaItem("Notificaciones", "Canjes en vivo", Icons.Default.Notifications, onNotificaciones),

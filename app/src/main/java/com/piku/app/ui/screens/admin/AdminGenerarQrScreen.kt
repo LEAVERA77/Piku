@@ -81,8 +81,15 @@ fun AdminGenerarQrScreen(
                     texto = if (uiState.cargando) "Generando…" else "Generar QR",
                     onClick = { if (!uiState.cargando) viewModel.generar() },
                     modifier = Modifier.fillMaxWidth(),
-                    habilitado = !uiState.cargando
+                    habilitado = !uiState.cargando && !uiState.limiteAlcanzado
                 )
+                if (uiState.limiteAlcanzado) {
+                    Text(
+                        "Límite mensual de puntos alcanzado. Actualizá tu plan en Suscripción.",
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
             } else {
                 BotonPiku(
                     texto = "Generar otro",

@@ -20,6 +20,12 @@ const {
 } = require('../utils/recompensa.imagenes.util');
 
 const { resolveComercioId } = require('../utils/comercio.resolve.util');
+const {
+  verificarLimiteOfertas,
+  obtenerEstadoSuscripcion,
+  cambiarPlanComercio,
+} = require('../services/suscripcion.service');
+const { PLAN_IDS } = require('../constants/planes.constants');
 
 function getComercioId(req) {
   return req.comercioId || req.user?.comercio_id || null;
@@ -208,6 +214,20 @@ async function createRecompensa(req, res) {
       return responderError(res, 400, 'Nombre y puntos requeridos válidos');
     }
 
+    const limiteOfertas = await verificarLimiteOfertas(comercioId);
+    if (!limiteOfertas.permitido) {
+      return responderError(
+        res,
+        403,
+        'Alcanzaste el límite de ofertas activas. Actualizá tu plan o desactivá alguna oferta existente.',
+        {
+          ofertas_activas: limiteOfertas.ofertasActivas,
+          ofertas_limite: limiteOfertas.ofertasLimite,
+          plan: limiteOfertas.plan,
+        }
+      );
+    }
+
     const insert = await insertRecompensa(query, comercioId, {
       nombre,
       descripcion,
@@ -341,6 +361,15 @@ async function duplicateRecompensa(req, res) {
     );
     if (!orig.rows.length) return responderError(res, 404, 'Recompensa no encontrada');
     const r = orig.rows[0];
+
+    const limiteOfertas = await verificarLimiteOfertas(comercioId);
+    if (!limiteOfertas.permitido) {
+      return responderError(
+        res,
+        403,
+        'Alcanzaste el límite de ofertas activas. Actualizá tu plan o desactivá alguna oferta existente.'
+      );
+    }
 
     const insert = await insertRecompensa(query, comercioId, {
       nombre: `${r.nombre} (copia)`,
@@ -972,6 +1001,41 @@ async function updateUbicacionComercio(req, res) {
   }
 }
 
+async function getEstadoSuscripcion(req, res) {
+  try {
+    const comercioId = getComercioId(req);
+    if (!comercioId) return responderError(res, 403, 'Sin comercio asociado');
+    const estado = await obtenerEstadoSuscripcion(comercioId);
+    return res.json(estado);
+  } catch (error) {
+    console.error('getEstadoSuscripcion:', error);
+    return responderError(res, 500, 'Error al obtener suscripción');
+  }
+}
+
+async function cambiarPlanSuscripcion(req, res) {
+  try {
+    const comercioId = getComercioId(req);
+    if (!comercioId) return responderError(res, 403, 'Sin comercio asociado');
+
+    const plan = String(req.body.plan || '').toLowerCase().trim();
+    if (!PLAN_IDS.has(plan)) {
+      return responderError(res, 400, 'Plan inválido. Opciones: gratuito, basico, pro');
+    }
+
+    const resultado = await cambiarPlanComercio(comercioId, plan);
+    const estado = await obtenerEstadoSuscripcion(comercioId);
+    return res.json({
+      mensaje: `Plan actualizado a ${resultado.planNombre}`,
+      plan: resultado.plan,
+      estado,
+    });
+  } catch (error) {
+    console.error('cambiarPlanSuscripcion:', error);
+    return responderError(res, 500, 'Error al cambiar plan');
+  }
+}
+
 async function uploadLogoComercio(req, res) {
   try {
     const comercioId = getComercioId(req);
@@ -1026,4 +1090,6 @@ module.exports = {
   registrarFcmToken,
   updateUbicacionComercio,
   uploadLogoComercio,
+  getEstadoSuscripcion,
+  cambiarPlanSuscripcion,
 };

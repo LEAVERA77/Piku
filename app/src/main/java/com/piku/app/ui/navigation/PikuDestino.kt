@@ -52,6 +52,7 @@ object PikuRutasRoot {
     const val AdminNotificaciones = "admin_notificaciones"
     const val AdminHistorialCanjes = "admin_historial_canjes"
     const val AdminUbicacion = "admin_ubicacion"
+    const val AdminSuscripcion = "admin_suscripcion"
 
     fun adminFormOferta(ofertaId: String = "new") = "admin_form_oferta/$ofertaId"
 }

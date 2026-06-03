@@ -124,7 +124,8 @@ fun OsmdroidMapView(
                         nombre = comercio.nombre,
                         cantidadOfertas = comercio.cantidadOfertas,
                         ofertasNuevas = comercio.ofertasNuevas,
-                        realizaEnvios = comercio.realizaEnvios
+                        realizaEnvios = comercio.realizaEnvios,
+                        destacado = comercio.destacado && !comercio.esOpenStreetMap()
                     ),
                     anchorY = MapPinBitmap.anchorY(
                         comercio.nombre,

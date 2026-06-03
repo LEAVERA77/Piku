@@ -26,6 +26,9 @@ import com.piku.app.data.model.HistorialResponse
 import com.piku.app.data.model.RecompensasDisponiblesResponse
 import com.piku.app.data.model.RubrosResponse
 import com.piku.app.data.model.SaldoApiResponse
+import com.piku.app.data.model.SuscripcionEstadoResponse
+import com.piku.app.data.model.CambiarPlanRequest
+import com.piku.app.data.model.CambiarPlanResponse
 import com.piku.app.data.model.GoogleLoginRequest
 import com.piku.app.data.model.ImagenUploadResponse
 import com.piku.app.data.model.LoginRequest
@@ -229,4 +232,10 @@ interface PikuApiService {
         @Query("fecha_hasta") fechaHasta: String? = null,
         @Query("buscar") buscar: String? = null
     ): HistorialCanjesComercioResponse
+
+    @GET("api/comercio/suscripcion/estado")
+    suspend fun estadoSuscripcionComercio(): SuscripcionEstadoResponse
+
+    @PUT("api/comercio/suscripcion/plan")
+    suspend fun cambiarPlanSuscripcion(@Body body: CambiarPlanRequest): CambiarPlanResponse
 }

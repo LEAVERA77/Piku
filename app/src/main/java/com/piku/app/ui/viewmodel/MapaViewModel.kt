@@ -66,7 +66,11 @@ data class MapaUiState(
             if (q.length >= 2) {
                 lista = lista.filter { it.nombre.contains(q, ignoreCase = true) }
             }
-            return lista
+            return lista.sortedWith(
+                compareByDescending<Comercio> { it.destacado && !it.esOpenStreetMap() }
+                    .thenBy { it.distanciaMetros ?: Int.MAX_VALUE }
+                    .thenBy { it.nombre }
+            )
         }
 
     val contadorVisibles: Int get() = comerciosVisibles.size

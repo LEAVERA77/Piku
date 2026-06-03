@@ -38,12 +38,13 @@ object MapPinBitmap {
         nombre: String? = null,
         cantidadOfertas: Int = 0,
         ofertasNuevas: Int = 0,
-        realizaEnvios: Boolean = false
+        realizaEnvios: Boolean = false,
+        destacado: Boolean = false
     ): BitmapDrawable {
         val escala = escalaPantalla(context)
-        val key = "$CACHE_VERSION|${escala}|$emoji|${nombre.orEmpty()}|$cantidadOfertas|$ofertasNuevas|$realizaEnvios"
+        val key = "$CACHE_VERSION|${escala}|$emoji|${nombre.orEmpty()}|$cantidadOfertas|$ofertasNuevas|$realizaEnvios|$destacado"
         val bitmap = bitmapCache.get(key) ?: renderBitmap(
-            context, escala, emoji, nombre, cantidadOfertas, ofertasNuevas, realizaEnvios
+            context, escala, emoji, nombre, cantidadOfertas, ofertasNuevas, realizaEnvios, destacado
         ).also { bitmapCache.put(key, it) }
         return BitmapDrawable(context.resources, bitmap)
     }
@@ -91,7 +92,8 @@ object MapPinBitmap {
         nombre: String?,
         cantidadOfertas: Int,
         ofertasNuevas: Int,
-        realizaEnvios: Boolean
+        realizaEnvios: Boolean,
+        destacado: Boolean
     ): Bitmap {
         val pinW = (38f * escala).roundToInt()
         val pinH = (48f * escala).roundToInt()
@@ -126,6 +128,7 @@ object MapPinBitmap {
         val cx = anchoMin / 2f
 
         val pinColor = when {
+            destacado -> Color.parseColor("#FFB300")
             ofertasNuevas > 0 -> Color.parseColor("#7C4DFF")
             cantidadOfertas > 0 -> Color.parseColor("#FF6B35")
             else -> Color.parseColor("#00A86B")
@@ -185,6 +188,18 @@ object MapPinBitmap {
                 cy + radio * 0.85f,
                 "🚲",
                 Color.parseColor("#0288D1"),
+                escala,
+                esEmoji = true
+            )
+        }
+
+        if (destacado) {
+            dibujarBadge(
+                canvas,
+                10f * escala,
+                12f * escala,
+                "⭐",
+                Color.parseColor("#FFB300"),
                 escala,
                 esEmoji = true
             )

@@ -43,6 +43,8 @@ import com.piku.app.ui.media.PikuImages
 import com.piku.app.ui.theme.NaranjaPiku
 import com.piku.app.ui.theme.PikuTheme
 import com.piku.app.ui.theme.VerdePiku
+import com.piku.app.data.model.SuscripcionEstadoResponse
+import com.piku.app.ui.components.TarjetaSuscripcionProgreso
 import com.piku.app.utils.rememberImagePicker
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -51,7 +53,8 @@ import kotlinx.coroutines.withContext
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AdminDashboardScreen(
-    onCerrarSesion: () -> Unit
+    onCerrarSesion: () -> Unit,
+    onSuscripcion: () -> Unit = {}
 ) {
     val context = LocalContext.current
     var stats by remember { mutableStateOf<Map<String, Any>?>(null) }
@@ -59,6 +62,7 @@ fun AdminDashboardScreen(
     var logoUrl by remember { mutableStateOf<String?>(null) }
     var nombreComercio by remember { mutableStateOf<String?>(null) }
     var subiendoLogo by remember { mutableStateOf(false) }
+    var suscripcion by remember { mutableStateOf<SuscripcionEstadoResponse?>(null) }
     val repo = remember { ComercioRepository(context) }
     val scope = rememberCoroutineScope()
 
@@ -102,6 +106,11 @@ fun AdminDashboardScreen(
         } catch (_: Exception) {
             // sin perfil comercio
         }
+        try {
+            suscripcion = withContext(Dispatchers.IO) { repo.obtenerEstadoSuscripcion() }
+        } catch (_: Exception) {
+            suscripcion = null
+        }
         refrescarBadge()
     }
 
@@ -127,6 +136,13 @@ fun AdminDashboardScreen(
                 .padding(padding)
                 .padding(horizontal = 20.dp, vertical = 12.dp)
         ) {
+            suscripcion?.let { sub ->
+                TarjetaSuscripcionProgreso(
+                    estado = sub,
+                    onActualizarPlan = onSuscripcion
+                )
+                Spacer(Modifier.height(12.dp))
+            }
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
