@@ -4,11 +4,12 @@ import android.content.Context
 import com.piku.app.data.config.ConfigLoader
 import com.piku.app.data.model.CanjeRequest
 import com.piku.app.data.model.CanjeResponse
+import com.piku.app.data.model.DesglosePuntosResponse
+import com.piku.app.data.model.Transaccion
 import com.piku.app.data.model.ValidarQrRequest
 import com.piku.app.data.model.ValidarQrResponse
 import com.piku.app.data.model.Recompensa
 import com.piku.app.data.model.SaldoApiResponse
-import com.piku.app.data.model.Transaccion
 import com.piku.app.data.network.ApiErrorParser
 import com.piku.app.data.network.RetrofitInstance
 import retrofit2.HttpException
@@ -47,6 +48,14 @@ class UsuarioRepository(private val context: Context) {
     suspend fun canjearRecompensa(recompensaId: String): CanjeResponse {
         try {
             return api.canjearRecompensa(CanjeRequest(recompensaId = recompensaId))
+        } catch (e: HttpException) {
+            throw Exception(ApiErrorParser.mensaje(e), e)
+        }
+    }
+
+    suspend fun obtenerDesglose(): DesglosePuntosResponse {
+        try {
+            return api.desglosePuntos()
         } catch (e: HttpException) {
             throw Exception(ApiErrorParser.mensaje(e), e)
         }

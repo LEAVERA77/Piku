@@ -16,6 +16,7 @@ const { startNotificationRetentionJob } = require('./services/notificationRetent
 const { attachWebSocketServer } = require('./services/websocket.service');
 const { wireNotificationHandlers } = require('./services/notificationBridge.service');
 const { initFcm } = require('./services/fcm.service');
+const { startBirthdayPointsJob } = require('./services/birthdayPoints.job');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -82,6 +83,7 @@ async function start() {
   });
 
   startNotificationRetentionJob();
+  startBirthdayPointsJob();
 }
 
 start();

@@ -16,6 +16,7 @@ const MIGRATION_FILES = [
   'migration_recompensa_imagenes.sql',
   'migration_notificaciones.sql',
   'migration_fcm_token.sql',
+  'migration_puntos_estrategia.sql',
 ];
 
 /** Columnas críticas que la API necesita (por si falla el SQL completo). */
@@ -71,6 +72,9 @@ const CRITICAL_ALTERS = [
   'ALTER TABLE piku_reglas_puntos ADD COLUMN IF NOT EXISTS monto_minimo NUMERIC(10, 2) NOT NULL DEFAULT 0',
   'ALTER TABLE piku_reglas_puntos ADD COLUMN IF NOT EXISTS puntos_fijos INTEGER NOT NULL DEFAULT 0',
   'ALTER TABLE piku_reglas_puntos ADD COLUMN IF NOT EXISTS max_puntos_por_dia INTEGER NOT NULL DEFAULT 500',
+  'ALTER TABLE piku_reglas_puntos ADD COLUMN IF NOT EXISTS unidad_moneda NUMERIC(10, 2) NOT NULL DEFAULT 10',
+  'ALTER TABLE piku_usuarios ADD COLUMN IF NOT EXISTS fecha_nacimiento DATE',
+  'ALTER TABLE piku_usuarios ADD COLUMN IF NOT EXISTS bono_bienvenida_otorgado BOOLEAN NOT NULL DEFAULT FALSE',
   'ALTER TABLE piku_reglas_puntos ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()',
   `CREATE TABLE IF NOT EXISTS piku_recompensa_imagenes (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

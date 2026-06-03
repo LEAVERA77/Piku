@@ -14,7 +14,9 @@ const upload = multer({
 router.use(authMiddleware, soloCliente);
 
 router.get('/saldo', usuarioController.getSaldoPuntos);
+router.get('/saldo/desglose', usuarioController.getDesglosePuntos);
 router.get('/historial', usuarioController.getHistorialPuntos);
+router.post('/bonificacion/compartir', usuarioController.bonificacionCompartir);
 router.get('/recompensas', usuarioController.getRecompensasDisponibles);
 router.post('/canjear', usuarioController.canjearRecompensa);
 router.post('/eventos', eventosController.crearEvento);

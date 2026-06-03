@@ -31,6 +31,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -110,6 +111,31 @@ fun SaldoScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 6.dp)
                 )
+            }
+        }
+
+        item {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                )
+            ) {
+                Column(Modifier.padding(16.dp)) {
+                    Text("💰 Desglose de puntos", fontWeight = FontWeight.Bold)
+                    Spacer(Modifier.height(8.dp))
+                    Row(Modifier.fillMaxWidth()) {
+                        Text("Compras: +${uiState.puntosCompras} pts")
+                        Spacer(Modifier.weight(1f))
+                        Text("Canjes: -${uiState.puntosCanjes} pts")
+                    }
+                    Row(Modifier.fillMaxWidth()) {
+                        Text("Bonos: +${uiState.puntosBonos} pts")
+                        Spacer(Modifier.weight(1f))
+                        Text("Saldo: ${uiState.puntos} pts")
+                    }
+                }
             }
         }
 

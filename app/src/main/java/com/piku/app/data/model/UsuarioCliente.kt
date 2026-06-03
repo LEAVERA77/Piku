@@ -61,6 +61,13 @@ data class HistorialResponse(
     val transacciones: List<TransaccionApi> = emptyList()
 )
 
+data class DesglosePuntosResponse(
+    val saldo: Int = 0,
+    val compras: Int = 0,
+    val bonos: Int = 0,
+    val canjes: Int = 0
+)
+
 data class RecompensaDisponible(
     val id: String,
     @SerializedName("comercio_id") val comercioId: String? = null,

@@ -11,6 +11,7 @@ const {
   agregarCamposDireccionUsuario,
 } = require('../utils/direccion.registro.util');
 const { validarTelefonoComercio } = require('../utils/telefono.util');
+const { otorgarBonoBienvenida } = require('../services/puntos.service');
 
 /**
  * Publica el comercio como Note en OSM (no bloquea el registro si falla).
@@ -133,12 +134,26 @@ async function registroCliente(req, res) {
     );
 
     const usuario = normalizarUsuario(insert.rows[0]);
+    let puntosBienvenida = 0;
+    try {
+      const bono = await withTransaction(async (client) =>
+        otorgarBonoBienvenida(client, usuario.id)
+      );
+      if (bono.otorgado) {
+        puntosBienvenida = bono.puntos;
+        usuario.puntos_saldo = (usuario.puntos_saldo || 0) + bono.puntos;
+      }
+    } catch (e) {
+      console.warn('bono bienvenida registroCliente:', e.message);
+    }
+
     const token = signToken({ userId: usuario.id, rol: usuario.rol });
 
     return res.status(201).json({
       mensaje: 'Cliente registrado correctamente',
       token,
       usuario,
+      puntosBienvenida,
     });
   } catch (error) {
     console.error('registroCliente:', error);
@@ -626,6 +641,16 @@ async function loginGoogle(req, res) {
         insertVals
       );
       usuario = normalizarUsuario(insert.rows[0]);
+      try {
+        const bono = await withTransaction(async (client) =>
+          otorgarBonoBienvenida(client, usuario.id)
+        );
+        if (bono.otorgado) {
+          usuario.puntos_saldo = (usuario.puntos_saldo || 0) + bono.puntos;
+        }
+      } catch (e) {
+        console.warn('bono bienvenida loginGoogle:', e.message);
+      }
     } else {
       usuario = normalizarUsuario(result.rows[0]);
       if (!usuario.activo) return responderError(res, 403, 'Cuenta desactivada');

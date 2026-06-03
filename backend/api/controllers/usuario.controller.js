@@ -228,9 +228,64 @@ async function uploadAvatar(req, res) {
   }
 }
 
+async function getDesglosePuntos(req, res) {
+  try {
+    const usuarioId = req.user.id;
+    const saldoRes = await query(
+      'SELECT puntos_saldo FROM piku_usuarios WHERE id = $1',
+      [usuarioId]
+    );
+    const saldo = saldoRes.rows[0]?.puntos_saldo ?? 0;
+
+    const agg = await query(
+      `SELECT
+         COALESCE(SUM(CASE
+           WHEN tipo = 'ganado' AND (
+             descripcion ILIKE 'Compra%' OR descripcion ILIKE 'Compra en%'
+           ) THEN puntos ELSE 0 END), 0)::int AS compras,
+         COALESCE(SUM(CASE
+           WHEN tipo = 'ganado' AND NOT (
+             descripcion ILIKE 'Compra%' OR descripcion ILIKE 'Compra en%'
+           ) THEN puntos ELSE 0 END), 0)::int AS bonos,
+         COALESCE(SUM(CASE
+           WHEN tipo = 'canjeado' THEN ABS(puntos) ELSE 0 END), 0)::int AS canjes
+       FROM piku_transacciones_puntos
+       WHERE usuario_id = $1`,
+      [usuarioId]
+    );
+
+    const row = agg.rows[0] || { compras: 0, bonos: 0, canjes: 0 };
+    return res.json({
+      saldo,
+      compras: row.compras,
+      bonos: row.bonos,
+      canjes: row.canjes,
+    });
+  } catch (error) {
+    console.error('getDesglosePuntos:', error);
+    return responderError(res, 500, 'Error al obtener desglose de puntos');
+  }
+}
+
+async function bonificacionCompartir(req, res) {
+  try {
+    const { otorgarBonoCompartir } = require('../services/puntos.service');
+    const resultado = await otorgarBonoCompartir(req.user.id);
+    if (!resultado.otorgado) {
+      return responderError(res, 400, resultado.mensaje);
+    }
+    return res.json(resultado);
+  } catch (error) {
+    console.error('bonificacionCompartir:', error);
+    return responderError(res, 500, 'Error al acreditar puntos');
+  }
+}
+
 module.exports = {
   getSaldoPuntos,
   getHistorialPuntos,
+  getDesglosePuntos,
+  bonificacionCompartir,
   getRecompensasDisponibles,
   canjearRecompensa,
   uploadAvatar,

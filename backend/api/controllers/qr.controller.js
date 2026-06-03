@@ -1,21 +1,13 @@
 const { query, withTransaction } = require('../services/neon.service');
 const { calcularDistancia } = require('../services/nominatim.service');
 const { generarCodigoUnico, responderError } = require('../utils/helpers');
+const { calcularPuntosCompra } = require('../services/puntos.service');
 
 const MINUTOS_EXPIRACION_QR = parseInt(process.env.QR_EXPIRACION_MINUTOS, 10) || 15;
 
-/**
- * Calcula puntos según reglas del comercio y monto de transacción.
- */
+/** @deprecated use calcularPuntosCompra */
 function calcularPuntos(reglas, montoTransaccion) {
-  const monto = parseFloat(montoTransaccion) || 0;
-  const minimo = parseFloat(reglas.monto_minimo) || 0;
-  if (monto < minimo) return reglas.puntos_fijos || 0;
-
-  const porPeso = parseFloat(reglas.puntos_por_peso) || 1;
-  const desdeMonto = Math.floor(monto * porPeso);
-  const fijos = parseInt(reglas.puntos_fijos, 10) || 0;
-  return Math.max(desdeMonto, fijos);
+  return calcularPuntosCompra(reglas, montoTransaccion);
 }
 
 /**
@@ -80,7 +72,7 @@ async function validarEscaneo(req, res) {
       const qr = verificacion.qr;
 
       const comercioRes = await client.query(
-        `SELECT id, nombre, lat, lon, suscripcion_activa
+        `SELECT id, nombre, lat, lon, suscripcion_activa, radio_metros
          FROM piku_comercios WHERE id = $1`,
         [qr.comercio_id]
       );
@@ -88,7 +80,7 @@ async function validarEscaneo(req, res) {
       if (!fila || fila.suscripcion_activa === false) {
         throw new Error('Comercio no disponible');
       }
-      const comercio = { ...fila, radio_metros: 100 };
+      const comercio = fila;
 
       const gps = verificarGPS(comercio, lat, lon);
       if (!gps.ok) throw new Error(gps.motivo);
@@ -106,7 +98,7 @@ async function validarEscaneo(req, res) {
 
       let puntos = qr.puntos_calculados;
       if (puntos == null) {
-        puntos = calcularPuntos(reglas, qr.monto_transaccion);
+        puntos = calcularPuntosCompra(reglas, qr.monto_transaccion);
       }
 
       // Límite diario por comercio
@@ -191,7 +183,7 @@ async function generarQR(req, res) {
       monto_minimo: 0,
       puntos_fijos: 10,
     };
-    const puntosCalculados = calcularPuntos(reglas, monto);
+    const puntosCalculados = calcularPuntosCompra(reglas, monto);
     const codigo = generarCodigoUnico('QR');
     const expiraAt = new Date(Date.now() + MINUTOS_EXPIRACION_QR * 60 * 1000);
 

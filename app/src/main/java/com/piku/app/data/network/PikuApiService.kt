@@ -20,6 +20,7 @@ import com.piku.app.data.model.RecompensaDetalleResponse
 import com.piku.app.data.model.RecompensaImagenesResponse
 import com.piku.app.data.model.RecompensaImagenUploadResponse
 import com.piku.app.data.model.EventoRequest
+import com.piku.app.data.model.DesglosePuntosResponse
 import com.piku.app.data.model.HistorialResponse
 import com.piku.app.data.model.RecompensasDisponiblesResponse
 import com.piku.app.data.model.RubrosResponse
@@ -105,6 +106,9 @@ interface PikuApiService {
 
     @GET("api/usuario/saldo")
     suspend fun saldoCliente(): SaldoApiResponse
+
+    @GET("api/usuario/saldo/desglose")
+    suspend fun desglosePuntos(): DesglosePuntosResponse
 
     @GET("api/usuario/historial")
     suspend fun historialPuntos(@Query("limite") limite: Int = 50): HistorialResponse
