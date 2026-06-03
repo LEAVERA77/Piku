@@ -1,7 +1,12 @@
 package com.piku.app.data.repository
 
+import android.annotation.SuppressLint
 import android.content.Context
+import android.location.Location
 import android.net.Uri
+import com.google.android.gms.location.LocationServices
+import com.google.android.gms.location.Priority
+import com.google.android.gms.tasks.CancellationTokenSource
 import com.piku.app.data.model.Comercio
 import com.piku.app.data.model.ComercioDetalleResponse
 import com.piku.app.data.model.ConfiguracionEnvios
@@ -19,6 +24,7 @@ import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.toRequestBody
 import retrofit2.HttpException
 import com.piku.app.utils.DistanceCalculator
+import kotlinx.coroutines.tasks.await
 
 class ComercioRepository(private val context: Context) {
 
@@ -55,6 +61,37 @@ class ComercioRepository(private val context: Context) {
         } catch (e: HttpException) {
             throw Exception(ApiErrorParser.mensaje(e), e)
         }
+    }
+
+    suspend fun actualizarUbicacion(lat: Double, lon: Double, direccion: String?) {
+        try {
+            val body = buildMap<String, Any> {
+                put("lat", lat)
+                put("lon", lon)
+                if (!direccion.isNullOrBlank()) put("direccion", direccion)
+            }
+            api.actualizarUbicacionComercio(body)
+        } catch (e: HttpException) {
+            throw Exception(ApiErrorParser.mensaje(e), e)
+        }
+    }
+
+    @SuppressLint("MissingPermission")
+    suspend fun obtenerUbicacionGps(): Pair<Double, Double>? {
+        val fused = LocationServices.getFusedLocationProviderClient(context)
+        val location: Location? = try {
+            fused.getCurrentLocation(
+                Priority.PRIORITY_BALANCED_POWER_ACCURACY,
+                CancellationTokenSource().token
+            ).await()
+        } catch (_: Exception) {
+            null
+        } ?: try {
+            fused.lastLocation.await()
+        } catch (_: Exception) {
+            null
+        }
+        return location?.let { it.latitude to it.longitude }
     }
 
     suspend fun obtenerConfigEnvios(): ConfiguracionEnvios {

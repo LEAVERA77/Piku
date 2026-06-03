@@ -3,6 +3,7 @@ const multer = require('multer');
 const comercioController = require('../controllers/comercio.controller');
 const { authMiddleware } = require('../middleware/auth.middleware');
 const { soloComercio } = require('../middleware/roles.middleware');
+const { attachComercioId } = require('../middleware/comercio.middleware');
 const {
   comercioNotificacionesLimiter,
   comercioCanjesLimiter,
@@ -14,7 +15,7 @@ const upload = multer({
   limits: { fileSize: 5 * 1024 * 1024 },
 });
 
-router.use(authMiddleware, soloComercio);
+router.use(authMiddleware, soloComercio, attachComercioId);
 
 router.get('/reglas', comercioController.getReglasPuntos);
 router.put('/reglas', comercioController.updateReglasPuntos);
@@ -47,6 +48,7 @@ router.put(
 );
 router.get('/canjes', comercioCanjesLimiter, comercioController.obtenerHistorialCanjes);
 router.put('/dispositivo/fcm', comercioController.registrarFcmToken);
+router.put('/ubicacion', comercioController.updateUbicacionComercio);
 router.post('/logo', upload.single('file'), comercioController.uploadLogoComercio);
 
 module.exports = router;

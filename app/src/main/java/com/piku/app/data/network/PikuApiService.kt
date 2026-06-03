@@ -193,6 +193,11 @@ interface PikuApiService {
     @POST("api/comercio/logo")
     suspend fun subirLogoComercio(@Part file: MultipartBody.Part): LogoUploadResponse
 
+    @PUT("api/comercio/ubicacion")
+    suspend fun actualizarUbicacionComercio(
+        @Body body: Map<String, @JvmSuppressWildcards Any?>
+    ): Map<String, Any>
+
     @GET("api/comercio/envios")
     suspend fun obtenerConfigEnvios(): ConfiguracionEnviosResponse
 

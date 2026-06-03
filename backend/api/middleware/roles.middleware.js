@@ -9,6 +9,7 @@ function requireRole(...rolesPermitidos) {
     if (!req.user || !normalizados.includes(rol)) {
       return res.status(403).json({
         error: 'No tenés permiso para esta acción',
+        detalle: `Se requiere rol: ${rolesPermitidos.join(' o ')}. Tu rol actual: ${rol || 'desconocido'}`,
         rolRequerido: rolesPermitidos,
       });
     }

@@ -9,7 +9,7 @@ object ApiErrorParser {
         val porCodigo = when (e.code()) {
             409 -> "Este email ya está registrado. Probá «Ingresar» o usá otro correo."
             404 -> "La API no está actualizada. Redesplegá el backend en Render (registro-comercio-google)."
-            403 -> "No tenés permiso. Revisá el código de invitación."
+            403 -> "No tenés permiso para esta acción. Verificá que iniciaste sesión como comercio."
             401 -> "Credenciales inválidas."
             400 -> "Datos inválidos. Revisá el formulario."
             else -> "Error del servidor (${e.code()})"

@@ -12,6 +12,7 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.LocalShipping
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.QrCode
@@ -45,10 +46,12 @@ fun AdminHerramientasScreen(
     onGenerarQr: () -> Unit,
     onConfigEnvios: () -> Unit,
     onNotificaciones: () -> Unit,
-    onHistorialCanjes: () -> Unit
+    onHistorialCanjes: () -> Unit,
+    onUbicacion: () -> Unit
 ) {
     val items = listOf(
         HerramientaItem("Generar QR", "Sumar puntos en caja", Icons.Default.QrCode, onGenerarQr),
+        HerramientaItem("Ubicación", "Marcar local en el mapa", Icons.Default.Place, onUbicacion),
         HerramientaItem("Envíos", "Domicilio y teléfono", Icons.Default.LocalShipping, onConfigEnvios),
         HerramientaItem("Notificaciones", "Canjes en vivo", Icons.Default.Notifications, onNotificaciones),
         HerramientaItem("Historial", "Canjes realizados", Icons.Default.History, onHistorialCanjes)

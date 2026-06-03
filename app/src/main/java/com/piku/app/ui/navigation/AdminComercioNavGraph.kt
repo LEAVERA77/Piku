@@ -17,8 +17,9 @@ import com.piku.app.ui.screens.admin.AdminGenerarQrScreen
 import com.piku.app.ui.screens.admin.AdminHerramientasScreen
 import com.piku.app.ui.screens.admin.FormularioOfertaScreen
 import com.piku.app.ui.screens.admin.GestionOfertasScreen
-import com.piku.app.ui.screens.comercio.ConfiguracionEnvioScreen
+import com.piku.app.ui.screens.admin.ComercioUbicacionScreen
 import com.piku.app.ui.screens.comercio.HistorialCanjesScreen
+import com.piku.app.ui.screens.comercio.ConfiguracionEnvioScreen
 import com.piku.app.ui.screens.comercio.NotificacionesComercioScreen
 
 private val rutasConBarra = setOf(
@@ -67,7 +68,8 @@ fun AdminComercioNavGraph(
                     onGenerarQr = { navController.navigate(PikuRutasRoot.AdminQr) },
                     onConfigEnvios = { navController.navigate(PikuRutasRoot.AdminConfigEnvios) },
                     onNotificaciones = { navController.navigate(PikuRutasRoot.AdminNotificaciones) },
-                    onHistorialCanjes = { navController.navigate(PikuRutasRoot.AdminHistorialCanjes) }
+                    onHistorialCanjes = { navController.navigate(PikuRutasRoot.AdminHistorialCanjes) },
+                    onUbicacion = { navController.navigate(PikuRutasRoot.AdminUbicacion) }
                 )
             }
             composable(
@@ -91,6 +93,9 @@ fun AdminComercioNavGraph(
             }
             composable(PikuRutasRoot.AdminHistorialCanjes) {
                 HistorialCanjesScreen(onBack = { navController.popBackStack() })
+            }
+            composable(PikuRutasRoot.AdminUbicacion) {
+                ComercioUbicacionScreen(onBack = { navController.popBackStack() })
             }
         }
     }

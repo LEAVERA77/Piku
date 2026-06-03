@@ -19,8 +19,18 @@ const {
   tablaImagenesDisponible,
 } = require('../utils/recompensa.imagenes.util');
 
+const { resolveComercioId } = require('../utils/comercio.resolve.util');
+
 function getComercioId(req) {
-  return req.user.comercio_id;
+  return req.comercioId || req.user?.comercio_id || null;
+}
+
+function debeActualizarCampo(val) {
+  if (val === undefined || val === null) return false;
+  if (typeof val === 'boolean') return true;
+  if (typeof val === 'number' && !Number.isNaN(val)) return true;
+  if (typeof val === 'string' && val !== '') return true;
+  return false;
 }
 
 const UUID_RE =
@@ -42,7 +52,7 @@ const ESTADOS_CANJE = new Set(['confirmado', 'pendiente', 'cancelado']);
 async function getReglasPuntos(req, res) {
   try {
     const comercioId = getComercioId(req);
-    if (!comercioId) return responderError(res, 403, 'Sin comercio asociado');
+    if (!comercioId) return responderError(res, 403, 'Sin comercio asociado a tu cuenta');
 
     const result = await query('SELECT * FROM piku_reglas_puntos WHERE comercio_id = $1', [comercioId]);
     if (!result.rows.length) {
@@ -150,15 +160,24 @@ async function getRecompensaStats(req, res) {
     );
     if (!existe.rows.length) return responderError(res, 404, 'Recompensa no encontrada');
 
-    const stats = await query(
-      `SELECT COUNT(*)::int AS canjes, COUNT(DISTINCT usuario_id)::int AS usuarios_unicos
-       FROM piku_canjes WHERE recompensa_id = $1`,
-      [id]
-    );
+    let canjes = 0;
+    let usuariosUnicos = 0;
+    try {
+      const stats = await query(
+        `SELECT COUNT(*)::int AS canjes, COUNT(DISTINCT usuario_id)::int AS usuarios_unicos
+         FROM piku_canjes WHERE recompensa_id = $1`,
+        [id]
+      );
+      canjes = stats.rows[0]?.canjes ?? 0;
+      usuariosUnicos = stats.rows[0]?.usuarios_unicos ?? 0;
+    } catch (dbErr) {
+      console.warn('getRecompensaStats canjes:', dbErr.message);
+      canjes = existe.rows[0].usos_actuales ?? 0;
+    }
 
     return res.json({
-      canjes: stats.rows[0].canjes,
-      usuariosUnicos: stats.rows[0].usuarios_unicos,
+      canjes,
+      usuariosUnicos,
       usosActuales: existe.rows[0].usos_actuales,
     });
   } catch (error) {
@@ -264,7 +283,7 @@ async function updateRecompensa(req, res) {
     }
 
     for (const [col, val] of Object.entries(mapa)) {
-      if (val !== undefined && val !== '') {
+      if (debeActualizarCampo(val)) {
         campos.push(`${col} = $${idx++}`);
         valores.push(val);
       }
@@ -272,7 +291,10 @@ async function updateRecompensa(req, res) {
 
     if (!campos.length) return responderError(res, 400, 'Sin datos para actualizar');
 
-    campos.push('updated_at = NOW()');
+    const colsRecomp = await columnasTabla('piku_recompensas');
+    if (tiene(colsRecomp, 'updated_at')) {
+      campos.push('updated_at = NOW()');
+    }
     valores.push(id, comercioId);
 
     const sql = `UPDATE piku_recompensas SET ${campos.join(', ')}
@@ -283,7 +305,7 @@ async function updateRecompensa(req, res) {
     return res.json({ mensaje: 'Recompensa actualizada', recompensa: updated.rows[0] });
   } catch (error) {
     console.error('updateRecompensa:', error);
-    return responderError(res, 500, 'Error al actualizar recompensa');
+    return responderError(res, 500, 'Error al actualizar recompensa', { detail: error.message });
   }
 }
 
@@ -908,9 +930,51 @@ async function registrarFcmToken(req, res) {
   }
 }
 
+async function updateUbicacionComercio(req, res) {
+  try {
+    const comercioId = getComercioId(req);
+    const lat = parseFloat(req.body.lat);
+    const lon = parseFloat(req.body.lon);
+    if (Number.isNaN(lat) || Number.isNaN(lon)) {
+      return responderError(res, 400, 'Latitud y longitud válidas requeridas');
+    }
+
+    const direccion =
+      req.body.direccion != null
+        ? sanitizarInput(req.body.direccion, 500)
+        : undefined;
+
+    const sets = ['lat = $1', 'lon = $2', 'updated_at = NOW()'];
+    const vals = [lat, lon];
+    if (direccion) {
+      sets.push(`direccion = $${vals.length + 1}`);
+      vals.push(direccion);
+    }
+    vals.push(comercioId);
+
+    const updated = await query(
+      `UPDATE piku_comercios SET ${sets.join(', ')}
+       WHERE id = $${vals.length}
+       RETURNING id, nombre, direccion, lat, lon, logo_url`,
+      vals
+    );
+    if (!updated.rows.length) return responderError(res, 404, 'Comercio no encontrado');
+
+    invalidarCacheComerciosSelect();
+    return res.json({
+      mensaje: 'Ubicación del comercio actualizada',
+      comercio: updated.rows[0],
+    });
+  } catch (error) {
+    console.error('updateUbicacionComercio:', error);
+    return responderError(res, 500, 'Error al actualizar ubicación', { detail: error.message });
+  }
+}
+
 async function uploadLogoComercio(req, res) {
   try {
     const comercioId = getComercioId(req);
+    if (!comercioId) return responderError(res, 403, 'Sin comercio asociado a tu cuenta');
     if (!req.file) return responderError(res, 400, 'Archivo de imagen requerido');
     if (!cloudinaryOk) return responderError(res, 503, 'Cloudinary no configurado en el servidor');
 
@@ -959,5 +1023,6 @@ module.exports = {
   marcarNotificacionLeida,
   obtenerHistorialCanjes,
   registrarFcmToken,
+  updateUbicacionComercio,
   uploadLogoComercio,
 };

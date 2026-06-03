@@ -10,7 +10,10 @@ data class PerfilResponse(
 data class ComercioPerfilDto(
     val id: String,
     val nombre: String,
-    @SerializedName("logo_url") val logoUrl: String? = null
+    @SerializedName("logo_url") val logoUrl: String? = null,
+    val direccion: String? = null,
+    val lat: Double? = null,
+    val lon: Double? = null
 )
 
 data class LogoUploadResponse(
