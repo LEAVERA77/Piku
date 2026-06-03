@@ -44,11 +44,6 @@ fun OsmdroidMapView(
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
-    val pinIcon = remember {
-        ContextCompat.getDrawable(context, R.drawable.ic_map_pin)?.let { drawable ->
-            BitmapDrawable(context.resources, drawable.toBitmap(64, 80))
-        }
-    }
     val userIcon = remember {
         ContextCompat.getDrawable(context, R.drawable.ic_map_user_location)?.let { drawable ->
             BitmapDrawable(context.resources, drawable.toBitmap(48, 48))
@@ -103,7 +98,7 @@ fun OsmdroidMapView(
         mapView.controller.animateTo(GeoPoint(centerLat, centerLon))
     }
 
-    LaunchedEffect(comercios, userLat, userLon, pinIcon, userIcon) {
+    LaunchedEffect(comercios, userLat, userLon, userIcon) {
         mapView.overlays.clear()
         if (userLat != null && userLon != null) {
             val userPoint = GeoPoint(userLat, userLon)
@@ -142,7 +137,7 @@ fun OsmdroidMapView(
                 } else {
                     comercio.direccion ?: ""
                 }
-                setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+                setAnchor(Marker.ANCHOR_CENTER, MapPinBitmap.anchorY(comercio.nombre))
                 icon = markerIcon
                 setOnMarkerClickListener { _, _ ->
                     onComercioClick(comercio)
