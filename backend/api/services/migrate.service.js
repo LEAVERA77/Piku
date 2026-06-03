@@ -17,6 +17,7 @@ const MIGRATION_FILES = [
   'migration_notificaciones.sql',
   'migration_fcm_token.sql',
   'migration_puntos_estrategia.sql',
+  'migration_transacciones_puntos.sql',
 ];
 
 /** Columnas críticas que la API necesita (por si falla el SQL completo). */
@@ -75,6 +76,29 @@ const CRITICAL_ALTERS = [
   'ALTER TABLE piku_reglas_puntos ADD COLUMN IF NOT EXISTS unidad_moneda NUMERIC(10, 2) NOT NULL DEFAULT 10',
   'ALTER TABLE piku_usuarios ADD COLUMN IF NOT EXISTS fecha_nacimiento DATE',
   'ALTER TABLE piku_usuarios ADD COLUMN IF NOT EXISTS bono_bienvenida_otorgado BOOLEAN NOT NULL DEFAULT FALSE',
+  'ALTER TABLE piku_usuarios ADD COLUMN IF NOT EXISTS codigo_referido VARCHAR(12)',
+  `CREATE TABLE IF NOT EXISTS piku_transacciones_puntos (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    usuario_id UUID NOT NULL REFERENCES piku_usuarios(id) ON DELETE CASCADE,
+    comercio_id UUID REFERENCES piku_comercios(id) ON DELETE SET NULL,
+    tipo VARCHAR(20) NOT NULL CHECK (tipo IN ('ganado', 'canjeado')),
+    puntos INTEGER NOT NULL,
+    descripcion TEXT,
+    qr_codigo_id UUID,
+    recompensa_id UUID,
+    codigo_canje VARCHAR(64),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  )`,
+  'CREATE INDEX IF NOT EXISTS idx_piku_transacciones_usuario ON piku_transacciones_puntos(usuario_id, created_at DESC)',
+  `CREATE TABLE IF NOT EXISTS piku_canjes (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    usuario_id UUID NOT NULL REFERENCES piku_usuarios(id) ON DELETE CASCADE,
+    recompensa_id UUID NOT NULL,
+    puntos_usados INTEGER NOT NULL CHECK (puntos_usados > 0),
+    codigo_canje VARCHAR(64) NOT NULL UNIQUE,
+    estado VARCHAR(20) NOT NULL DEFAULT 'confirmado',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  )`,
   'ALTER TABLE piku_reglas_puntos ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()',
   `CREATE TABLE IF NOT EXISTS piku_recompensa_imagenes (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

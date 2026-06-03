@@ -1,7 +1,7 @@
 const { query, withTransaction } = require('../services/neon.service');
 const { calcularDistancia } = require('../services/nominatim.service');
 const { generarCodigoUnico, responderError } = require('../utils/helpers');
-const { calcularPuntosCompra } = require('../services/puntos.service');
+const { calcularPuntosCompra, saldoSeguro } = require('../services/puntos.service');
 
 const MINUTOS_EXPIRACION_QR = parseInt(process.env.QR_EXPIRACION_MINUTOS, 10) || 15;
 
@@ -120,7 +120,8 @@ async function validarEscaneo(req, res) {
         'SELECT puntos_saldo FROM piku_usuarios WHERE id = $1 FOR UPDATE',
         [req.user.id]
       );
-      const nuevoSaldo = user.rows[0].puntos_saldo + puntos;
+      const saldoActual = saldoSeguro(user.rows[0]?.puntos_saldo);
+      const nuevoSaldo = saldoActual + puntos;
 
       await client.query(
         'UPDATE piku_usuarios SET puntos_saldo = $1, updated_at = NOW() WHERE id = $2',

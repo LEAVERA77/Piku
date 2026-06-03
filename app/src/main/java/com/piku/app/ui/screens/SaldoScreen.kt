@@ -16,7 +16,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CardGiftcard
+import android.content.Intent
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -27,6 +28,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.material.icons.filled.CardGiftcard
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -57,6 +60,7 @@ fun SaldoScreen(
     viewModel: SaldoViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val context = LocalContext.current
 
     LaunchedEffect(Unit) {
         viewModel.refrescar()
@@ -112,6 +116,14 @@ fun SaldoScreen(
                     modifier = Modifier.padding(top = 6.dp)
                 )
             }
+            uiState.mensajeInfo?.let { msg ->
+                Text(
+                    text = msg,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(top = 6.dp)
+                )
+            }
         }
 
         item {
@@ -156,6 +168,27 @@ fun SaldoScreen(
                 modifier = Modifier.fillMaxWidth(),
                 estilo = EstiloBotonPiku.CONTORNO,
                 icono = Icons.Default.CardGiftcard
+            )
+        }
+
+        item {
+            BotonPiku(
+                texto = "COMPARTIR PIKU (+20 PTS)",
+                onClick = {
+                    viewModel.compartirPiku {
+                        val intent = Intent(Intent.ACTION_SEND).apply {
+                            type = "text/plain"
+                            putExtra(
+                                Intent.EXTRA_TEXT,
+                                "Sumá puntos y canjeá ofertas con Piku en comercios de tu ciudad."
+                            )
+                        }
+                        context.startActivity(Intent.createChooser(intent, "Compartir Piku"))
+                    }
+                },
+                modifier = Modifier.fillMaxWidth(),
+                estilo = EstiloBotonPiku.CONTORNO,
+                icono = Icons.Default.Share
             )
         }
 

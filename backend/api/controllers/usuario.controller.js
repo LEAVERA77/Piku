@@ -2,6 +2,25 @@ const { query, withTransaction } = require('../services/neon.service');
 const { registrarEvento } = require('../services/eventos.service');
 const { uploadImage, configurado: cloudinaryOk } = require('../services/cloudinary.service');
 const { generarCodigoUnico, responderError } = require('../utils/helpers');
+const {
+  otorgarBonoBienvenida,
+  otorgarBonoCompartir,
+  debitarPuntos,
+  asegurarCodigoReferido,
+  saldoSeguro,
+} = require('../services/puntos.service');
+
+async function asegurarBonoInicial(usuarioId) {
+  try {
+    return await withTransaction(async (client) => {
+      await asegurarCodigoReferido(client, usuarioId);
+      return otorgarBonoBienvenida(client, usuarioId);
+    });
+  } catch (error) {
+    console.warn('asegurarBonoInicial:', error.message);
+    return { otorgado: false, puntos: 0 };
+  }
+}
 
 /**
  * Saldo de puntos del cliente autenticado.
@@ -9,11 +28,13 @@ const { generarCodigoUnico, responderError } = require('../utils/helpers');
 async function getSaldoPuntos(req, res) {
   try {
     const usuarioId = req.user.id;
+    await asegurarBonoInicial(usuarioId);
+
     const result = await query(
       'SELECT puntos_saldo FROM piku_usuarios WHERE id = $1',
       [usuarioId]
     );
-    const puntos = result.rows[0]?.puntos_saldo ?? 0;
+    const puntos = saldoSeguro(result.rows[0]?.puntos_saldo);
     const equivalenciaDescuento = Math.floor(puntos / 10);
 
     return res.json({
@@ -33,18 +54,25 @@ async function getSaldoPuntos(req, res) {
 async function getHistorialPuntos(req, res) {
   try {
     const limite = Math.min(parseInt(req.query.limite, 10) || 50, 100);
-    const result = await query(
-      `SELECT t.id, t.tipo, t.puntos, t.descripcion, t.created_at,
-              c.nombre AS comercio_nombre
-       FROM piku_transacciones_puntos t
-       LEFT JOIN piku_comercios c ON c.id = t.comercio_id
-       WHERE t.usuario_id = $1
-       ORDER BY t.created_at DESC
-       LIMIT $2`,
-      [req.user.id, limite]
-    );
-
-    return res.json({ transacciones: result.rows });
+    try {
+      const result = await query(
+        `SELECT t.id::text AS id, t.tipo, t.puntos, t.descripcion, t.created_at,
+                c.nombre AS comercio_nombre
+         FROM piku_transacciones_puntos t
+         LEFT JOIN piku_comercios c ON c.id = t.comercio_id
+         WHERE t.usuario_id = $1
+         ORDER BY t.created_at DESC
+         LIMIT $2`,
+        [req.user.id, limite]
+      );
+      return res.json({ transacciones: result.rows });
+    } catch (dbError) {
+      if (/piku_transacciones_puntos|does not exist|no existe/i.test(dbError.message)) {
+        console.warn('getHistorialPuntos: tabla ausente, devolviendo vacío');
+        return res.json({ transacciones: [] });
+      }
+      throw dbError;
+    }
   } catch (error) {
     console.error('getHistorialPuntos:', error);
     return responderError(res, 500, 'Error al obtener historial');
@@ -135,37 +163,28 @@ async function canjearRecompensa(req, res) {
         'SELECT puntos_saldo FROM piku_usuarios WHERE id = $1 FOR UPDATE',
         [req.user.id]
       );
-      const saldo = user.rows[0].puntos_saldo;
+      const saldo = saldoSeguro(user.rows[0]?.puntos_saldo);
       if (saldo < recompensa.puntos_requeridos) {
         throw new Error('Puntos insuficientes');
       }
 
       const codigoCanje = generarCodigoUnico('CANJE');
-      const nuevoSaldo = saldo - recompensa.puntos_requeridos;
 
-      await client.query(
-        'UPDATE piku_usuarios SET puntos_saldo = $1, updated_at = NOW() WHERE id = $2',
-        [nuevoSaldo, req.user.id]
-      );
+      const debito = await debitarPuntos(client, {
+        usuarioId: req.user.id,
+        comercioId: recompensa.comercio_id,
+        puntos: recompensa.puntos_requeridos,
+        descripcion: `Canje: ${recompensa.nombre}`,
+        extras: {
+          recompensaId: recompensa.id,
+          codigoCanje,
+        },
+      });
 
       await client.query(
         `INSERT INTO piku_canjes (usuario_id, recompensa_id, puntos_usados, codigo_canje)
          VALUES ($1, $2, $3, $4)`,
         [req.user.id, recompensa.id, recompensa.puntos_requeridos, codigoCanje]
-      );
-
-      await client.query(
-        `INSERT INTO piku_transacciones_puntos
-         (usuario_id, comercio_id, tipo, puntos, descripcion, recompensa_id, codigo_canje)
-         VALUES ($1, $2, 'canjeado', $3, $4, $5, $6)`,
-        [
-          req.user.id,
-          recompensa.comercio_id,
-          -recompensa.puntos_requeridos,
-          `Canje: ${recompensa.nombre}`,
-          recompensa.id,
-          codigoCanje,
-        ]
       );
 
       if (recompensa.stock != null) {
@@ -180,7 +199,7 @@ async function canjearRecompensa(req, res) {
         [recompensa.id]
       );
 
-      return { recompensa, codigoCanje, nuevoSaldo };
+      return { recompensa, codigoCanje, nuevoSaldo: debito.saldo };
     });
 
     try {
@@ -231,30 +250,39 @@ async function uploadAvatar(req, res) {
 async function getDesglosePuntos(req, res) {
   try {
     const usuarioId = req.user.id;
+    await asegurarBonoInicial(usuarioId);
+
     const saldoRes = await query(
       'SELECT puntos_saldo FROM piku_usuarios WHERE id = $1',
       [usuarioId]
     );
-    const saldo = saldoRes.rows[0]?.puntos_saldo ?? 0;
+    const saldo = saldoSeguro(saldoRes.rows[0]?.puntos_saldo);
 
-    const agg = await query(
-      `SELECT
-         COALESCE(SUM(CASE
-           WHEN tipo = 'ganado' AND (
-             descripcion ILIKE 'Compra%' OR descripcion ILIKE 'Compra en%'
-           ) THEN puntos ELSE 0 END), 0)::int AS compras,
-         COALESCE(SUM(CASE
-           WHEN tipo = 'ganado' AND NOT (
-             descripcion ILIKE 'Compra%' OR descripcion ILIKE 'Compra en%'
-           ) THEN puntos ELSE 0 END), 0)::int AS bonos,
-         COALESCE(SUM(CASE
-           WHEN tipo = 'canjeado' THEN ABS(puntos) ELSE 0 END), 0)::int AS canjes
-       FROM piku_transacciones_puntos
-       WHERE usuario_id = $1`,
-      [usuarioId]
-    );
+    let row = { compras: 0, bonos: 0, canjes: 0 };
+    try {
+      const agg = await query(
+        `SELECT
+           COALESCE(SUM(CASE
+             WHEN tipo = 'ganado' AND (
+               descripcion ILIKE 'Compra%' OR descripcion ILIKE 'Compra en%'
+             ) THEN puntos ELSE 0 END), 0)::int AS compras,
+           COALESCE(SUM(CASE
+             WHEN tipo = 'ganado' AND NOT (
+               descripcion ILIKE 'Compra%' OR descripcion ILIKE 'Compra en%'
+             ) THEN puntos ELSE 0 END), 0)::int AS bonos,
+           COALESCE(SUM(CASE
+             WHEN tipo = 'canjeado' THEN ABS(puntos) ELSE 0 END), 0)::int AS canjes
+         FROM piku_transacciones_puntos
+         WHERE usuario_id = $1`,
+        [usuarioId]
+      );
+      row = agg.rows[0] || row;
+    } catch (dbError) {
+      if (!/piku_transacciones_puntos|does not exist|no existe/i.test(dbError.message)) {
+        throw dbError;
+      }
+    }
 
-    const row = agg.rows[0] || { compras: 0, bonos: 0, canjes: 0 };
     return res.json({
       saldo,
       compras: row.compras,
@@ -267,9 +295,35 @@ async function getDesglosePuntos(req, res) {
   }
 }
 
+async function bonificacionBienvenida(req, res) {
+  try {
+    const resultado = await asegurarBonoInicial(req.user.id);
+    if (!resultado.otorgado) {
+      const saldoRes = await query(
+        'SELECT puntos_saldo FROM piku_usuarios WHERE id = $1',
+        [req.user.id]
+      );
+      return res.json({
+        otorgado: false,
+        puntos: 0,
+        saldo: saldoSeguro(saldoRes.rows[0]?.puntos_saldo),
+        mensaje: 'Ya recibiste tu bono de bienvenida',
+      });
+    }
+    return res.json({
+      otorgado: true,
+      puntos: resultado.puntos,
+      saldo: resultado.saldo,
+      mensaje: `¡Te regalamos ${resultado.puntos} puntos de bienvenida!`,
+    });
+  } catch (error) {
+    console.error('bonificacionBienvenida:', error);
+    return responderError(res, 500, 'Error al acreditar bienvenida');
+  }
+}
+
 async function bonificacionCompartir(req, res) {
   try {
-    const { otorgarBonoCompartir } = require('../services/puntos.service');
     const resultado = await otorgarBonoCompartir(req.user.id);
     if (!resultado.otorgado) {
       return responderError(res, 400, resultado.mensaje);
@@ -285,6 +339,7 @@ module.exports = {
   getSaldoPuntos,
   getHistorialPuntos,
   getDesglosePuntos,
+  bonificacionBienvenida,
   bonificacionCompartir,
   getRecompensasDisponibles,
   canjearRecompensa,

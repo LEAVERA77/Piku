@@ -20,6 +20,7 @@ import com.piku.app.data.model.RecompensaDetalleResponse
 import com.piku.app.data.model.RecompensaImagenesResponse
 import com.piku.app.data.model.RecompensaImagenUploadResponse
 import com.piku.app.data.model.EventoRequest
+import com.piku.app.data.model.BonificacionResponse
 import com.piku.app.data.model.DesglosePuntosResponse
 import com.piku.app.data.model.HistorialResponse
 import com.piku.app.data.model.RecompensasDisponiblesResponse
@@ -112,6 +113,12 @@ interface PikuApiService {
 
     @GET("api/usuario/historial")
     suspend fun historialPuntos(@Query("limite") limite: Int = 50): HistorialResponse
+
+    @POST("api/usuario/bonificacion/bienvenida")
+    suspend fun bonificacionBienvenida(): BonificacionResponse
+
+    @POST("api/usuario/bonificacion/compartir")
+    suspend fun bonificacionCompartir(): BonificacionResponse
 
     @GET("api/usuario/recompensas")
     suspend fun recompensasDisponibles(): RecompensasDisponiblesResponse

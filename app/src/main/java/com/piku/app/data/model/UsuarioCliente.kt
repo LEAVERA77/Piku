@@ -68,6 +68,13 @@ data class DesglosePuntosResponse(
     val canjes: Int = 0
 )
 
+data class BonificacionResponse(
+    val otorgado: Boolean = false,
+    val puntos: Int = 0,
+    val saldo: Int? = null,
+    val mensaje: String? = null
+)
+
 data class RecompensaDisponible(
     val id: String,
     @SerializedName("comercio_id") val comercioId: String? = null,

@@ -20,7 +20,8 @@ data class SaldoUiState(
     val puntosCanjes: Int = 0,
     val transacciones: List<Transaccion> = emptyList(),
     val cargando: Boolean = true,
-    val error: String? = null
+    val error: String? = null,
+    val mensajeInfo: String? = null
 )
 
 class SaldoViewModel(application: Application) : AndroidViewModel(application) {
@@ -31,10 +32,10 @@ class SaldoViewModel(application: Application) : AndroidViewModel(application) {
 
     fun refrescar() {
         viewModelScope.launch {
-            _uiState.update { it.copy(cargando = true, error = null) }
+            _uiState.update { it.copy(cargando = true, error = null, mensajeInfo = null) }
             try {
                 val saldo = repo.obtenerSaldo()
-                val historial = repo.obtenerHistorial()
+                val historial = runCatching { repo.obtenerHistorial() }.getOrDefault(emptyList())
                 val desglose = runCatching { repo.obtenerDesglose() }.getOrNull()
                 _uiState.update {
                     it.copy(
@@ -45,14 +46,40 @@ class SaldoViewModel(application: Application) : AndroidViewModel(application) {
                         puntosBonos = desglose?.bonos ?: 0,
                         puntosCanjes = desglose?.canjes ?: 0,
                         transacciones = historial,
-                        cargando = false
+                        cargando = false,
+                        error = null
                     )
                 }
             } catch (e: Exception) {
                 _uiState.update {
-                    it.copy(cargando = false, error = e.message ?: "No se pudo cargar el saldo")
+                    it.copy(
+                        cargando = false,
+                        error = e.message ?: "No se pudo cargar el saldo"
+                    )
                 }
             }
+        }
+    }
+
+    fun compartirPiku(onCompartir: () -> Unit) {
+        onCompartir()
+        viewModelScope.launch {
+            runCatching { repo.bonificacionCompartir() }
+                .onSuccess { res ->
+                    if (res.otorgado) {
+                        _uiState.update { it.copy(mensajeInfo = res.mensaje) }
+                        refrescar()
+                    } else {
+                        _uiState.update {
+                            it.copy(mensajeInfo = res.mensaje ?: "Ya recibiste puntos por compartir hoy")
+                        }
+                    }
+                }
+                .onFailure { e ->
+                    _uiState.update {
+                        it.copy(mensajeInfo = e.message ?: "No se pudieron acreditar los puntos")
+                    }
+                }
         }
     }
 }

@@ -2,6 +2,7 @@ package com.piku.app.data.repository
 
 import android.content.Context
 import com.piku.app.data.config.ConfigLoader
+import com.piku.app.data.model.BonificacionResponse
 import com.piku.app.data.model.CanjeRequest
 import com.piku.app.data.model.CanjeResponse
 import com.piku.app.data.model.DesglosePuntosResponse
@@ -30,6 +31,23 @@ class UsuarioRepository(private val context: Context) {
     suspend fun obtenerHistorial(limite: Int = 50): List<Transaccion> {
         try {
             return api.historialPuntos(limite).transacciones.map { it.toTransaccion() }
+        } catch (e: HttpException) {
+            if (e.code() == 404) return emptyList()
+            throw Exception(ApiErrorParser.mensaje(e), e)
+        }
+    }
+
+    suspend fun asegurarBonoBienvenida(): BonificacionResponse {
+        try {
+            return api.bonificacionBienvenida()
+        } catch (e: HttpException) {
+            throw Exception(ApiErrorParser.mensaje(e), e)
+        }
+    }
+
+    suspend fun bonificacionCompartir(): BonificacionResponse {
+        try {
+            return api.bonificacionCompartir()
         } catch (e: HttpException) {
             throw Exception(ApiErrorParser.mensaje(e), e)
         }

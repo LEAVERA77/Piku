@@ -11,7 +11,7 @@ const {
   agregarCamposDireccionUsuario,
 } = require('../utils/direccion.registro.util');
 const { validarTelefonoComercio } = require('../utils/telefono.util');
-const { otorgarBonoBienvenida } = require('../services/puntos.service');
+const { otorgarBonoBienvenida, procesarInvitacionAmigo, asegurarCodigoReferido, saldoSeguro } = require('../services/puntos.service');
 const { verificarIdTokenGoogle } = require('../utils/google.token.util');
 
 /**
@@ -118,12 +118,18 @@ async function registroCliente(req, res) {
     const usuario = normalizarUsuario(insert.rows[0]);
     let puntosBienvenida = 0;
     try {
-      const bono = await withTransaction(async (client) =>
-        otorgarBonoBienvenida(client, usuario.id)
-      );
+      const bono = await withTransaction(async (client) => {
+        await asegurarCodigoReferido(client, usuario.id);
+        const bienvenida = await otorgarBonoBienvenida(client, usuario.id);
+        const codigoAmigo = req.body.codigoAmigo || req.body.codigo_amigo;
+        if (codigoAmigo) {
+          await procesarInvitacionAmigo(client, usuario.id, codigoAmigo);
+        }
+        return bienvenida;
+      });
       if (bono.otorgado) {
         puntosBienvenida = bono.puntos;
-        usuario.puntos_saldo = (usuario.puntos_saldo || 0) + bono.puntos;
+        usuario.puntos_saldo = saldoSeguro(usuario.puntos_saldo) + bono.puntos;
       }
     } catch (e) {
       console.warn('bono bienvenida registroCliente:', e.message);
@@ -603,6 +609,7 @@ async function loginGoogle(req, res) {
     );
 
     let usuario;
+    let puntosBienvenida = 0;
     if (!result.rows.length) {
       const hash = await bcrypt.hash(`google:${googleId}`, 4);
       const insertCampos = ['email', 'password_hash', 'nombre', 'rol'];
@@ -622,9 +629,22 @@ async function loginGoogle(req, res) {
         insertVals
       );
       usuario = normalizarUsuario(insert.rows[0]);
-      withTransaction(async (client) => otorgarBonoBienvenida(client, usuario.id)).catch((e) => {
-        console.warn('bono bienvenida loginGoogle async:', e.message);
-      });
+      try {
+        const bono = await withTransaction(async (client) => {
+          await asegurarCodigoReferido(client, usuario.id);
+          const codigoAmigo = req.body.codigoAmigo || req.body.codigo_amigo;
+          if (codigoAmigo) {
+            await procesarInvitacionAmigo(client, usuario.id, codigoAmigo);
+          }
+          return otorgarBonoBienvenida(client, usuario.id);
+        });
+        if (bono.otorgado) {
+          puntosBienvenida = bono.puntos;
+          usuario.puntos_saldo = saldoSeguro(usuario.puntos_saldo) + bono.puntos;
+        }
+      } catch (e) {
+        console.warn('bono bienvenida loginGoogle:', e.message);
+      }
     } else {
       usuario = normalizarUsuario(result.rows[0]);
       if (!usuario.activo) return responderError(res, 403, 'Cuenta desactivada');
@@ -659,6 +679,7 @@ async function loginGoogle(req, res) {
       mensaje: 'Sesión con Google iniciada',
       token,
       usuario,
+      puntosBienvenida,
     });
   } catch (error) {
     console.error('loginGoogle:', error);

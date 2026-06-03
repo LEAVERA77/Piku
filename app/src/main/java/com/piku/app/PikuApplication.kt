@@ -2,6 +2,7 @@ package com.piku.app
 
 import android.app.Application
 import com.piku.app.data.network.RetrofitInstance
+import com.piku.app.data.repository.UsuarioRepository
 import com.piku.app.data.security.InstallSessionGuard
 import com.piku.app.data.datastore.AuthDataStore
 import kotlinx.coroutines.CoroutineScope
@@ -17,6 +18,9 @@ class PikuApplication : Application() {
         CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
             InstallSessionGuard.apply(this@PikuApplication)
             AuthDataStore.warmCache(this@PikuApplication)
+            if (AuthDataStore.hasSession(this@PikuApplication)) {
+                runCatching { UsuarioRepository(this@PikuApplication).obtenerSaldo() }
+            }
         }
         val osmdroidBase = File(cacheDir, "osmdroid").apply { mkdirs() }
         Configuration.getInstance().apply {
