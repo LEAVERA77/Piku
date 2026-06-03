@@ -49,7 +49,6 @@ import com.piku.app.ui.theme.PikuTheme
 import com.piku.app.data.model.OfertaComercio
 import com.piku.app.data.repository.OfertaRepository
 import com.piku.app.ui.components.PikuPhotoImage
-import com.piku.app.ui.media.PikuImages
 import com.piku.app.ui.theme.NaranjaPiku
 import com.piku.app.ui.theme.VerdePiku
 import kotlinx.coroutines.launch
