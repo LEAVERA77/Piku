@@ -28,6 +28,7 @@ import org.osmdroid.util.BoundingBox
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.CustomZoomButtonsController
 import org.osmdroid.views.MapView
+import android.util.Log
 import org.osmdroid.views.overlay.Marker
 import org.osmdroid.views.overlay.Polygon
 import org.osmdroid.views.overlay.infowindow.InfoWindow
@@ -41,7 +42,7 @@ fun OsmdroidMapView(
     userLon: Double?,
     onComercioClick: (Comercio) -> Unit,
     onViewportChanged: ((minLat: Double, maxLat: Double, minLon: Double, maxLon: Double) -> Unit)?,
-    zoomLevel: Double = 14.0,
+    zoomLevel: Double = 15.0,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -56,7 +57,7 @@ fun OsmdroidMapView(
             setTileSource(TileSourceFactory.MAPNIK)
             setMultiTouchControls(true)
             zoomController.setVisibility(CustomZoomButtonsController.Visibility.NEVER)
-            controller.setZoom(14.0)
+            controller.setZoom(15.0)
             controller.setCenter(GeoPoint(centerLat, centerLon))
         }
     }
@@ -133,13 +134,15 @@ fun OsmdroidMapView(
             }
         }
 
+        Log.d(TAG, "Agregando ${pins.size} pines al mapa (comercios=${comercios.size})")
+
         mapView.overlays.clear()
         if (userLat != null && userLon != null) {
             val userPoint = GeoPoint(userLat, userLon)
             val precision = Polygon(mapView).apply {
-                points = Polygon.pointsAsCircle(userPoint, 80.0)
-                fillPaint.color = Color.argb(0x33, 0x25, 0x63, 0xEB)
-                outlinePaint.color = Color.argb(0x88, 0x25, 0x63, 0xEB)
+                points = Polygon.pointsAsCircle(userPoint, RADIO_UBICACION_METROS)
+                fillPaint.color = Color.parseColor("#3300A86B")
+                outlinePaint.color = Color.parseColor("#00A86B")
                 outlinePaint.strokeWidth = 2f
             }
             mapView.overlays.add(precision)
@@ -177,6 +180,9 @@ fun OsmdroidMapView(
         update = { it.invalidate() }
     )
 }
+
+private const val TAG = "OsmdroidMapView"
+private const val RADIO_UBICACION_METROS = 15.0
 
 private fun notifyViewport(
     mapView: MapView,

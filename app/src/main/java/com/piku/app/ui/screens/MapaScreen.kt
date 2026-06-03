@@ -84,10 +84,10 @@ fun MapaScreen(
     Box(modifier = modifier.fillMaxSize()) {
         OsmdroidMapView(
             comercios = uiState.comerciosVisibles,
-            centerLat = uiState.userLat,
-            centerLon = uiState.userLon,
-            userLat = if (uiState.tieneUbicacionReal) uiState.userLat else null,
-            userLon = if (uiState.tieneUbicacionReal) uiState.userLon else null,
+            centerLat = uiState.mapCenterLat,
+            centerLon = uiState.mapCenterLon,
+            userLat = uiState.gpsLat,
+            userLon = uiState.gpsLon,
             onComercioClick = { viewModel.seleccionarComercio(it) },
             onViewportChanged = viewModel::onViewportChanged,
             zoomLevel = uiState.zoomMapa,

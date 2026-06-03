@@ -8,6 +8,8 @@ import androidx.lifecycle.viewModelScope
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
 import com.google.android.gms.tasks.CancellationTokenSource
+import android.util.Log
+import com.piku.app.data.ComerciosCerritoDemo
 import com.piku.app.data.model.Comercio
 import com.piku.app.data.model.Rubro
 import com.piku.app.data.nominatim.NominatimAddress
@@ -33,8 +35,10 @@ data class MapaUiState(
     val rubros: List<Rubro> = emptyList(),
     val rubrosSeleccionados: Set<String> = emptySet(),
     val busquedaNombre: String = "",
-    val userLat: Double = CERRITO_LAT,
-    val userLon: Double = CERRITO_LON,
+    val mapCenterLat: Double = CERRITO_LAT,
+    val mapCenterLon: Double = CERRITO_LON,
+    val gpsLat: Double? = null,
+    val gpsLon: Double? = null,
     val tieneUbicacionReal: Boolean = false,
     val zoomMapa: Double = ZOOM_DEFAULT,
     val panelExpandido: Boolean = true,
@@ -65,12 +69,17 @@ data class MapaUiState(
         }
 
     val contadorVisibles: Int get() = comerciosVisibles.size
+
+    val refLat: Double get() = gpsLat ?: mapCenterLat
+    val refLon: Double get() = gpsLon ?: mapCenterLon
 }
 
 private const val CERRITO_LAT = -31.9189
 private const val CERRITO_LON = -60.6085
-private const val ZOOM_UBICACION = 20.5
-private const val ZOOM_DEFAULT = 14.0
+private const val ZOOM_UBICACION = 18.0
+private const val ZOOM_DEFAULT = 15.0
+
+private const val TAG = "MapaViewModel"
 
 private fun coincideRubro(comercio: Comercio, catalogo: List<Rubro>, seleccionados: Set<String>): Boolean {
     val cat = comercio.categoria?.lowercase()?.trim()?.replace("é", "e") ?: "otros"
@@ -134,29 +143,46 @@ class MapaViewModel(application: Application) : AndroidViewModel(application) {
                     }
                 }
 
-                val lat = location?.latitude ?: _uiState.value.userLat
-                val lon = location?.longitude ?: _uiState.value.userLon
-                val conGps = location != null
-                _uiState.update {
-                    it.copy(
-                        userLat = lat,
-                        userLon = lon,
-                        tieneUbicacionReal = conGps,
-                        zoomMapa = if (conGps) ZOOM_UBICACION else it.zoomMapa
-                    )
+                if (location != null) {
+                    _uiState.update {
+                        it.copy(
+                            gpsLat = location.latitude,
+                            gpsLon = location.longitude,
+                            tieneUbicacionReal = true
+                        )
+                    }
+                    aplicarCalleInferida(location.latitude, location.longitude)
                 }
-                if (conGps) aplicarCalleInferida(lat, lon)
 
-                val comercios = repo.listarComerciosInicial(lat, lon)
+                val s = _uiState.value
+                val refLat = s.refLat
+                val refLon = s.refLon
+                val comercios = try {
+                    repo.listarComerciosInicial(refLat, refLon).let { lista ->
+                        if (lista.isEmpty()) {
+                            Log.w(TAG, "API sin comercios; usando demo Cerrito (${ComerciosCerritoDemo.lista.size})")
+                            ComerciosCerritoDemo.lista
+                        } else lista
+                    }
+                } catch (e: Exception) {
+                    Log.w(TAG, "Error API comercios; usando demo Cerrito", e)
+                    ComerciosCerritoDemo.lista
+                }
+                comercios.forEach { c ->
+                    Log.d(TAG, "Comercio: ${c.nombre} en (${c.lat}, ${c.lon}) emoji=${c.iconoEmoji}")
+                }
+                Log.d(TAG, "Total comercios en mapa: ${comercios.size}")
                 _uiState.update {
                     it.copy(cargando = false, comercios = comercios, error = null)
                 }
                 repo.registrarEvento("mapa_abierto")
             } catch (e: Exception) {
+                Log.e(TAG, "Error al cargar mapa", e)
                 _uiState.update {
                     it.copy(
                         cargando = false,
-                        error = e.message ?: "Error al cargar comercios en el mapa"
+                        comercios = ComerciosCerritoDemo.lista,
+                        error = null
                     )
                 }
             }
@@ -178,7 +204,7 @@ class MapaViewModel(application: Application) : AndroidViewModel(application) {
             try {
                 val s = _uiState.value
                 val lista = repo.listarComerciosEnViewport(
-                    s.userLat, s.userLon, minLat, maxLat, minLon, maxLon
+                    s.refLat, s.refLon, minLat, maxLat, minLon, maxLon
                 )
                 val merged = (s.comercios + lista).associateBy { it.id }.values.toList()
                 _uiState.update {
@@ -196,8 +222,12 @@ class MapaViewModel(application: Application) : AndroidViewModel(application) {
     fun centrarEnUsuario() {
         if (!_uiState.value.tieneUbicacionReal) {
             cargarUbicacionYComercios(conUbicacion = true)
-        } else {
-            _uiState.update { it.copy(zoomMapa = ZOOM_UBICACION) }
+            return
+        }
+        val lat = _uiState.value.gpsLat ?: return
+        val lon = _uiState.value.gpsLon ?: return
+        _uiState.update {
+            it.copy(mapCenterLat = lat, mapCenterLon = lon, zoomMapa = ZOOM_UBICACION)
         }
     }
 
@@ -250,14 +280,14 @@ class MapaViewModel(application: Application) : AndroidViewModel(application) {
         if (query.length < 2) {
             _uiState.update { it.copy(resultadosBusqueda = emptyList()) }
             if (s.tieneUbicacionReal) {
-                aplicarCalleInferida(s.userLat, s.userLon)
+                aplicarCalleInferida(s.refLat, s.refLon)
             }
             return
         }
         viewModelScope.launch {
             try {
                 val consulta = NominatimAddressFormatter.consultaGeocode(query, s.contextoDireccion)
-                val resultados = nominatim.buscarCerca(s.userLat, s.userLon, consulta)
+                val resultados = nominatim.buscarCerca(s.refLat, s.refLon, consulta)
                 _uiState.update { it.copy(resultadosBusqueda = resultados, error = null) }
             } catch (_: Exception) {
                 _uiState.update { it.copy(error = "Error en búsqueda de dirección") }
@@ -275,7 +305,7 @@ class MapaViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             _uiState.update { it.copy(cargandoViewport = true, error = null) }
             try {
-                val resultado = nominatim.resolverDireccion(s.userLat, s.userLon, texto)
+                val resultado = nominatim.resolverDireccion(s.refLat, s.refLon, texto)
                 if (resultado == null) {
                     _uiState.update {
                         it.copy(
@@ -320,8 +350,8 @@ class MapaViewModel(application: Application) : AndroidViewModel(application) {
         }
         _uiState.update {
             it.copy(
-                userLat = lat,
-                userLon = lon,
+                mapCenterLat = lat,
+                mapCenterLon = lon,
                 zoomMapa = ZOOM_UBICACION,
                 resultadosBusqueda = emptyList(),
                 sugerenciasDireccion = emptyList(),
@@ -344,7 +374,7 @@ class MapaViewModel(application: Application) : AndroidViewModel(application) {
             }
             try {
                 val s = _uiState.value
-                val res = repo.chatPiku(texto, s.userLat, s.userLon)
+                val res = repo.chatPiku(texto, s.refLat, s.refLon)
                 _uiState.update {
                     it.copy(
                         cargandoChat = false,
@@ -401,7 +431,7 @@ class MapaViewModel(application: Application) : AndroidViewModel(application) {
             }
             try {
                 val s = _uiState.value
-                val res = repo.chatPiku(pregunta, s.userLat, s.userLon)
+                val res = repo.chatPiku(pregunta, s.refLat, s.refLon)
                 _uiState.update {
                     it.copy(
                         cargandoChat = false,

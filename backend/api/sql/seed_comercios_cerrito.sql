@@ -1,20 +1,11 @@
--- Seed Cerrito (Entre Ríos) — SOLO REFERENCIA
--- Los inserts con password_hash deben generarse con bcrypt.
--- Ejecutá el script Node (recomendado):
---   cd backend/api && node scripts/seedComerciosCerrito.js
---
--- Credenciales tras el seed:
---   cafe@martinez.com / donjuan@pizzeria.com / farmacia@cerrito.com /
---   moda@urbana.com / ahorro@super.com  →  contraseña: comercio123
+-- Comercios de prueba en Cerrito, Entre Ríos (referencia).
+-- Preferir: cd backend/api && npm run seed:cerrito
+-- (crea usuarios, ofertas y reglas de puntos).
 
--- Verificación manual:
-SELECT u.email, c.nombre, c.direccion, c.lat, c.lon, c.icono_emoji, c.realiza_envios
-FROM piku_usuarios u
-JOIN piku_comercios c ON c.id = u.comercio_id
-WHERE u.email IN (
-  'cafe@martinez.com',
-  'donjuan@pizzeria.com',
-  'farmacia@cerrito.com',
-  'moda@urbana.com',
-  'ahorro@super.com'
-);
+SELECT id, nombre, lat, lon, tipo_comercio, icono_emoji
+FROM piku_comercios
+WHERE lat BETWEEN -31.921 AND -31.916
+   OR direccion ILIKE '%Cerrito%';
+
+-- Si la consulta anterior está vacía, ejecutar el seed Node o insertar manualmente
+-- con los mismos datos que scripts/seedComerciosCerrito.js
