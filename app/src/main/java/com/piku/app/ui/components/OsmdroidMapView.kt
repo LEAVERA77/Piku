@@ -59,7 +59,7 @@ fun OsmdroidMapView(
             zoomController.setVisibility(CustomZoomButtonsController.Visibility.NEVER)
             minZoomLevel = 14.0
             maxZoomLevel = 20.0
-            controller.setZoom(16.5)
+            controller.setZoom(16.0)
             controller.setCenter(GeoPoint(centerLat, centerLon))
         }
     }

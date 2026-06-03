@@ -77,9 +77,9 @@ data class MapaUiState(
 
 private const val CERRITO_LAT = CerritoGeo.CENTRO_LAT
 private const val CERRITO_LON = CerritoGeo.CENTRO_LON
-private const val ZOOM_UBICACION = 18.0
-private const val ZOOM_DEFAULT = 16.5
-private const val ZOOM_CERRITO_CERCA = 17.5
+private const val ZOOM_UBICACION = 17.0
+private const val ZOOM_DEFAULT = 16.0
+private const val ZOOM_CERRITO_CERCA = 17.0
 
 private const val TAG = "MapaViewModel"
 

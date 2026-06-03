@@ -6,11 +6,12 @@ import com.piku.app.utils.DistanceCalculator
 /** Geografía de prueba: Cerrito, Entre Ríos. */
 object CerritoGeo {
 
-    const val CENTRO_LAT = -31.9189
-    const val CENTRO_LON = -60.6085
+    /** Plaza Las Colonias, centro urbano de Cerrito (Entre Ríos). */
+    const val CENTRO_LAT = -31.5833
+    const val CENTRO_LON = -60.0667
 
-    private const val RADIO_ZONA_M = 15_000
-    private const val RADIO_CERCA_USUARIO_M = 5_000
+    private const val RADIO_ZONA_M = 8_000
+    private const val RADIO_CERCA_USUARIO_M = 3_000
 
     fun enZonaCerrito(lat: Double, lon: Double): Boolean =
         DistanceCalculator.metros(CENTRO_LAT, CENTRO_LON, lat, lon) <= RADIO_ZONA_M
@@ -39,7 +40,6 @@ object CerritoGeo {
             if (api == null) {
                 demo
             } else {
-                val (lat, lon) = corregirLatLon(api.lat, api.lon)
                 demo.copy(
                     id = api.id,
                     lat = demo.lat,
@@ -52,12 +52,7 @@ object CerritoGeo {
                     tipoComercio = api.tipoComercio ?: demo.tipoComercio,
                     iconoEmoji = api.iconoEmoji ?: demo.iconoEmoji,
                     puntosMinCanje = api.puntosMinCanje
-                ).let {
-                    // Si la API trae coords válidas en Cerrito, preferirlas (por si se mueven en BD)
-                    if (lat != null && lon != null && enZonaCerrito(lat, lon)) {
-                        it.copy(lat = lat, lon = lon)
-                    } else it
-                }
+                )
             }
         }
 

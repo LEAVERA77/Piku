@@ -153,16 +153,7 @@ fun MapaScreen(
             }
         }
 
-        if (!tieneUbicacion) {
-            SmallFloatingActionButton(
-                onClick = { permisosUbicacion.launchMultiplePermissionRequest() },
-                modifier = Modifier
-                    .align(Alignment.BottomStart)
-                    .padding(start = 12.dp, bottom = 88.dp)
-            ) {
-                Text("📍", style = MaterialTheme.typography.labelSmall)
-            }
-        } else {
+        if (tieneUbicacion) {
             SmallFloatingActionButton(
                 onClick = { viewModel.centrarEnUsuario() },
                 modifier = Modifier

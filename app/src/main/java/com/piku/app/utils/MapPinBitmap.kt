@@ -20,7 +20,7 @@ import kotlin.math.roundToInt
  */
 object MapPinBitmap {
 
-    private const val CACHE_VERSION = "v2"
+    private const val CACHE_VERSION = "v3"
     private val bitmapCache = LruCache<String, Bitmap>(96)
 
     private val TEARDROP = Path().apply {
@@ -49,13 +49,13 @@ object MapPinBitmap {
     }
 
     fun anchorY(nombre: String?, ofertasNuevas: Int = 0, cantidadOfertas: Int = 0): Float {
-        val pinH = 64f
+        val pinH = 48f
         val labelH = if (nombre.isNullOrBlank()) {
             0f
         } else if (ofertasNuevas > 0 || cantidadOfertas > 0) {
-            38f
-        } else {
             28f
+        } else {
+            22f
         }
         val total = pinH + labelH
         return if (total <= 0f) 1f else pinH / total
@@ -63,15 +63,15 @@ object MapPinBitmap {
 
     private fun escalaPantalla(context: Context): Float {
         val density = context.resources.displayMetrics.density
-        return max(2f, density * 1.35f)
+        return max(0.95f, density * 0.72f)
     }
 
-    private fun sp(context: Context, sp: Float, escala: Float): Float =
+    private fun sp(context: Context, sp: Float): Float =
         TypedValue.applyDimension(
             TypedValue.COMPLEX_UNIT_SP,
             sp,
             context.resources.displayMetrics
-        ) * (escala / context.resources.displayMetrics.density)
+        )
 
     private fun alturaEtiqueta(
         nombre: String?,
@@ -81,7 +81,7 @@ object MapPinBitmap {
     ): Int {
         if (nombre.isNullOrBlank()) return 0
         val tieneSub = ofertasNuevas > 0 || cantidadOfertas > 0
-        return ((if (tieneSub) 38f else 28f) * escala).roundToInt()
+        return ((if (tieneSub) 28f else 22f) * escala).roundToInt()
     }
 
     private fun renderBitmap(
@@ -93,19 +93,19 @@ object MapPinBitmap {
         ofertasNuevas: Int,
         realizaEnvios: Boolean
     ): Bitmap {
-        val pinW = (52f * escala).roundToInt()
-        val pinH = (64f * escala).roundToInt()
+        val pinW = (38f * escala).roundToInt()
+        val pinH = (48f * escala).roundToInt()
         val labelH = alturaEtiqueta(nombre, ofertasNuevas, cantidadOfertas, escala)
 
         val nombrePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = Color.parseColor("#1A237E")
-            textSize = sp(context, 13f, escala)
+            textSize = sp(context, 10f)
             typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
             textAlign = Paint.Align.CENTER
         }
         val subPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = Color.parseColor("#546E7A")
-            textSize = sp(context, 11f, escala)
+            textSize = sp(context, 8.5f)
             textAlign = Paint.Align.CENTER
         }
 
@@ -117,7 +117,7 @@ object MapPinBitmap {
         val anchoSub = if (subTexto.isNotEmpty()) subPaint.measureText(subTexto) else 0f
         val anchoMin = maxOf(
             pinW.toFloat(),
-            max(anchoNombre, anchoSub) + 24f * escala
+            max(anchoNombre, anchoSub) + 16f * escala
         ).roundToInt()
         val altoTotal = pinH + labelH
 
@@ -258,9 +258,9 @@ object MapPinBitmap {
 
     private fun textoNovedades(ofertasNuevas: Int, cantidadOfertas: Int): String = when {
         ofertasNuevas > 0 && cantidadOfertas > 0 ->
-            "✨ $ofertasNuevas nueva(s) · $cantidadOfertas oferta(s)"
-        ofertasNuevas > 0 -> "✨ $ofertasNuevas oferta(s) nueva(s)"
-        cantidadOfertas > 0 -> "🔥 $cantidadOfertas oferta(s) activa(s)"
+            "$ofertasNuevas nueva(s) · $cantidadOfertas oferta(s)"
+        ofertasNuevas > 0 -> "$ofertasNuevas nueva(s)"
+        cantidadOfertas > 0 -> "$cantidadOfertas oferta(s)"
         else -> ""
     }
 

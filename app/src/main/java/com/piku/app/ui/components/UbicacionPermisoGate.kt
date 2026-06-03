@@ -4,7 +4,6 @@ import android.Manifest
 import android.content.Intent
 import android.net.Uri
 import android.provider.Settings
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -19,6 +18,10 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -26,12 +29,14 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
-import com.piku.app.ui.theme.PikuTheme
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
 import com.piku.app.data.datastore.AppPreferences
 import com.piku.app.data.security.InstallSessionGuard
+import androidx.compose.runtime.rememberCoroutineScope
+import com.piku.app.ui.theme.PikuTheme
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 private val PERMISOS_UBICACION = listOf(
     Manifest.permission.ACCESS_FINE_LOCATION,
@@ -39,31 +44,7 @@ private val PERMISOS_UBICACION = listOf(
 )
 
 /**
- * Al abrir la app (nueva instalación), dispara el diálogo del sistema de ubicación.
- */
-@OptIn(ExperimentalPermissionsApi::class)
-@Composable
-fun SolicitudUbicacionAlInicio() {
-    val context = LocalContext.current
-    val permisos = rememberMultiplePermissionsState(PERMISOS_UBICACION)
-
-    LaunchedEffect(permisos.allPermissionsGranted) {
-        if (permisos.allPermissionsGranted) return@LaunchedEffect
-        val installId = InstallSessionGuard.currentInstallId(context)
-        val debePedir = withContext(Dispatchers.IO) {
-            AppPreferences.debeSolicitarUbicacion(context, installId)
-        }
-        if (debePedir) {
-            permisos.launchMultiplePermissionRequest()
-            withContext(Dispatchers.IO) {
-                AppPreferences.marcarUbicacionSolicitada(context, installId)
-            }
-        }
-    }
-}
-
-/**
- * Envuelve el flujo cliente: si no hay permiso, muestra aviso minimalista para activarlo.
+ * Un solo aviso de ubicación: sin diálogo automático ni superposición que bloquee la app.
  */
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
@@ -72,75 +53,80 @@ fun UbicacionPermisoGate(
     content: @Composable () -> Unit
 ) {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     val permisos = rememberMultiplePermissionsState(PERMISOS_UBICACION)
     val concedido = permisos.allPermissionsGranted
+    var mostrarAviso by remember { mutableStateOf(false) }
 
     LaunchedEffect(concedido) {
-        if (!concedido) {
-            val installId = InstallSessionGuard.currentInstallId(context)
-            val debePedir = withContext(Dispatchers.IO) {
-                AppPreferences.debeSolicitarUbicacion(context, installId)
-            }
-            if (debePedir) {
-                permisos.launchMultiplePermissionRequest()
-                withContext(Dispatchers.IO) {
-                    AppPreferences.marcarUbicacionSolicitada(context, installId)
-                }
-            }
+        if (concedido) {
+            mostrarAviso = false
+            return@LaunchedEffect
+        }
+        delay(2_500)
+        if (!permisos.allPermissionsGranted) {
+            mostrarAviso = true
         }
     }
 
     Box(modifier = modifier.fillMaxSize()) {
         content()
-        if (!concedido) {
-            Box(
+        if (!concedido && mostrarAviso) {
+            Card(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.35f)),
-                contentAlignment = Alignment.BottomCenter
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 80.dp),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surface
+                ),
+                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
             ) {
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    shape = RoundedCornerShape(20.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surface
-                    ),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Column(
-                        modifier = Modifier.padding(20.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    Text(
+                        text = "Ubicación para Piku",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Text(
+                        text = "Permití el acceso para ver comercios cerca tuyo en el mapa.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Start
+                    )
+                    BotonPiku(
+                        texto = "Permitir ubicación",
+                        onClick = {
+                            permisos.launchMultiplePermissionRequest()
+                            mostrarAviso = false
+                            val installId = InstallSessionGuard.currentInstallId(context)
+                            scope.launch(Dispatchers.IO) {
+                                AppPreferences.marcarUbicacionSolicitada(context, installId)
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    TextButton(
+                        onClick = { mostrarAviso = false },
+                        modifier = Modifier.align(Alignment.CenterHorizontally)
                     ) {
-                        Text(
-                            text = "Ubicación para Piku",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                        Text(
-                            text = "Necesitamos tu ubicación para mostrarte ofertas y comercios cerca de vos.",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            textAlign = TextAlign.Start
-                        )
-                        BotonPiku(
-                            texto = "Permitir ubicación",
-                            onClick = { permisos.launchMultiplePermissionRequest() },
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                        TextButton(
-                            onClick = {
-                                val intent = Intent(
-                                    Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
-                                    Uri.fromParts("package", context.packageName, null)
-                                ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                context.startActivity(intent)
-                            },
-                            modifier = Modifier.align(Alignment.CenterHorizontally)
-                        ) {
-                            Text("Abrir ajustes")
-                        }
+                        Text("Ahora no", style = MaterialTheme.typography.labelMedium)
+                    }
+                    TextButton(
+                        onClick = {
+                            val intent = Intent(
+                                Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                                Uri.fromParts("package", context.packageName, null)
+                            ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            context.startActivity(intent)
+                        },
+                        modifier = Modifier.align(Alignment.CenterHorizontally)
+                    ) {
+                        Text("Abrir ajustes", style = MaterialTheme.typography.labelMedium)
                     }
                 }
             }
