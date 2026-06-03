@@ -195,7 +195,7 @@ interface PikuApiService {
     suspend fun estadisticasComercio(): Map<String, Any>
 
     @Multipart
-    @POST("api/comercio/logo")
+    @POST("api/comercio/upload-logo")
     suspend fun subirLogoComercio(@Part file: MultipartBody.Part): LogoUploadResponse
 
     @PUT("api/comercio/ubicacion")

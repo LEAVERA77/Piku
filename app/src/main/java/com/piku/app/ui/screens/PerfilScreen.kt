@@ -21,6 +21,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.PhotoCamera
@@ -54,6 +55,7 @@ import com.piku.app.ui.viewmodel.PerfilViewModel
 @Composable
 fun PerfilScreen(
     onCerrarSesion: () -> Unit = {},
+    onConfiguracion: () -> Unit = {},
     modifier: Modifier = Modifier,
     viewModel: PerfilViewModel = viewModel()
 ) {
@@ -224,6 +226,20 @@ fun PerfilScreen(
         }
 
         Spacer(modifier = Modifier.height(24.dp))
+
+        OutlinedButton(
+            onClick = onConfiguracion,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(48.dp),
+            shape = RoundedCornerShape(14.dp)
+        ) {
+            Icon(Icons.Default.Settings, null, tint = MaterialTheme.colorScheme.primary)
+            Spacer(modifier = Modifier.size(8.dp))
+            Text("Configuración")
+        }
+
+        Spacer(modifier = Modifier.height(10.dp))
 
         OutlinedButton(
             onClick = { viewModel.cerrarSesion(onCerrarSesion) },

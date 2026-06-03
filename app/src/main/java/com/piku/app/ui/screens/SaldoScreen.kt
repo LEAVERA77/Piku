@@ -16,23 +16,24 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import android.content.Intent
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.QrCodeScanner
+import androidx.compose.material.icons.filled.CardGiftcard
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.material.icons.filled.CardGiftcard
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -51,6 +52,7 @@ import com.piku.app.ui.theme.NaranjaPiku
 import com.piku.app.ui.theme.PikuTheme
 import com.piku.app.ui.theme.VerdePiku
 import com.piku.app.ui.viewmodel.SaldoViewModel
+import com.piku.app.utils.CompartirLogro
 
 @Composable
 fun SaldoScreen(
@@ -64,6 +66,29 @@ fun SaldoScreen(
 
     LaunchedEffect(Unit) {
         viewModel.refrescar()
+    }
+
+    uiState.hitoParaCompartir?.let { hito ->
+        AlertDialog(
+            onDismissRequest = { viewModel.descartarHito() },
+            title = { Text("¡Nuevo logro!") },
+            text = { Text(CompartirLogro.mensajeHito(hito)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        CompartirLogro.compartirLogro(context, CompartirLogro.mensajeHito(hito))
+                        viewModel.marcarHitoCompartido(hito)
+                    }
+                ) {
+                    Text("Compartir")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { viewModel.marcarHitoCompartido(hito) }) {
+                    Text("Ahora no")
+                }
+            }
+        )
     }
 
     if (uiState.cargando && uiState.transacciones.isEmpty() && uiState.puntos == 0) {
@@ -173,17 +198,28 @@ fun SaldoScreen(
 
         item {
             BotonPiku(
+                texto = "COMPARTIR MI SALDO",
+                onClick = {
+                    CompartirLogro.compartirLogro(
+                        context,
+                        CompartirLogro.mensajeSaldo(uiState.puntos, uiState.equivalenciaDescuentoArs)
+                    )
+                },
+                modifier = Modifier.fillMaxWidth(),
+                estilo = EstiloBotonPiku.CONTORNO,
+                icono = Icons.Default.Share
+            )
+        }
+
+        item {
+            BotonPiku(
                 texto = "COMPARTIR PIKU (+20 PTS)",
                 onClick = {
                     viewModel.compartirPiku {
-                        val intent = Intent(Intent.ACTION_SEND).apply {
-                            type = "text/plain"
-                            putExtra(
-                                Intent.EXTRA_TEXT,
-                                "Sumá puntos y canjeá ofertas con Piku en comercios de tu ciudad."
-                            )
-                        }
-                        context.startActivity(Intent.createChooser(intent, "Compartir Piku"))
+                        CompartirLogro.compartirLogro(
+                            context,
+                            "Sumá puntos y canjeá ofertas con Piku en comercios de tu ciudad."
+                        )
                     }
                 },
                 modifier = Modifier.fillMaxWidth(),

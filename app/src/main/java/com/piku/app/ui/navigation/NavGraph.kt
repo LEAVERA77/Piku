@@ -17,6 +17,7 @@ import androidx.navigation.navArgument
 import com.piku.app.ui.components.BarraNavegacion
 import com.piku.app.ui.components.UbicacionPermisoGate
 import com.piku.app.ui.screens.CanjesScreen
+import com.piku.app.ui.screens.ConfiguracionScreen
 import com.piku.app.ui.screens.DetalleComercioScreen
 import com.piku.app.ui.screens.DetalleOfertaScreen
 import com.piku.app.ui.screens.EscanerScreen
@@ -92,7 +93,15 @@ fun PikuClienteNavGraph(
                 )
             }
             composable(PikuDestino.Perfil.ruta) {
-                PerfilScreen(onCerrarSesion = onCerrarSesion)
+                PerfilScreen(
+                    onCerrarSesion = onCerrarSesion,
+                    onConfiguracion = {
+                        navController.navigate(PikuDestino.Configuracion.ruta)
+                    }
+                )
+            }
+            composable(PikuDestino.Configuracion.ruta) {
+                ConfiguracionScreen(onBack = { navController.popBackStack() })
             }
             }
         }

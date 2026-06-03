@@ -34,16 +34,20 @@ private val LightColorScheme = lightColorScheme(
 
 private val DarkColorScheme = darkColorScheme(
     primary = VerdePikuDark,
-    onPrimary = TextoPrincipal,
+    onPrimary = TextoPrincipalDark,
+    primaryContainer = Color(0xFF1B3D32),
+    onPrimaryContainer = Color(0xFFB8F5D8),
     secondary = NaranjaPikuDark,
-    onSecondary = TextoPrincipal,
+    onSecondary = TextoPrincipalDark,
+    secondaryContainer = Color(0xFF4A2C12),
+    onSecondaryContainer = Color(0xFFFFDCC8),
     tertiary = VerdePiku,
     background = FondoPikuDark,
     onBackground = TextoPrincipalDark,
     surface = SuperficieDark,
     onSurface = TextoPrincipalDark,
-    surfaceVariant = SuperficieDark,
-    onSurfaceVariant = TextoSecundario
+    surfaceVariant = Color(0xFF2A2A2A),
+    onSurfaceVariant = Color(0xFFB0B0B0)
 )
 
 private tailrec fun Context.findActivity(): Activity? = when (this) {

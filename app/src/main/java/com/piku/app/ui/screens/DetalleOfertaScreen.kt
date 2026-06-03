@@ -47,6 +47,7 @@ import com.piku.app.ui.components.ArticuloFotoCarousel
 import com.piku.app.ui.components.ComercioEnvioContactoCard
 import com.piku.app.ui.components.PikuPhotoImage
 import com.piku.app.ui.theme.VerdePiku
+import com.piku.app.utils.CompartirLogro
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -68,6 +69,8 @@ fun DetalleOfertaScreen(
     var mostrarConfirmacion by remember { mutableStateOf(false) }
     var canjeando by remember { mutableStateOf(false) }
     var codigoCanje by remember { mutableStateOf<String?>(null) }
+    var mostrarCompartirCanje by remember { mutableStateOf(false) }
+    var nombreOfertaCanjeada by remember { mutableStateOf<String?>(null) }
 
     val cloud = ConfigLoader.cloudinaryCloudName(context)
 
@@ -93,7 +96,9 @@ fun DetalleOfertaScreen(
                 val res = usuarioRepo.canjearRecompensa(recompensaId)
                 puntosSaldo = res.puntosRestantes ?: puntosSaldo
                 codigoCanje = res.codigoCanje
+                nombreOfertaCanjeada = res.recompensa?.nombre ?: detalle?.recompensa?.nombre
                 mostrarConfirmacion = false
+                mostrarCompartirCanje = true
                 snackbar.showSnackbar(res.mensaje)
             } catch (e: Exception) {
                 snackbar.showSnackbar(e.message ?: "No se pudo canjear")
@@ -294,6 +299,33 @@ fun DetalleOfertaScreen(
                     enabled = !canjeando
                 ) {
                     Text("Cancelar")
+                }
+            }
+        )
+    }
+
+    if (mostrarCompartirCanje) {
+        val nombre = nombreOfertaCanjeada ?: "una oferta"
+        AlertDialog(
+            onDismissRequest = { mostrarCompartirCanje = false },
+            title = { Text("¡Canje listo!") },
+            text = {
+                Text("¿Querés contárselo a tus amigos? Compartí tu logro en redes.")
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        CompartirLogro.compartirLogro(context, CompartirLogro.mensajeCanje(nombre))
+                        mostrarCompartirCanje = false
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = VerdePiku)
+                ) {
+                    Text("Compartir logro")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { mostrarCompartirCanje = false }) {
+                    Text("Ahora no")
                 }
             }
         )

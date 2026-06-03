@@ -19,7 +19,8 @@ enum class PikuDestino(
     Canjes("canjes", "Canjes"),
     Perfil("perfil", "Perfil"),
     DetalleComercio("detalle_comercio/{comercioId}", "Detalle", mostrarEnBarra = false),
-    DetalleOferta("detalle_oferta/{recompensaId}", "Oferta", mostrarEnBarra = false);
+    DetalleOferta("detalle_oferta/{recompensaId}", "Oferta", mostrarEnBarra = false),
+    Configuracion("configuracion", "Ajustes", mostrarEnBarra = false);
 
     companion object {
         val barraInferior = entries.filter { it.mostrarEnBarra }
@@ -36,6 +37,7 @@ fun PikuDestino.icono(): ImageVector = when (this) {
     PikuDestino.Perfil -> Icons.Default.Person
     PikuDestino.DetalleComercio -> Icons.Default.Map
     PikuDestino.DetalleOferta -> Icons.Default.CardGiftcard
+    PikuDestino.Configuracion -> Icons.Default.Person
 }
 
 object PikuRutasRoot {

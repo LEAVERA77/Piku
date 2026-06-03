@@ -3,7 +3,7 @@
     "baseUrl": "https://piku-324e.onrender.com"
   },
   "cloudinary": {
-    "cloudName": "tu_cloud_name"
+    "cloudName": "dvuekqmxd"
   },
   "nominatim": {
     "baseUrl": "http://167.234.235.76:8080"

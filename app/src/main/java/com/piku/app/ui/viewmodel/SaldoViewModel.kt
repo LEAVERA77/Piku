@@ -3,8 +3,10 @@ package com.piku.app.ui.viewmodel
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.piku.app.data.datastore.AppPreferences
 import com.piku.app.data.model.Transaccion
 import com.piku.app.data.repository.UsuarioRepository
+import com.piku.app.utils.CompartirLogro
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -21,7 +23,8 @@ data class SaldoUiState(
     val transacciones: List<Transaccion> = emptyList(),
     val cargando: Boolean = true,
     val error: String? = null,
-    val mensajeInfo: String? = null
+    val mensajeInfo: String? = null,
+    val hitoParaCompartir: Int? = null
 )
 
 class SaldoViewModel(application: Application) : AndroidViewModel(application) {
@@ -37,6 +40,8 @@ class SaldoViewModel(application: Application) : AndroidViewModel(application) {
                 val saldo = repo.obtenerSaldo()
                 val historial = runCatching { repo.obtenerHistorial() }.getOrDefault(emptyList())
                 val desglose = runCatching { repo.obtenerDesglose() }.getOrNull()
+                val ultimoHito = AppPreferences.ultimoHitoCelebrado(getApplication())
+                val hito = CompartirLogro.hitoNuevo(saldo.puntos, ultimoHito)
                 _uiState.update {
                     it.copy(
                         puntos = saldo.puntos,
@@ -47,7 +52,8 @@ class SaldoViewModel(application: Application) : AndroidViewModel(application) {
                         puntosCanjes = desglose?.canjes ?: 0,
                         transacciones = historial,
                         cargando = false,
-                        error = null
+                        error = null,
+                        hitoParaCompartir = hito
                     )
                 }
             } catch (e: Exception) {
@@ -80,6 +86,17 @@ class SaldoViewModel(application: Application) : AndroidViewModel(application) {
                         it.copy(mensajeInfo = e.message ?: "No se pudieron acreditar los puntos")
                     }
                 }
+        }
+    }
+
+    fun descartarHito() {
+        _uiState.update { it.copy(hitoParaCompartir = null) }
+    }
+
+    fun marcarHitoCompartido(hito: Int) {
+        viewModelScope.launch {
+            AppPreferences.marcarHitoCelebrado(getApplication(), hito)
+            _uiState.update { it.copy(hitoParaCompartir = null) }
         }
     }
 }
