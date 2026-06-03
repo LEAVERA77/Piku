@@ -16,13 +16,14 @@ import android.util.LruCache
 import android.util.TypedValue
 import kotlin.math.max
 import kotlin.math.roundToInt
+import kotlin.math.sin
 
 /**
  * Marcadores del mapa Piku: diseño moderno, escala con zoom y estados visuales por novedades.
  */
 object MapPinBitmap {
 
-    private const val CACHE_VERSION = "v4"
+    private const val CACHE_VERSION = "v5"
     private const val ZOOM_REF = 16.0
     private const val ZOOM_MIN = 14.0
     private const val ZOOM_MAX = 20.0
@@ -110,7 +111,11 @@ object MapPinBitmap {
         realizaEnvios: Boolean = false,
         destacado: Boolean = false,
         zoomScale: Float = 1f,
-        mostrarEtiqueta: Boolean = true
+        mostrarEtiqueta: Boolean = true,
+        modoOscuro: Boolean = false,
+        atenuado: Boolean = false,
+        pulsePhase: Float = -1f,
+        logoBitmap: Bitmap? = null
     ): BitmapDrawable {
         val escala = escalaPantalla(context) * zoomScale.coerceIn(0.45f, 1.35f)
         val key = buildString {
@@ -131,6 +136,14 @@ object MapPinBitmap {
             append(destacado)
             append('|')
             append(mostrarEtiqueta)
+            append('|')
+            append(modoOscuro)
+            append('|')
+            append(atenuado)
+            append('|')
+            append(if (pulsePhase >= 0f) (pulsePhase * 10).toInt() else -1)
+            append('|')
+            append(logoBitmap != null)
         }
         val bitmap = bitmapCache.get(key) ?: renderBitmap(
             context,
@@ -141,7 +154,11 @@ object MapPinBitmap {
             ofertasNuevas,
             realizaEnvios,
             destacado,
-            mostrarEtiqueta
+            mostrarEtiqueta,
+            modoOscuro,
+            atenuado,
+            pulsePhase,
+            logoBitmap
         ).also { bitmapCache.put(key, it) }
         return BitmapDrawable(context.resources, bitmap)
     }
@@ -196,7 +213,11 @@ object MapPinBitmap {
         ofertasNuevas: Int,
         realizaEnvios: Boolean,
         destacado: Boolean,
-        mostrarEtiqueta: Boolean
+        mostrarEtiqueta: Boolean,
+        modoOscuro: Boolean,
+        atenuado: Boolean,
+        pulsePhase: Float,
+        logoBitmap: Bitmap?
     ): Bitmap {
         val estado = resolverEstado(destacado, ofertasNuevas, cantidadOfertas)
         val palette = palette(estado)
@@ -207,14 +228,14 @@ object MapPinBitmap {
 
         val labelTypeface = Typeface.create("sans-serif-medium", Typeface.BOLD)
         val nombrePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = Color.parseColor("#0F172A")
+            color = if (modoOscuro) Color.parseColor("#F8FAFC") else Color.parseColor("#0F172A")
             textSize = sp(context, 10.5f, escala)
             typeface = labelTypeface
             textAlign = Paint.Align.LEFT
             letterSpacing = 0.01f
         }
         val subPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = Color.parseColor("#64748B")
+            color = if (modoOscuro) Color.parseColor("#94A3B8") else Color.parseColor("#64748B")
             textSize = sp(context, 8.5f, escala)
             typeface = Typeface.create("sans-serif", Typeface.NORMAL)
             textAlign = Paint.Align.LEFT
@@ -240,15 +261,18 @@ object MapPinBitmap {
         val cx = anchoMin / 2f
         val offsetX = (anchoMin - pinW) / 2f
 
-        // Halo / pulso para novedades
+        // Halo / pulso animado para novedades
         if (estado == PinEstado.NOVEDAD) {
+            val wave = if (pulsePhase >= 0f) {
+                0.5f + 0.5f * sin(pulsePhase * 2.0 * Math.PI).toFloat()
+            } else 0.35f
             val haloPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                color = Color.argb(55, Color.red(palette.ring), Color.green(palette.ring), Color.blue(palette.ring))
+                color = Color.argb((45 + 70 * wave).toInt(), Color.red(palette.ring), Color.green(palette.ring), Color.blue(palette.ring))
                 style = Paint.Style.FILL
             }
-            canvas.drawCircle(cx, pinH * 0.22f, pinW * 0.62f, haloPaint)
-            haloPaint.color = Color.argb(35, Color.red(palette.accent), Color.green(palette.accent), Color.blue(palette.accent))
-            canvas.drawCircle(cx, pinH * 0.22f, pinW * 0.78f, haloPaint)
+            canvas.drawCircle(cx, pinH * 0.22f, pinW * (0.58f + wave * 0.22f), haloPaint)
+            haloPaint.color = Color.argb((25 + 45 * wave).toInt(), Color.red(palette.accent), Color.green(palette.accent), Color.blue(palette.accent))
+            canvas.drawCircle(cx, pinH * 0.22f, pinW * (0.74f + wave * 0.16f), haloPaint)
         }
 
         canvas.save()
@@ -282,43 +306,54 @@ object MapPinBitmap {
             }
         )
 
-        // Borde luminoso
+        // Borde luminoso (más visible en modo oscuro)
         canvas.drawPath(
             pinPath,
             Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                color = Color.argb(140, 255, 255, 255)
+                color = Color.argb(if (modoOscuro) 220 else 140, 255, 255, 255)
                 style = Paint.Style.STROKE
-                strokeWidth = 1.8f * escala
+                strokeWidth = if (modoOscuro) 2.4f * escala else 1.8f * escala
             }
         )
 
-        // Círculo blanco para emoji
+        // Círculo para logo o emoji
         val cy = pinH * 0.26f
         val radio = pinW * 0.255f
-        canvas.drawCircle(cx - offsetX, cy, radio + 1.2f * escala, Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        val iconCx = cx - offsetX
+        canvas.drawCircle(iconCx, cy, radio + 1.2f * escala, Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = Color.argb(40, 0, 0, 0)
             style = Paint.Style.FILL
         })
-        canvas.drawCircle(cx - offsetX, cy, radio, Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        canvas.drawCircle(iconCx, cy, radio, Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = Color.WHITE
             style = Paint.Style.FILL
         })
-        canvas.drawCircle(cx - offsetX, cy, radio, Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = Color.argb(50, 15, 23, 42)
+        canvas.drawCircle(iconCx, cy, radio, Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.argb(if (modoOscuro) 80 else 50, 15, 23, 42)
             style = Paint.Style.STROKE
             strokeWidth = 1f * escala
         })
 
-        val emojiPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            textAlign = Paint.Align.CENTER
-            textSize = pinW * 0.36f
+        val logoOk = logoBitmap != null && !logoBitmap.isRecycled
+        if (logoOk) {
+            val clip = Path().apply { addCircle(iconCx, cy, radio * 0.92f, Path.Direction.CW) }
+            canvas.save()
+            canvas.clipPath(clip)
+            val dst = RectF(iconCx - radio * 0.92f, cy - radio * 0.92f, iconCx + radio * 0.92f, cy + radio * 0.92f)
+            canvas.drawBitmap(logoBitmap!!, null, dst, Paint(Paint.ANTI_ALIAS_FLAG))
+            canvas.restore()
+        } else {
+            val emojiPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                textAlign = Paint.Align.CENTER
+                textSize = pinW * 0.36f
+            }
+            canvas.drawText(
+                emoji.trim(),
+                iconCx,
+                cy + emojiPaint.textSize * 0.36f,
+                emojiPaint
+            )
         }
-        canvas.drawText(
-            emoji.trim(),
-            cx - offsetX,
-            cy + emojiPaint.textSize * 0.36f,
-            emojiPaint
-        )
 
         if (realizaEnvios) {
             dibujarChipCircular(
@@ -346,6 +381,9 @@ object MapPinBitmap {
         when {
             ofertasNuevas > 0 -> {
                 val txt = if (ofertasNuevas > 1) "$ofertasNuevas" else "!"
+                val wave = if (pulsePhase >= 0f) {
+                    0.5f + 0.5f * sin(pulsePhase * 2.0 * Math.PI).toFloat()
+                } else 0f
                 dibujarBadge(
                     canvas,
                     pinW - 9f * escala,
@@ -353,7 +391,8 @@ object MapPinBitmap {
                     txt,
                     palette.badge,
                     escala,
-                    pulso = true
+                    pulso = true,
+                    pulseWave = wave
                 )
             }
             cantidadOfertas > 0 -> {
@@ -403,7 +442,7 @@ object MapPinBitmap {
                 radius,
                 radius,
                 Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                    color = Color.WHITE
+                    color = if (modoOscuro) Color.parseColor("#1E293B") else Color.WHITE
                     style = Paint.Style.FILL
                 }
             )
@@ -412,7 +451,7 @@ object MapPinBitmap {
                 radius,
                 radius,
                 Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                    color = Color.argb(28, 15, 23, 42)
+                    color = Color.argb(if (modoOscuro) 60 else 28, 15, 23, 42)
                     style = Paint.Style.STROKE
                     strokeWidth = 1.2f * escala
                 }
@@ -437,6 +476,11 @@ object MapPinBitmap {
             }
         }
 
+        if (atenuado) {
+            val faded = Bitmap.createBitmap(bitmap.width, bitmap.height, Bitmap.Config.ARGB_8888)
+            Canvas(faded).drawBitmap(bitmap, 0f, 0f, Paint().apply { alpha = 102 })
+            return faded
+        }
         return bitmap
     }
 
@@ -482,11 +526,13 @@ object MapPinBitmap {
         texto: String,
         color: Int,
         escala: Float,
-        pulso: Boolean = false
+        pulso: Boolean = false,
+        pulseWave: Float = 0f
     ) {
         if (pulso) {
-            canvas.drawCircle(x, y, 11f * escala, Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                this.color = Color.argb(60, Color.red(color), Color.green(color), Color.blue(color))
+            val r = 11f * escala + pulseWave * 4f * escala
+            canvas.drawCircle(x, y, r, Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                this.color = Color.argb((40 + 80 * pulseWave).toInt(), Color.red(color), Color.green(color), Color.blue(color))
                 style = Paint.Style.FILL
             })
         }

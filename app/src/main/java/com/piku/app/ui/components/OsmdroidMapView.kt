@@ -1,5 +1,6 @@
 package com.piku.app.ui.components
 
+import android.graphics.Bitmap
 import android.graphics.Color
 import android.graphics.drawable.BitmapDrawable
 import androidx.compose.runtime.Composable
@@ -7,6 +8,8 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableDoubleStateOf
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -19,14 +22,25 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.piku.app.R
 import com.piku.app.data.TipoComercio
+import com.piku.app.data.config.ConfigLoader
 import com.piku.app.data.model.Comercio
+import com.piku.app.data.model.Rubro
+import com.piku.app.ui.media.PikuImages
+import com.piku.app.utils.CartoMapTiles
+import com.piku.app.utils.MapClusterBitmap
+import com.piku.app.utils.MapClusterEngine
+import com.piku.app.utils.MapLabelPriority
+import com.piku.app.utils.MapLogoCache
+import com.piku.app.utils.MapMarkerItem
 import com.piku.app.utils.MapPinBitmap
+import com.piku.app.utils.MapRubroUtil
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
 import org.osmdroid.events.MapListener
 import org.osmdroid.events.ScrollEvent
 import org.osmdroid.events.ZoomEvent
-import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.BoundingBox
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.CustomZoomButtonsController
@@ -45,13 +59,45 @@ fun OsmdroidMapView(
     userLat: Double?,
     userLon: Double?,
     onComercioClick: (Comercio) -> Unit,
+    onClusterClick: (lat: Double, lon: Double, zoomActual: Double) -> Unit,
     onViewportChanged: ((minLat: Double, maxLat: Double, minLon: Double, maxLon: Double) -> Unit)?,
     zoomLevel: Double = 15.0,
+    mapDarkTheme: Boolean = false,
+    rubros: List<Rubro> = emptyList(),
+    rubrosSeleccionados: Set<String> = emptySet(),
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     var mapZoom by remember { mutableDoubleStateOf(zoomLevel) }
+    var pulsePhase by remember { mutableFloatStateOf(0f) }
+    var logosPorId by remember { mutableStateOf<Map<String, Bitmap>>(emptyMap()) }
+
+    val hayNovedades = remember(comercios) { comercios.any { it.ofertasNuevas > 0 } }
+    val filtroActivo = rubrosSeleccionados.isNotEmpty()
+
+    LaunchedEffect(hayNovedades) {
+        if (!hayNovedades) return@LaunchedEffect
+        while (isActive) {
+            delay(380)
+            pulsePhase = (pulsePhase + 0.11f) % 1f
+        }
+    }
+
+    LaunchedEffect(comercios) {
+        val cloud = ConfigLoader.cloudinaryCloudName(context)
+        val loaded = withContext(Dispatchers.IO) {
+            val map = LinkedHashMap<String, Bitmap>()
+            comercios
+                .filter { !it.esOpenStreetMap() }
+                .forEach { c ->
+                    val url = PikuImages.resolve(c.logoUrl, c.id, c.nombre, cloud)
+                    MapLogoCache.load(context, url, 128)?.let { map[c.id] = it }
+                }
+            map
+        }
+        logosPorId = loaded
+    }
 
     val userIcon = remember {
         ContextCompat.getDrawable(context, R.drawable.ic_map_user_location)?.let { drawable ->
@@ -60,7 +106,6 @@ fun OsmdroidMapView(
     }
     val mapView = remember {
         MapView(context).apply {
-            setTileSource(TileSourceFactory.MAPNIK)
             setMultiTouchControls(true)
             zoomController.setVisibility(CustomZoomButtonsController.Visibility.NEVER)
             minZoomLevel = 14.0
@@ -68,6 +113,11 @@ fun OsmdroidMapView(
             controller.setZoom(16.0)
             controller.setCenter(GeoPoint(centerLat, centerLon))
         }
+    }
+
+    LaunchedEffect(mapDarkTheme) {
+        mapView.setTileSource(CartoMapTiles.tileSource(mapDarkTheme))
+        mapView.invalidate()
     }
 
     DisposableEffect(lifecycleOwner, mapView) {
@@ -114,92 +164,148 @@ fun OsmdroidMapView(
         mapZoom = zoomLevel
     }
 
-    LaunchedEffect(comercios, userLat, userLon, userIcon, mapZoom) {
-        data class PinOverlay(
-            val comercio: Comercio,
-            val icon: BitmapDrawable,
-            val anchorY: Float,
-            val snippet: String
-        )
-
+    LaunchedEffect(
+        comercios,
+        userLat,
+        userLon,
+        userIcon,
+        mapZoom,
+        mapDarkTheme,
+        rubros,
+        rubrosSeleccionados,
+        logosPorId,
+        pulsePhase,
+        hayNovedades
+    ) {
         val zoomScale = MapPinBitmap.escalaDesdeZoom(mapZoom)
-        val mostrarEtiqueta = MapPinBitmap.mostrarEtiqueta(mapZoom)
-
-        val pins = withContext(Dispatchers.Default) {
-            comercios.mapNotNull { comercio ->
-                val lat = comercio.lat ?: return@mapNotNull null
-                val lon = comercio.lon ?: return@mapNotNull null
-                val emoji = TipoComercio.emojiPara(comercio)
-                PinOverlay(
-                    comercio = comercio,
-                    icon = MapPinBitmap.crear(
-                        context = context,
-                        emoji = emoji,
-                        nombre = comercio.nombre,
-                        cantidadOfertas = comercio.cantidadOfertas,
-                        ofertasNuevas = comercio.ofertasNuevas,
-                        realizaEnvios = comercio.realizaEnvios,
-                        destacado = comercio.destacado && !comercio.esOpenStreetMap(),
-                        zoomScale = zoomScale,
-                        mostrarEtiqueta = mostrarEtiqueta
-                    ),
-                    anchorY = MapPinBitmap.anchorY(
-                        nombre = comercio.nombre,
-                        ofertasNuevas = comercio.ofertasNuevas,
-                        cantidadOfertas = comercio.cantidadOfertas,
-                        zoomScale = zoomScale,
-                        mostrarEtiqueta = mostrarEtiqueta
-                    ),
-                    snippet = when {
-                        comercio.ofertasNuevas > 0 && comercio.cantidadOfertas > 0 ->
-                            "${comercio.ofertasNuevas} nueva(s) · ${comercio.cantidadOfertas} oferta(s)"
-                        comercio.ofertasNuevas > 0 ->
-                            "${comercio.ofertasNuevas} oferta(s) nueva(s)"
-                        comercio.cantidadOfertas > 0 ->
-                            "${comercio.cantidadOfertas} oferta(s) activa(s)"
-                        else -> comercio.direccion ?: ""
-                    }
-                )
-            }
-        }
-
-        Log.d(TAG, "Pines: ${pins.size} (zoom=${"%.1f".format(mapZoom)}, escala=${"%.2f".format(zoomScale)})")
+        val etiquetasPermitidas = MapLabelPriority.idsConEtiqueta(comercios, mapZoom)
+        val refLat = userLat ?: centerLat
+        val items = MapClusterEngine.agrupar(comercios, mapZoom, refLat)
 
         mapView.overlays.clear()
         if (userLat != null && userLon != null) {
             val userPoint = GeoPoint(userLat, userLon)
             val precision = Polygon(mapView).apply {
                 points = Polygon.pointsAsCircle(userPoint, RADIO_UBICACION_METROS)
-                fillPaint.color = Color.parseColor("#330D9488")
-                outlinePaint.color = Color.parseColor("#0D9488")
+                fillPaint.color = Color.parseColor(if (mapDarkTheme) "#334CDB94" else "#330D9488")
+                outlinePaint.color = Color.parseColor(if (mapDarkTheme) "#4CDB94" else "#0D9488")
                 outlinePaint.strokeWidth = 2f
             }
             mapView.overlays.add(precision)
-            val userMarker = Marker(mapView).apply {
-                position = userPoint
-                title = "Tú estás aquí"
-                setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
-                icon = userIcon
-            }
-            mapView.overlays.add(userMarker)
+            mapView.overlays.add(
+                Marker(mapView).apply {
+                    position = userPoint
+                    title = "Tú estás aquí"
+                    setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
+                    icon = userIcon
+                }
+            )
         }
-        pins.forEach { pin ->
-            val lat = pin.comercio.lat ?: return@forEach
-            val lon = pin.comercio.lon ?: return@forEach
-            val marker = Marker(mapView).apply {
-                position = GeoPoint(lat, lon)
-                title = pin.comercio.nombre
-                snippet = pin.snippet
-                setAnchor(Marker.ANCHOR_CENTER, pin.anchorY)
-                icon = pin.icon
-                setOnMarkerClickListener { _, _ ->
-                    onComercioClick(pin.comercio)
-                    InfoWindow.closeAllInfoWindowsOn(mapView)
-                    true
+
+        data class MarkerData(
+            val lat: Double,
+            val lon: Double,
+            val title: String,
+            val snippet: String,
+            val icon: BitmapDrawable,
+            val anchorY: Float,
+            val onClick: () -> Unit
+        )
+
+        val markers = withContext(Dispatchers.Default) {
+            items.mapNotNull { item ->
+                when (item) {
+                    is MapMarkerItem.Cluster -> {
+                        val count = item.comercios.size
+                        val icon = if (mapZoom >= 15.2) {
+                            MapClusterBitmap.crearConEtiqueta(context, count, zoomScale, mapDarkTheme)
+                        } else {
+                            MapClusterBitmap.crear(context, count, zoomScale, mapDarkTheme)
+                        }
+                        MarkerData(
+                            lat = item.lat,
+                            lon = item.lon,
+                            title = "$count comercios",
+                            snippet = "Tocá para acercar",
+                            icon = icon,
+                            anchorY = MapClusterBitmap.anchorY(),
+                            onClick = { onClusterClick(item.lat, item.lon, mapZoom) }
+                        )
+                    }
+                    is MapMarkerItem.Single -> {
+                        val comercio = item.comercio
+                        val lat = comercio.lat ?: return@mapNotNull null
+                        val lon = comercio.lon ?: return@mapNotNull null
+                        val resalta = !filtroActivo || MapRubroUtil.coincideRubro(comercio, rubros, rubrosSeleccionados)
+                        val atenuado = filtroActivo && !resalta
+                        val mostrarEtiqueta = MapPinBitmap.mostrarEtiqueta(mapZoom) &&
+                            comercio.id in etiquetasPermitidas
+                        val emoji = TipoComercio.emojiPara(comercio)
+                        val icon = MapPinBitmap.crear(
+                            context = context,
+                            emoji = emoji,
+                            nombre = comercio.nombre,
+                            cantidadOfertas = comercio.cantidadOfertas,
+                            ofertasNuevas = comercio.ofertasNuevas,
+                            realizaEnvios = comercio.realizaEnvios,
+                            destacado = comercio.destacado && !comercio.esOpenStreetMap(),
+                            zoomScale = zoomScale,
+                            mostrarEtiqueta = mostrarEtiqueta,
+                            modoOscuro = mapDarkTheme,
+                            atenuado = atenuado,
+                            pulsePhase = if (comercio.ofertasNuevas > 0 && hayNovedades) pulsePhase else -1f,
+                            logoBitmap = logosPorId[comercio.id]
+                        )
+                        val snippet = when {
+                            comercio.ofertasNuevas > 0 && comercio.cantidadOfertas > 0 ->
+                                "${comercio.ofertasNuevas} nueva(s) · ${comercio.cantidadOfertas} oferta(s)"
+                            comercio.ofertasNuevas > 0 ->
+                                "${comercio.ofertasNuevas} oferta(s) nueva(s)"
+                            comercio.cantidadOfertas > 0 ->
+                                "${comercio.cantidadOfertas} oferta(s) activa(s)"
+                            else -> comercio.direccion ?: ""
+                        }
+                        MarkerData(
+                            lat = lat,
+                            lon = lon,
+                            title = comercio.nombre,
+                            snippet = snippet,
+                            icon = icon,
+                            anchorY = MapPinBitmap.anchorY(
+                                nombre = comercio.nombre,
+                                ofertasNuevas = comercio.ofertasNuevas,
+                                cantidadOfertas = comercio.cantidadOfertas,
+                                zoomScale = zoomScale,
+                                mostrarEtiqueta = mostrarEtiqueta
+                            ),
+                            onClick = { onComercioClick(comercio) }
+                        )
+                    }
                 }
             }
-            mapView.overlays.add(marker)
         }
+
+        markers.forEach { data ->
+            mapView.overlays.add(
+                Marker(mapView).apply {
+                    position = GeoPoint(data.lat, data.lon)
+                    title = data.title
+                    snippet = data.snippet
+                    setAnchor(Marker.ANCHOR_CENTER, data.anchorY)
+                    icon = data.icon
+                    setOnMarkerClickListener { _, _ ->
+                        data.onClick()
+                        InfoWindow.closeAllInfoWindowsOn(mapView)
+                        true
+                    }
+                }
+            )
+        }
+
+        Log.d(
+            TAG,
+            "Mapa: ${items.size} items, zoom=${"%.1f".format(mapZoom)}, dark=$mapDarkTheme, logos=${logosPorId.size}"
+        )
         mapView.invalidate()
     }
 

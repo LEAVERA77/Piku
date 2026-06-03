@@ -11,7 +11,6 @@ import com.google.android.gms.tasks.CancellationTokenSource
 import android.util.Log
 import com.piku.app.data.CerritoGeo
 import com.piku.app.data.ComerciosCerritoDemo
-import com.piku.app.data.TipoComercio
 import com.piku.app.data.model.Comercio
 import com.piku.app.data.model.Rubro
 import com.piku.app.data.nominatim.NominatimAddress
@@ -27,6 +26,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
+
+import com.piku.app.utils.MapRubroUtil
 
 data class MensajeChat(val rol: String, val texto: String)
 
@@ -88,24 +89,8 @@ private const val ZOOM_CERRITO_CERCA = 17.0
 
 private const val TAG = "MapaViewModel"
 
-private fun normalizarRubro(valor: String?): String =
-    valor?.trim()?.lowercase()?.replace("é", "e")?.replace("í", "i") ?: ""
-
-private fun coincideRubro(comercio: Comercio, catalogo: List<Rubro>, seleccionados: Set<String>): Boolean {
-    val tipoCanon = TipoComercio.desdeId(comercio.tipoComercio ?: comercio.categoria)
-    val cat = normalizarRubro(comercio.categoria).ifBlank { normalizarRubro(tipoCanon.categoria) }
-    val tipoId = normalizarRubro(comercio.tipoComercio).ifBlank { normalizarRubro(tipoCanon.id) }
-    val rubrosActivos = catalogo.filter { seleccionados.contains(it.id) }
-    return rubrosActivos.any { rubro ->
-        rubro.id == tipoId ||
-            rubro.id == cat ||
-            rubro.categorias.any { c ->
-                val norm = normalizarRubro(c)
-                cat == norm || cat.contains(norm) || norm.contains(cat) ||
-                    tipoId == norm || tipoId.contains(norm) || norm.contains(tipoId)
-            }
-    }
-}
+private fun coincideRubro(comercio: Comercio, catalogo: List<Rubro>, seleccionados: Set<String>): Boolean =
+    MapRubroUtil.coincideRubro(comercio, catalogo, seleccionados)
 
 class MapaViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -253,6 +238,16 @@ class MapaViewModel(application: Application) : AndroidViewModel(application) {
                 mapCenterLat = lat,
                 mapCenterLon = lon,
                 zoomMapa = if (enCerrito) ZOOM_CERRITO_CERCA else ZOOM_UBICACION
+            )
+        }
+    }
+
+    fun expandirCluster(lat: Double, lon: Double, zoomActual: Double) {
+        _uiState.update {
+            it.copy(
+                mapCenterLat = lat,
+                mapCenterLon = lon,
+                zoomMapa = (zoomActual + 1.35).coerceAtMost(20.0)
             )
         }
     }

@@ -20,6 +20,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -82,6 +83,8 @@ fun MapaScreen(
         viewModel.cargarUbicacionYComercios(conUbicacion = tieneUbicacion)
     }
 
+    val mapDarkTheme = MaterialTheme.colorScheme.background.luminance() < 0.5f
+
     Box(modifier = modifier.fillMaxSize()) {
         OsmdroidMapView(
             comercios = uiState.comerciosVisibles,
@@ -90,8 +93,12 @@ fun MapaScreen(
             userLat = uiState.gpsLat,
             userLon = uiState.gpsLon,
             onComercioClick = { viewModel.seleccionarComercio(it) },
+            onClusterClick = { lat, lon, zoom -> viewModel.expandirCluster(lat, lon, zoom) },
             onViewportChanged = viewModel::onViewportChanged,
             zoomLevel = uiState.zoomMapa,
+            mapDarkTheme = mapDarkTheme,
+            rubros = uiState.rubros,
+            rubrosSeleccionados = uiState.rubrosSeleccionados,
             modifier = Modifier.fillMaxSize()
         )
 
