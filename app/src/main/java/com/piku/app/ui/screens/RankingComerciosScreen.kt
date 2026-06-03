@@ -33,9 +33,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.piku.app.ui.preview.PreviewMocks
+import com.piku.app.ui.theme.PikuTheme
+import com.piku.app.ui.viewmodel.RankingUiState
 import com.piku.app.data.TipoComercio
 import com.piku.app.data.model.RankingComercioItem
 import com.piku.app.ui.theme.NaranjaPiku
@@ -79,54 +83,55 @@ fun RankingComerciosScreen(
             )
         }
     ) { padding ->
-        when {
-            uiState.cargando && uiState.ranking.isEmpty() -> {
-                Box(
-                    Modifier.fillMaxSize().padding(padding),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator(color = VerdePiku)
-                }
+        RankingComerciosContent(uiState = uiState, modifier = Modifier.padding(padding))
+    }
+}
+
+@Composable
+internal fun RankingComerciosContent(
+    uiState: RankingUiState,
+    modifier: Modifier = Modifier
+) {
+    when {
+        uiState.cargando && uiState.ranking.isEmpty() -> {
+            Box(Modifier.fillMaxSize().then(modifier), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator(color = VerdePiku)
             }
-            uiState.error != null -> {
-                Box(
-                    Modifier.fillMaxSize().padding(padding),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(uiState.error ?: "", color = MaterialTheme.colorScheme.error)
-                }
+        }
+        uiState.error != null -> {
+            Box(Modifier.fillMaxSize().then(modifier), contentAlignment = Alignment.Center) {
+                Text(uiState.error ?: "", color = MaterialTheme.colorScheme.error)
             }
-            else -> {
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(padding)
-                        .padding(horizontal = 16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
+        }
+        else -> {
+            LazyColumn(
+                modifier = modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                item {
+                    Text(
+                        "Top canjes — ${uiState.mes}",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(vertical = 8.dp)
+                    )
+                }
+                if (uiState.ranking.isEmpty()) {
                     item {
                         Text(
-                            "Top canjes — ${uiState.mes}",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(vertical = 8.dp)
+                            "Todavía no hay canjes este mes. ¡Sé el primero!",
+                            style = MaterialTheme.typography.bodyLarge,
+                            modifier = Modifier.padding(vertical = 24.dp)
                         )
                     }
-                    if (uiState.ranking.isEmpty()) {
-                        item {
-                            Text(
-                                "Todavía no hay canjes este mes. ¡Sé el primero!",
-                                style = MaterialTheme.typography.bodyLarge,
-                                modifier = Modifier.padding(vertical = 24.dp)
-                            )
-                        }
-                    } else {
-                        items(uiState.ranking, key = { it.posicion }) { item ->
-                            RankingItemCard(item)
-                        }
+                } else {
+                    items(uiState.ranking, key = { it.posicion }) { item ->
+                        RankingItemCard(item)
                     }
-                    item { Spacer(Modifier.height(16.dp)) }
                 }
+                item { Spacer(Modifier.height(16.dp)) }
             }
         }
     }
@@ -179,6 +184,24 @@ private fun RankingItemCard(item: RankingComercioItem) {
                 Text("${item.canjes}", fontWeight = FontWeight.Bold, color = VerdePiku, fontSize = 22.sp)
                 Text("canjes", style = MaterialTheme.typography.labelSmall)
             }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Preview(showBackground = true, device = "spec:width=411dp,height=891dp")
+@Composable
+private fun PreviewRankingComerciosScreen() {
+    PikuTheme {
+        Scaffold(
+            topBar = {
+                TopAppBar(title = { Text("Comercios populares") })
+            }
+        ) { padding ->
+            RankingComerciosContent(
+                uiState = PreviewMocks.rankingUiState,
+                modifier = Modifier.padding(padding)
+            )
         }
     }
 }

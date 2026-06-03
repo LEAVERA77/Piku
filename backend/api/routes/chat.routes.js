@@ -5,7 +5,6 @@ const { soloCliente } = require('../middleware/roles.middleware');
 
 const router = express.Router();
 
-router.use(authMiddleware, soloCliente);
-router.post('/chat-piku', chatController.chatPiku);
+router.post('/chat-piku', authMiddleware, soloCliente, chatController.chatPiku);
 
 module.exports = router;

@@ -34,7 +34,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.piku.app.ui.preview.PreviewMocks
+import com.piku.app.ui.theme.PikuTheme
 import com.piku.app.data.model.PlanSuscripcion
 import com.piku.app.data.model.SuscripcionEstadoResponse
 import com.piku.app.data.repository.ComercioRepository
@@ -95,58 +98,73 @@ fun SuscripcionScreen(onBack: () -> Unit) {
             )
             else -> {
                 val e = estado ?: return@Scaffold
-                val planes = e.planes.ifEmpty { planesDefault() }
-                LazyColumn(
-                    Modifier
-                        .fillMaxSize()
-                        .padding(padding)
-                        .padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    item {
-                        Text(
-                            "Elegí el plan que mejor se adapte a tu negocio.",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(Modifier.height(4.dp))
-                    }
-                    items(planes) { plan ->
-                        PlanCard(
-                            plan = plan,
-                            esActual = plan.id == e.plan,
-                            cambiando = cambiando,
-                            onSeleccionar = {
-                                if (plan.id == e.plan || cambiando) return@PlanCard
-                                scope.launch {
-                                    cambiando = true
-                                    try {
-                                        val res = withContext(Dispatchers.IO) {
-                                            repo.cambiarPlan(plan.id)
-                                        }
-                                        estado = res.estado ?: withContext(Dispatchers.IO) {
-                                            repo.obtenerEstadoSuscripcion()
-                                        }
-                                        Toast.makeText(
-                                            context,
-                                            res.mensaje ?: "Plan actualizado",
-                                            Toast.LENGTH_SHORT
-                                        ).show()
-                                    } catch (ex: Exception) {
-                                        Toast.makeText(
-                                            context,
-                                            ex.message ?: "No se pudo cambiar el plan",
-                                            Toast.LENGTH_LONG
-                                        ).show()
-                                    } finally {
-                                        cambiando = false
-                                    }
+                SuscripcionContent(
+                    estado = e,
+                    planes = e.planes.ifEmpty { planesDefault() },
+                    cambiando = cambiando,
+                    onSeleccionar = { plan ->
+                        if (plan.id == e.plan || cambiando) return@SuscripcionContent
+                        scope.launch {
+                            cambiando = true
+                            try {
+                                val res = withContext(Dispatchers.IO) {
+                                    repo.cambiarPlan(plan.id)
                                 }
+                                estado = res.estado ?: withContext(Dispatchers.IO) {
+                                    repo.obtenerEstadoSuscripcion()
+                                }
+                                Toast.makeText(
+                                    context,
+                                    res.mensaje ?: "Plan actualizado",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            } catch (ex: Exception) {
+                                Toast.makeText(
+                                    context,
+                                    ex.message ?: "No se pudo cambiar el plan",
+                                    Toast.LENGTH_LONG
+                                ).show()
+                            } finally {
+                                cambiando = false
                             }
-                        )
-                    }
-                }
+                        }
+                    },
+                    modifier = Modifier.padding(padding)
+                )
             }
+        }
+    }
+}
+
+@Composable
+internal fun SuscripcionContent(
+    estado: SuscripcionEstadoResponse,
+    planes: List<PlanSuscripcion>,
+    cambiando: Boolean,
+    onSeleccionar: (PlanSuscripcion) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    LazyColumn(
+        modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        item {
+            Text(
+                "Elegí el plan que mejor se adapte a tu negocio.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(Modifier.height(4.dp))
+        }
+        items(planes) { plan ->
+            PlanCard(
+                plan = plan,
+                esActual = plan.id == estado.plan,
+                cambiando = cambiando,
+                onSeleccionar = { onSeleccionar(plan) }
+            )
         }
     }
 }
@@ -210,3 +228,24 @@ private fun planesDefault(): List<PlanSuscripcion> = listOf(
     PlanSuscripcion("basico", "Básico", 5.0, 5000, 10, false),
     PlanSuscripcion("pro", "Pro", 15.0, null, null, true)
 )
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Preview(showBackground = true, device = "spec:width=411dp,height=891dp")
+@Composable
+private fun PreviewSuscripcionScreen() {
+    PikuTheme {
+        Scaffold(
+            topBar = {
+                TopAppBar(title = { Text("Suscripción") })
+            }
+        ) { padding ->
+            SuscripcionContent(
+                estado = PreviewMocks.suscripcionEstado,
+                planes = PreviewMocks.suscripcionEstado.planes,
+                cambiando = false,
+                onSeleccionar = {},
+                modifier = Modifier.padding(padding)
+            )
+        }
+    }
+}

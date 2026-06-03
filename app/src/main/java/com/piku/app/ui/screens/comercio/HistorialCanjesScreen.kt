@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -29,8 +30,12 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.piku.app.ui.preview.PreviewMocks
+import com.piku.app.ui.theme.PikuTheme
+import com.piku.app.ui.viewmodel.HistorialCanjesUiState
 import com.piku.app.data.model.CanjeComercioItem
 import com.piku.app.ui.components.BotonPiku
 import com.piku.app.ui.theme.VerdePiku
@@ -69,62 +74,79 @@ fun HistorialCanjesScreen(
             )
         }
     ) { padding ->
-        Column(
-            Modifier
-                .fillMaxSize()
-                .padding(padding)
-        ) {
-            OutlinedTextField(
-                value = uiState.buscar,
-                onValueChange = viewModel::onBuscarChange,
-                label = { Text("Buscar cliente u oferta") },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
-            )
-            BotonPiku(
-                texto = "Buscar",
-                onClick = viewModel::aplicarBusqueda,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp)
-            )
-            when {
-                uiState.cargando && uiState.canjes.isEmpty() -> {
-                    CircularProgressIndicator(
-                        modifier = Modifier.padding(32.dp),
-                        color = VerdePiku
-                    )
-                }
-                uiState.error != null -> {
-                    Text(
-                        uiState.error!!,
-                        color = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.padding(16.dp)
-                    )
-                }
-                uiState.canjes.isEmpty() -> {
-                    Text(
-                        "No hay canjes todavía.",
-                        modifier = Modifier.padding(16.dp)
-                    )
-                }
-                else -> {
-                    LazyColumn(
-                        state = listState,
-                        contentPadding = PaddingValues(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        items(uiState.canjes, key = { it.id }) { canje ->
-                            TarjetaCanjeComercio(canje)
-                        }
-                        if (uiState.cargandoMas) {
-                            item {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.padding(16.dp),
-                                    color = VerdePiku
-                                )
-                            }
+        HistorialCanjesContent(
+            uiState = uiState,
+            onBuscarChange = viewModel::onBuscarChange,
+            onAplicarBusqueda = viewModel::aplicarBusqueda,
+            listState = listState,
+            modifier = Modifier.padding(padding)
+        )
+    }
+}
+
+@Composable
+internal fun HistorialCanjesContent(
+    uiState: HistorialCanjesUiState,
+    onBuscarChange: (String) -> Unit,
+    onAplicarBusqueda: () -> Unit,
+    listState: LazyListState,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        Modifier
+            .fillMaxSize()
+            .then(modifier)
+    ) {
+        OutlinedTextField(
+            value = uiState.buscar,
+            onValueChange = onBuscarChange,
+            label = { Text("Buscar cliente u oferta") },
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 8.dp)
+        )
+        BotonPiku(
+            texto = "Buscar",
+            onClick = onAplicarBusqueda,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp)
+        )
+        when {
+            uiState.cargando && uiState.canjes.isEmpty() -> {
+                CircularProgressIndicator(
+                    modifier = Modifier.padding(32.dp),
+                    color = VerdePiku
+                )
+            }
+            uiState.error != null -> {
+                Text(
+                    uiState.error!!,
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.padding(16.dp)
+                )
+            }
+            uiState.canjes.isEmpty() -> {
+                Text(
+                    "No hay canjes todavía.",
+                    modifier = Modifier.padding(16.dp)
+                )
+            }
+            else -> {
+                LazyColumn(
+                    state = listState,
+                    contentPadding = PaddingValues(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(uiState.canjes, key = { it.id }) { canje ->
+                        TarjetaCanjeComercio(canje)
+                    }
+                    if (uiState.cargandoMas) {
+                        item {
+                            CircularProgressIndicator(
+                                modifier = Modifier.padding(16.dp),
+                                color = VerdePiku
+                            )
                         }
                     }
                 }
@@ -157,6 +179,27 @@ private fun TarjetaCanjeComercio(canje: CanjeComercioItem) {
             canje.createdAt?.let {
                 Text(it, style = MaterialTheme.typography.labelSmall)
             }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Preview(showBackground = true, device = "spec:width=411dp,height=891dp")
+@Composable
+private fun PreviewHistorialCanjesScreen() {
+    PikuTheme {
+        Scaffold(
+            topBar = {
+                TopAppBar(title = { Text("Historial de canjes") })
+            }
+        ) { padding ->
+            HistorialCanjesContent(
+                uiState = PreviewMocks.historialCanjesUiState,
+                onBuscarChange = {},
+                onAplicarBusqueda = {},
+                listState = rememberLazyListState(),
+                modifier = Modifier.padding(padding)
+            )
         }
     }
 }

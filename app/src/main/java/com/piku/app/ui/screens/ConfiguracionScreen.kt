@@ -35,8 +35,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.piku.app.data.datastore.AppPreferences
+import com.piku.app.ui.theme.PikuTheme
 import com.piku.app.ui.theme.ThemeMode
 import kotlinx.coroutines.launch
 
@@ -59,76 +61,105 @@ fun ConfiguracionScreen(onBack: () -> Unit) {
             )
         }
     ) { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .background(MaterialTheme.colorScheme.background)
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp, vertical = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            Text(
-                "Personalizá la app según tu preferencia.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+        ConfiguracionContent(
+            tema = tema,
+            onTemaChange = { mode ->
+                scope.launch { AppPreferences.guardarTema(context, mode) }
+            },
+            modifier = Modifier.padding(padding)
+        )
+    }
+}
 
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
-                )
-            ) {
-                Column(Modifier.padding(16.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            Icons.Default.SettingsBrightness,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                        Text(
-                            "Apariencia",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold,
-                            modifier = Modifier.padding(start = 8.dp)
-                        )
-                    }
-                    Spacer(Modifier.height(8.dp))
-                    Text(
-                        "Elegí tema claro, oscuro o seguí la configuración del sistema.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+@Composable
+internal fun ConfiguracionContent(
+    tema: ThemeMode,
+    onTemaChange: (ThemeMode) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 20.dp, vertical = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        Text(
+            "Personalizá la app según tu preferencia.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
+            )
+        ) {
+            Column(Modifier.padding(16.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        Icons.Default.SettingsBrightness,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary
                     )
-                    Spacer(Modifier.height(12.dp))
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        ThemeMode.entries.forEach { mode ->
-                            FilterChip(
-                                selected = tema == mode,
-                                onClick = {
-                                    scope.launch {
-                                        AppPreferences.guardarTema(context, mode)
-                                    }
-                                },
-                                label = { Text(mode.etiqueta) },
-                                leadingIcon = when (mode) {
-                                    ThemeMode.LIGHT -> {
-                                        { Icon(Icons.Default.LightMode, null) }
-                                    }
-                                    ThemeMode.DARK -> {
-                                        { Icon(Icons.Default.DarkMode, null) }
-                                    }
-                                    ThemeMode.SYSTEM -> {
-                                        { Icon(Icons.Default.SettingsBrightness, null) }
-                                    }
-                                },
-                                modifier = Modifier.fillMaxWidth()
-                            )
-                        }
+                    Text(
+                        "Apariencia",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.padding(start = 8.dp)
+                    )
+                }
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    "Elegí tema claro, oscuro o seguí la configuración del sistema.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(Modifier.height(12.dp))
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    ThemeMode.entries.forEach { mode ->
+                        FilterChip(
+                            selected = tema == mode,
+                            onClick = { onTemaChange(mode) },
+                            label = { Text(mode.etiqueta) },
+                            leadingIcon = when (mode) {
+                                ThemeMode.LIGHT -> {
+                                    { Icon(Icons.Default.LightMode, null) }
+                                }
+                                ThemeMode.DARK -> {
+                                    { Icon(Icons.Default.DarkMode, null) }
+                                }
+                                ThemeMode.SYSTEM -> {
+                                    { Icon(Icons.Default.SettingsBrightness, null) }
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        )
                     }
                 }
             }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Preview(showBackground = true, device = "spec:width=411dp,height=891dp")
+@Composable
+private fun PreviewConfiguracionScreen() {
+    PikuTheme {
+        Scaffold(
+            topBar = {
+                TopAppBar(title = { Text("Configuración") })
+            }
+        ) { padding ->
+            ConfiguracionContent(
+                tema = ThemeMode.DARK,
+                onTemaChange = {},
+                modifier = Modifier.padding(padding)
+            )
         }
     }
 }

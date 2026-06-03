@@ -2,6 +2,8 @@ package com.piku.app.ui.screens.admin
 
 import android.Manifest
 import android.widget.Toast
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -28,9 +30,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.piku.app.ui.theme.PikuTheme
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
 import com.piku.app.data.CerritoGeo
@@ -96,92 +101,157 @@ fun ComercioUbicacionScreen(onBack: () -> Unit) {
             return@Scaffold
         }
 
-        Column(
-            Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(16.dp)
-        ) {
-            Text(
-                "Marcá dónde está tu local. Los clientes verán el pin en el mapa.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(Modifier.height(12.dp))
+        ComercioUbicacionFormContent(
+            lat = lat,
+            lon = lon,
+            direccion = direccion,
+            onCentroCambiado = { nuevaLat, nuevaLon ->
+                lat = nuevaLat
+                lon = nuevaLon
+            },
+            onDireccionChange = { direccion = it },
+            onUsarGps = {
+                if (!permisosUbicacion.allPermissionsGranted) {
+                    permisosUbicacion.launchMultiplePermissionRequest()
+                    return@ComercioUbicacionFormContent
+                }
+                scope.launch {
+                    try {
+                        val coords = withContext(Dispatchers.IO) { repo.obtenerUbicacionGps() }
+                        if (coords != null) {
+                            lat = coords.first
+                            lon = coords.second
+                        } else {
+                            Toast.makeText(context, "No pudimos obtener tu ubicación", Toast.LENGTH_SHORT).show()
+                        }
+                    } catch (e: Exception) {
+                        Toast.makeText(context, e.message ?: "Error de GPS", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            },
+            onGuardar = {
+                if (guardando) return@ComercioUbicacionFormContent
+                scope.launch {
+                    guardando = true
+                    try {
+                        withContext(Dispatchers.IO) {
+                            repo.actualizarUbicacion(lat, lon, direccion.trim().ifBlank { null })
+                        }
+                        Toast.makeText(context, "Ubicación guardada", Toast.LENGTH_SHORT).show()
+                        onBack()
+                    } catch (e: Exception) {
+                        Toast.makeText(
+                            context,
+                            e.message ?: "No se pudo guardar",
+                            Toast.LENGTH_LONG
+                        ).show()
+                    } finally {
+                        guardando = false
+                    }
+                }
+            },
+            guardando = guardando,
+            mostrarMapa = true,
+            modifier = Modifier.padding(padding)
+        )
+    }
+}
+
+@Composable
+internal fun ComercioUbicacionFormContent(
+    lat: Double,
+    lon: Double,
+    direccion: String,
+    onCentroCambiado: (Double, Double) -> Unit,
+    onDireccionChange: (String) -> Unit,
+    onUsarGps: () -> Unit,
+    onGuardar: () -> Unit,
+    guardando: Boolean,
+    mostrarMapa: Boolean = true,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        Modifier
+            .fillMaxSize()
+            .then(modifier)
+            .padding(16.dp)
+    ) {
+        Text(
+            "Marcá dónde está tu local. Los clientes verán el pin en el mapa.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(Modifier.height(12.dp))
+        if (mostrarMapa) {
             SelectorUbicacionMapa(
                 lat = lat,
                 lon = lon,
-                onCentroCambiado = { nuevaLat, nuevaLon ->
-                    lat = nuevaLat
-                    lon = nuevaLon
-                },
+                onCentroCambiado = onCentroCambiado,
                 modifier = Modifier.fillMaxWidth()
             )
-            Spacer(Modifier.height(12.dp))
-            OutlinedTextField(
-                value = direccion,
-                onValueChange = { direccion = it },
-                label = { Text("Dirección (opcional)") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = false,
-                maxLines = 2
-            )
-            Spacer(Modifier.height(8.dp))
-            Text(
-                "Coordenadas: ${"%.5f".format(lat)}, ${"%.5f".format(lon)}",
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(Modifier.height(16.dp))
-            BotonPiku(
-                texto = "Usar mi ubicación actual",
-                onClick = {
-                    if (!permisosUbicacion.allPermissionsGranted) {
-                        permisosUbicacion.launchMultiplePermissionRequest()
-                        return@BotonPiku
-                    }
-                    scope.launch {
-                        try {
-                            val coords = withContext(Dispatchers.IO) { repo.obtenerUbicacionGps() }
-                            if (coords != null) {
-                                lat = coords.first
-                                lon = coords.second
-                            } else {
-                                Toast.makeText(context, "No pudimos obtener tu ubicación", Toast.LENGTH_SHORT).show()
-                            }
-                        } catch (e: Exception) {
-                            Toast.makeText(context, e.message ?: "Error de GPS", Toast.LENGTH_SHORT).show()
-                        }
-                    }
-                },
-                modifier = Modifier.fillMaxWidth(),
-                icono = Icons.Default.MyLocation
-            )
-            Spacer(Modifier.height(12.dp))
-            BotonPiku(
-                texto = if (guardando) "Guardando…" else "Guardar ubicación",
-                onClick = {
-                    if (guardando) return@BotonPiku
-                    scope.launch {
-                        guardando = true
-                        try {
-                            withContext(Dispatchers.IO) {
-                                repo.actualizarUbicacion(lat, lon, direccion.trim().ifBlank { null })
-                            }
-                            Toast.makeText(context, "Ubicación guardada", Toast.LENGTH_SHORT).show()
-                            onBack()
-                        } catch (e: Exception) {
-                            Toast.makeText(
-                                context,
-                                e.message ?: "No se pudo guardar",
-                                Toast.LENGTH_LONG
-                            ).show()
-                        } finally {
-                            guardando = false
-                        }
-                    }
-                },
-                modifier = Modifier.fillMaxWidth()
+        } else {
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .height(220.dp)
+                    .background(MaterialTheme.colorScheme.surfaceVariant),
+                contentAlignment = Alignment.Center
+            ) {
+                Text("Mapa (vista previa)", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+        Spacer(Modifier.height(12.dp))
+        OutlinedTextField(
+            value = direccion,
+            onValueChange = onDireccionChange,
+            label = { Text("Dirección (opcional)") },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = false,
+            maxLines = 2
+        )
+        Spacer(Modifier.height(8.dp))
+        Text(
+            "Coordenadas: ${"%.5f".format(lat)}, ${"%.5f".format(lon)}",
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(Modifier.height(16.dp))
+        BotonPiku(
+            texto = "Usar mi ubicación actual",
+            onClick = onUsarGps,
+            modifier = Modifier.fillMaxWidth(),
+            icono = Icons.Default.MyLocation
+        )
+        Spacer(Modifier.height(12.dp))
+        BotonPiku(
+            texto = if (guardando) "Guardando…" else "Guardar ubicación",
+            onClick = onGuardar,
+            modifier = Modifier.fillMaxWidth()
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Preview(showBackground = true, device = "spec:width=411dp,height=891dp")
+@Composable
+private fun PreviewComercioUbicacionScreen() {
+    PikuTheme {
+        Scaffold(
+            topBar = {
+                TopAppBar(title = { Text("Ubicación del negocio") })
+            }
+        ) { padding ->
+            ComercioUbicacionFormContent(
+                lat = CerritoGeo.CENTRO_LAT,
+                lon = CerritoGeo.CENTRO_LON,
+                direccion = "Av. San Martín 123, Cerrito",
+                onCentroCambiado = { _, _ -> },
+                onDireccionChange = {},
+                onUsarGps = {},
+                onGuardar = {},
+                guardando = false,
+                mostrarMapa = false,
+                modifier = Modifier.padding(padding)
             )
         }
     }

@@ -35,8 +35,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.piku.app.ui.preview.PreviewMocks
+import com.piku.app.ui.theme.PikuTheme
+import com.piku.app.ui.viewmodel.DesafiosUiState
 import com.piku.app.data.model.DesafioItem
 import com.piku.app.ui.components.BotonPiku
 import com.piku.app.ui.components.EstiloBotonPiku
@@ -78,41 +82,53 @@ fun DesafiosScreen(
             )
         }
     ) { padding ->
-        when {
-            uiState.cargando && uiState.desafios.isEmpty() -> {
-                Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(color = VerdePiku)
-                }
+        DesafiosContent(
+            uiState = uiState,
+            onCompletar = viewModel::completar,
+            modifier = Modifier.padding(padding)
+        )
+    }
+}
+
+@Composable
+internal fun DesafiosContent(
+    uiState: DesafiosUiState,
+    onCompletar: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    when {
+        uiState.cargando && uiState.desafios.isEmpty() -> {
+            Box(Modifier.fillMaxSize().then(modifier), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator(color = VerdePiku)
             }
-            else -> {
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(padding)
-                        .padding(horizontal = 16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    item {
-                        Text(
-                            "Completá desafíos y sumá Piku Points extra esta semana.",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(vertical = 8.dp)
-                        )
-                    }
-                    uiState.error?.let { err ->
-                        item {
-                            Text(err, color = MaterialTheme.colorScheme.error)
-                        }
-                    }
-                    items(uiState.desafios, key = { it.id }) { desafio ->
-                        DesafioCard(
-                            desafio = desafio,
-                            onCompletar = { viewModel.completar(desafio.id) }
-                        )
-                    }
-                    item { Spacer(Modifier.height(16.dp)) }
+        }
+        else -> {
+            LazyColumn(
+                modifier = modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                item {
+                    Text(
+                        "Completá desafíos y sumá Piku Points extra esta semana.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(vertical = 8.dp)
+                    )
                 }
+                uiState.error?.let { err ->
+                    item {
+                        Text(err, color = MaterialTheme.colorScheme.error)
+                    }
+                }
+                items(uiState.desafios, key = { it.id }) { desafio ->
+                    DesafioCard(
+                        desafio = desafio,
+                        onCompletar = { onCompletar(desafio.id) }
+                    )
+                }
+                item { Spacer(Modifier.height(16.dp)) }
             }
         }
     }
@@ -162,6 +178,25 @@ private fun DesafioCard(desafio: DesafioItem, onCompletar: () -> Unit) {
                     )
                 }
             }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Preview(showBackground = true, device = "spec:width=411dp,height=891dp")
+@Composable
+private fun PreviewDesafiosScreen() {
+    PikuTheme {
+        Scaffold(
+            topBar = {
+                TopAppBar(title = { Text("Desafíos semanales") })
+            }
+        ) { padding ->
+            DesafiosContent(
+                uiState = PreviewMocks.desafiosUiState,
+                onCompletar = {},
+                modifier = Modifier.padding(padding)
+            )
         }
     }
 }

@@ -32,8 +32,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.piku.app.ui.theme.NaranjaPiku
+import com.piku.app.ui.theme.PikuTheme
 import com.piku.app.ui.theme.VerdePiku
 
 private data class HerramientaItem(
@@ -114,5 +116,22 @@ fun AdminHerramientasScreen(
                 }
             }
         }
+    }
+}
+
+@Preview(showBackground = true, device = "spec:width=411dp,height=891dp")
+@Composable
+private fun PreviewAdminHerramientasScreen() {
+    PikuTheme {
+        AdminHerramientasScreen(
+            onGenerarQr = {},
+            onConfigEnvios = {},
+            onNotificaciones = {},
+            onHistorialCanjes = {},
+            onUbicacion = {},
+            onSuscripcion = {},
+            onReglasPuntos = {},
+            onInsights = {}
+        )
     }
 }

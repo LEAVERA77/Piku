@@ -37,10 +37,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.piku.app.data.model.Comercio
+import com.piku.app.data.model.RecompensaDetalleResponse
+import com.piku.app.data.model.RecompensaPublica
+import com.piku.app.ui.preview.PreviewMocks
+import com.piku.app.ui.theme.PikuTheme
 import com.piku.app.data.config.ConfigLoader
 import com.piku.app.data.datastore.AuthDataStore
-import com.piku.app.data.model.RecompensaDetalleResponse
 import com.piku.app.data.repository.MapaRepository
 import com.piku.app.data.repository.UsuarioRepository
 import com.piku.app.ui.components.ArticuloFotoCarousel
@@ -127,148 +132,17 @@ fun DetalleOfertaScreen(
             detalle != null -> {
                 val oferta = detalle!!.recompensa
                 val puedeCanjear = esCliente && puntosSaldo >= oferta.puntosRequeridos && codigoCanje == null
-
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(padding)
-                        .verticalScroll(rememberScrollState())
-                        .padding(16.dp)
-                ) {
-                    val fotos = oferta.todasLasFotos(cloud)
-                    if (fotos.size > 1) {
-                        ArticuloFotoCarousel(
-                            fotos = fotos,
-                            contentDescription = oferta.nombre
-                        )
-                    } else {
-                        PikuPhotoImage(
-                            url = fotos.first(),
-                            contentDescription = oferta.nombre,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(220.dp)
-                                .clip(RoundedCornerShape(16.dp)),
-                            cornerRadius = 16.dp,
-                            contentScale = ContentScale.Crop
-                        )
-                    }
-                    Spacer(Modifier.height(16.dp))
-                    Text(oferta.nombre, style = MaterialTheme.typography.headlineMedium)
-                    val beneficio = oferta.resumenBeneficio()
-                    if (beneficio.isNotBlank()) {
-                        Text(
-                            beneficio,
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.secondary,
-                            modifier = Modifier.padding(top = 4.dp)
-                        )
-                    }
-                    detalle!!.comercio?.nombre?.let {
-                        Text(
-                            it,
-                            style = MaterialTheme.typography.titleSmall,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                    if (esCliente) {
-                        Text(
-                            "Tu saldo: $puntosSaldo pts",
-                            style = MaterialTheme.typography.bodyMedium,
-                            modifier = Modifier.padding(top = 6.dp)
-                        )
-                    }
-                    Text(
-                        "${oferta.puntosRequeridos} puntos necesarios",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = VerdePiku,
-                        modifier = Modifier.padding(top = 8.dp)
-                    )
-                    oferta.descripcion?.let {
-                        Spacer(Modifier.height(12.dp))
-                        Text(it, style = MaterialTheme.typography.bodyLarge)
-                    }
-                    oferta.condiciones?.let {
-                        Spacer(Modifier.height(12.dp))
-                        Text("Condiciones", style = MaterialTheme.typography.titleSmall)
-                        Text(it, style = MaterialTheme.typography.bodyMedium)
-                    }
-                    if (!oferta.vigenciaDesde.isNullOrBlank() || !oferta.vigenciaHasta.isNullOrBlank()) {
-                        Spacer(Modifier.height(12.dp))
-                        Text(
-                            "Vigencia: ${oferta.vigenciaDesde ?: "—"} → ${oferta.vigenciaHasta ?: "—"}",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    codigoCanje?.let { codigo ->
-                        Spacer(Modifier.height(16.dp))
-                        Text(
-                            "Código de canje",
-                            style = MaterialTheme.typography.titleSmall,
-                            color = VerdePiku
-                        )
-                        Text(
-                            codigo,
-                            style = MaterialTheme.typography.headlineSmall,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                        Text(
-                            "Mostrá este código en el comercio para usar tu beneficio.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(top = 4.dp)
-                        )
-                    }
-                    if (esCliente) {
-                        Spacer(Modifier.height(16.dp))
-                        Text(
-                            "En el comercio",
-                            style = MaterialTheme.typography.titleSmall
-                        )
-                        Text(
-                            "1. En la caja, escaneá el QR del comercio (pestaña Inicio → Escanear) para sumar puntos.\n" +
-                                "2. Cuando tengas suficientes puntos, canjeá este artículo y mostrá el código en el local.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    detalle!!.comercio?.let { c ->
-                        if (c.realizaEnvios || !c.telefonoContacto.isNullOrBlank()) {
-                            Spacer(Modifier.height(16.dp))
-                            ComercioEnvioContactoCard(
-                                comercio = c,
-                                articuloNombre = oferta.nombre
-                            )
-                        }
-                    }
-                    if (esCliente && codigoCanje == null) {
-                        Spacer(Modifier.height(24.dp))
-                        Button(
-                            onClick = { mostrarConfirmacion = true },
-                            modifier = Modifier.fillMaxWidth(),
-                            enabled = puedeCanjear && !canjeando,
-                            colors = ButtonDefaults.buttonColors(containerColor = VerdePiku)
-                        ) {
-                            if (canjeando) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.height(24.dp),
-                                    strokeWidth = 2.dp
-                                )
-                            } else {
-                                Text("Canjear")
-                            }
-                        }
-                        if (!puedeCanjear && puntosSaldo < oferta.puntosRequeridos) {
-                            Text(
-                                "Te faltan ${oferta.puntosRequeridos - puntosSaldo} puntos para canjear.",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.error,
-                                modifier = Modifier.padding(top = 8.dp)
-                            )
-                        }
-                    }
-                }
+                DetalleOfertaContenido(
+                    detalle = detalle!!,
+                    cloud = cloud,
+                    puntosSaldo = puntosSaldo,
+                    esCliente = esCliente,
+                    codigoCanje = codigoCanje,
+                    puedeCanjear = puedeCanjear,
+                    canjeando = canjeando,
+                    onCanjearClick = { mostrarConfirmacion = true },
+                    modifier = Modifier.padding(padding)
+                )
             }
         }
     }
@@ -329,5 +203,185 @@ fun DetalleOfertaScreen(
                 }
             }
         )
+    }
+}
+
+@Composable
+internal fun DetalleOfertaContenido(
+    detalle: RecompensaDetalleResponse,
+    cloud: String?,
+    puntosSaldo: Int,
+    esCliente: Boolean,
+    codigoCanje: String?,
+    puedeCanjear: Boolean,
+    canjeando: Boolean,
+    onCanjearClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val oferta: RecompensaPublica = detalle.recompensa
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(16.dp)
+    ) {
+        val fotos = oferta.todasLasFotos(cloud)
+        if (fotos.size > 1) {
+            ArticuloFotoCarousel(
+                fotos = fotos,
+                contentDescription = oferta.nombre
+            )
+        } else {
+            PikuPhotoImage(
+                url = fotos.first(),
+                contentDescription = oferta.nombre,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(220.dp)
+                    .clip(RoundedCornerShape(16.dp)),
+                cornerRadius = 16.dp,
+                contentScale = ContentScale.Crop
+            )
+        }
+        Spacer(Modifier.height(16.dp))
+        Text(oferta.nombre, style = MaterialTheme.typography.headlineMedium)
+        val beneficio = oferta.resumenBeneficio()
+        if (beneficio.isNotBlank()) {
+            Text(
+                beneficio,
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.secondary,
+                modifier = Modifier.padding(top = 4.dp)
+            )
+        }
+        detalle.comercio?.nombre?.let {
+            Text(
+                it,
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.primary
+            )
+        }
+        if (esCliente) {
+            Text(
+                "Tu saldo: $puntosSaldo pts",
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.padding(top = 6.dp)
+            )
+        }
+        Text(
+            "${oferta.puntosRequeridos} puntos necesarios",
+            style = MaterialTheme.typography.titleMedium,
+            color = VerdePiku,
+            modifier = Modifier.padding(top = 8.dp)
+        )
+        oferta.descripcion?.let {
+            Spacer(Modifier.height(12.dp))
+            Text(it, style = MaterialTheme.typography.bodyLarge)
+        }
+        oferta.condiciones?.let {
+            Spacer(Modifier.height(12.dp))
+            Text("Condiciones", style = MaterialTheme.typography.titleSmall)
+            Text(it, style = MaterialTheme.typography.bodyMedium)
+        }
+        if (!oferta.vigenciaDesde.isNullOrBlank() || !oferta.vigenciaHasta.isNullOrBlank()) {
+            Spacer(Modifier.height(12.dp))
+            Text(
+                "Vigencia: ${oferta.vigenciaDesde ?: "—"} → ${oferta.vigenciaHasta ?: "—"}",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        codigoCanje?.let { codigo ->
+            Spacer(Modifier.height(16.dp))
+            Text(
+                "Código de canje",
+                style = MaterialTheme.typography.titleSmall,
+                color = VerdePiku
+            )
+            Text(
+                codigo,
+                style = MaterialTheme.typography.headlineSmall,
+                color = MaterialTheme.colorScheme.primary
+            )
+            Text(
+                "Mostrá este código en el comercio para usar tu beneficio.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 4.dp)
+            )
+        }
+        if (esCliente) {
+            Spacer(Modifier.height(16.dp))
+            Text(
+                "En el comercio",
+                style = MaterialTheme.typography.titleSmall
+            )
+            Text(
+                "1. En la caja, escaneá el QR del comercio (pestaña Inicio → Escanear) para sumar puntos.\n" +
+                    "2. Cuando tengas suficientes puntos, canjeá este artículo y mostrá el código en el local.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        detalle.comercio?.let { c: Comercio ->
+            if (c.realizaEnvios || !c.telefonoContacto.isNullOrBlank()) {
+                Spacer(Modifier.height(16.dp))
+                ComercioEnvioContactoCard(
+                    comercio = c,
+                    articuloNombre = oferta.nombre
+                )
+            }
+        }
+        if (esCliente && codigoCanje == null) {
+            Spacer(Modifier.height(24.dp))
+            Button(
+                onClick = onCanjearClick,
+                modifier = Modifier.fillMaxWidth(),
+                enabled = puedeCanjear && !canjeando,
+                colors = ButtonDefaults.buttonColors(containerColor = VerdePiku)
+            ) {
+                if (canjeando) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.height(24.dp),
+                        strokeWidth = 2.dp
+                    )
+                } else {
+                    Text("Canjear")
+                }
+            }
+            if (!puedeCanjear && puntosSaldo < oferta.puntosRequeridos) {
+                Text(
+                    "Te faltan ${oferta.puntosRequeridos - puntosSaldo} puntos para canjear.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.padding(top = 8.dp)
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Preview(showBackground = true, device = "spec:width=411dp,height=891dp")
+@Composable
+private fun PreviewDetalleOfertaScreen() {
+    PikuTheme {
+        Scaffold(
+            topBar = {
+                TopAppBar(title = { Text(PreviewMocks.recompensaDetalle.recompensa.nombre) })
+            }
+        ) { padding ->
+            DetalleOfertaContenido(
+                detalle = PreviewMocks.recompensaDetalle,
+                cloud = null,
+                puntosSaldo = 320,
+                esCliente = true,
+                codigoCanje = null,
+                puedeCanjear = true,
+                canjeando = false,
+                onCanjearClick = {},
+                modifier = Modifier.padding(padding)
+            )
+        }
     }
 }

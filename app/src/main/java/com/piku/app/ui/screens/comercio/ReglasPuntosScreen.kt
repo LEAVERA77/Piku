@@ -34,7 +34,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.piku.app.ui.theme.PikuTheme
 import com.piku.app.data.repository.ComercioRepository
 import com.piku.app.ui.components.BotonPiku
 import com.piku.app.ui.components.EstiloBotonPiku
@@ -96,115 +98,177 @@ fun ReglasPuntosScreen(onBack: () -> Unit) {
     ) { padding ->
         when {
             cargando -> CircularProgressIndicator(Modifier.padding(padding).padding(24.dp))
-            else -> Column(
-                Modifier
-                    .fillMaxSize()
-                    .padding(padding)
-                    .padding(16.dp)
-                    .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+            else -> ReglasPuntosFormContent(
+                montoMinimo = montoMinimo,
+                onMontoMinimoChange = { montoMinimo = it.filter { c -> c.isDigit() || c == '.' } },
+                puntosFijos = puntosFijos,
+                onPuntosFijosChange = { puntosFijos = it.filter { c -> c.isDigit() } },
+                maxPorDia = maxPorDia,
+                onMaxPorDiaChange = { maxPorDia = it.filter { c -> c.isDigit() } },
+                activo = activo,
+                onActivoChange = { activo = it },
+                infoSistema = infoSistema,
+                error = error,
+                guardando = guardando,
+                onGuardar = {
+                    scope.launch {
+                        guardando = true
+                        error = null
+                        try {
+                            withContext(Dispatchers.IO) {
+                                repo.guardarReglasPuntos(
+                                    montoMinimo = montoMinimo.toDoubleOrNull() ?: 0.0,
+                                    puntosFijos = puntosFijos.toIntOrNull() ?: 0,
+                                    maxPuntosPorDia = maxPorDia.toIntOrNull() ?: 500,
+                                    activo = activo
+                                )
+                            }
+                            Toast.makeText(context, "Política actualizada", Toast.LENGTH_SHORT).show()
+                        } catch (e: Exception) {
+                            error = e.message
+                        } finally {
+                            guardando = false
+                        }
+                    }
+                },
+                modifier = Modifier.padding(padding)
+            )
+        }
+    }
+}
+
+@Composable
+internal fun ReglasPuntosFormContent(
+    montoMinimo: String,
+    onMontoMinimoChange: (String) -> Unit,
+    puntosFijos: String,
+    onPuntosFijosChange: (String) -> Unit,
+    maxPorDia: String,
+    onMaxPorDiaChange: (String) -> Unit,
+    activo: Boolean,
+    onActivoChange: (Boolean) -> Unit,
+    infoSistema: String?,
+    error: String?,
+    guardando: Boolean,
+    onGuardar: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        Modifier
+            .fillMaxSize()
+            .then(modifier)
+            .padding(16.dp)
+            .verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Text(
+            "Configurá cómo tus clientes acumulan y canjean Piku Points en tu local.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+
+        infoSistema?.let { regla ->
+            Card(
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f)
+                )
             ) {
+                Column(Modifier.padding(12.dp)) {
+                    Text("Sistema Piku Points", style = MaterialTheme.typography.titleSmall)
+                    Spacer(Modifier.height(4.dp))
+                    Text(regla, style = MaterialTheme.typography.bodySmall)
+                }
+            }
+        }
+
+        OutlinedTextField(
+            value = montoMinimo,
+            onValueChange = onMontoMinimoChange,
+            label = { Text("Monto mínimo de compra (ARS)") },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true
+        )
+        OutlinedTextField(
+            value = puntosFijos,
+            onValueChange = onPuntosFijosChange,
+            label = { Text("Puntos fijos por visita (opcional)") },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true
+        )
+        OutlinedTextField(
+            value = maxPorDia,
+            onValueChange = onMaxPorDiaChange,
+            label = { Text("Máximo de puntos por cliente por día") },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true
+        )
+
+        Card(
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
+            )
+        ) {
+            Column(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(12.dp),
+                horizontalAlignment = Alignment.Start
+            ) {
+                Text("Programa activo", style = MaterialTheme.typography.titleSmall)
                 Text(
-                    "Configurá cómo tus clientes acumulan y canjean Piku Points en tu local.",
-                    style = MaterialTheme.typography.bodyMedium,
+                    "Si está desactivado, no se otorgan puntos en caja.",
+                    style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-
-                infoSistema?.let { regla ->
-                    Card(
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f)
-                        )
-                    ) {
-                        Column(Modifier.padding(12.dp)) {
-                            Text("Sistema Piku Points", style = MaterialTheme.typography.titleSmall)
-                            Spacer(Modifier.height(4.dp))
-                            Text(regla, style = MaterialTheme.typography.bodySmall)
-                        }
-                    }
-                }
-
-                OutlinedTextField(
-                    value = montoMinimo,
-                    onValueChange = { montoMinimo = it.filter { c -> c.isDigit() || c == '.' } },
-                    label = { Text("Monto mínimo de compra (ARS)") },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
-                )
-                OutlinedTextField(
-                    value = puntosFijos,
-                    onValueChange = { puntosFijos = it.filter { c -> c.isDigit() } },
-                    label = { Text("Puntos fijos por visita (opcional)") },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
-                )
-                OutlinedTextField(
-                    value = maxPorDia,
-                    onValueChange = { maxPorDia = it.filter { c -> c.isDigit() } },
-                    label = { Text("Máximo de puntos por cliente por día") },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
-                )
-
-                Card(
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
-                    )
-                ) {
-                    Column(
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(12.dp),
-                        horizontalAlignment = Alignment.Start
-                    ) {
-                        Text("Programa activo", style = MaterialTheme.typography.titleSmall)
-                        Text(
-                            "Si está desactivado, no se otorgan puntos en caja.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Switch(checked = activo, onCheckedChange = { activo = it })
-                    }
-                }
-
-                error?.let {
-                    Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
-                }
-
-                BotonPiku(
-                    texto = if (guardando) "Guardando…" else "Guardar política",
-                    onClick = {
-                        scope.launch {
-                            guardando = true
-                            error = null
-                            try {
-                                withContext(Dispatchers.IO) {
-                                    repo.guardarReglasPuntos(
-                                        montoMinimo = montoMinimo.toDoubleOrNull() ?: 0.0,
-                                        puntosFijos = puntosFijos.toIntOrNull() ?: 0,
-                                        maxPuntosPorDia = maxPorDia.toIntOrNull() ?: 500,
-                                        activo = activo
-                                    )
-                                }
-                                Toast.makeText(context, "Política actualizada", Toast.LENGTH_SHORT).show()
-                            } catch (e: Exception) {
-                                error = e.message
-                            } finally {
-                                guardando = false
-                            }
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    habilitado = !guardando,
-                    estilo = EstiloBotonPiku.PRIMARIO
-                )
-
-                Text(
-                    "Los puntos requeridos para cada publicación se configuran en el catálogo.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = NaranjaPiku
-                )
+                Switch(checked = activo, onCheckedChange = onActivoChange)
             }
+        }
+
+        error?.let {
+            Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+        }
+
+        BotonPiku(
+            texto = if (guardando) "Guardando…" else "Guardar política",
+            onClick = onGuardar,
+            modifier = Modifier.fillMaxWidth(),
+            habilitado = !guardando,
+            estilo = EstiloBotonPiku.PRIMARIO
+        )
+
+        Text(
+            "Los puntos requeridos para cada publicación se configuran en el catálogo.",
+            style = MaterialTheme.typography.bodySmall,
+            color = NaranjaPiku
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Preview(showBackground = true, device = "spec:width=411dp,height=891dp")
+@Composable
+private fun PreviewReglasPuntosScreen() {
+    PikuTheme {
+        Scaffold(
+            topBar = {
+                TopAppBar(title = { Text("Política de puntos") })
+            }
+        ) { padding ->
+            ReglasPuntosFormContent(
+                montoMinimo = "500",
+                onMontoMinimoChange = {},
+                puntosFijos = "10",
+                onPuntosFijosChange = {},
+                maxPorDia = "500",
+                onMaxPorDiaChange = {},
+                activo = true,
+                onActivoChange = {},
+                infoSistema = "1 punto por cada $100 de compra (mínimo $500).",
+                error = null,
+                guardando = false,
+                onGuardar = {},
+                modifier = Modifier.padding(padding)
+            )
         }
     }
 }

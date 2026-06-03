@@ -32,8 +32,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.piku.app.ui.preview.PreviewMocks
+import com.piku.app.ui.theme.PikuTheme
 import com.piku.app.data.model.ComercioInsightsResponse
 import com.piku.app.ui.theme.NaranjaPiku
 import com.piku.app.ui.theme.VerdePiku
@@ -226,4 +229,22 @@ private fun variacionTexto(variacion: Double): String = when {
     variacion > 0 -> "+${variacion}% vs mes anterior"
     variacion < 0 -> "${variacion}% vs mes anterior"
     else -> "igual que mes anterior"
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Preview(showBackground = true, device = "spec:width=411dp,height=891dp")
+@Composable
+private fun PreviewInsightsScreen() {
+    PikuTheme {
+        Scaffold(
+            topBar = {
+                TopAppBar(title = { Text("Insights") })
+            }
+        ) { padding ->
+            InsightsContent(
+                insights = PreviewMocks.insights,
+                modifier = Modifier.padding(padding)
+            )
+        }
+    }
 }
