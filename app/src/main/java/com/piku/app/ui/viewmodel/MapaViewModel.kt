@@ -77,9 +77,9 @@ data class MapaUiState(
 
 private const val CERRITO_LAT = CerritoGeo.CENTRO_LAT
 private const val CERRITO_LON = CerritoGeo.CENTRO_LON
-private const val ZOOM_UBICACION = 17.0
-private const val ZOOM_DEFAULT = 15.0
-private const val ZOOM_CERRITO_CERCA = 16.5
+private const val ZOOM_UBICACION = 18.0
+private const val ZOOM_DEFAULT = 16.5
+private const val ZOOM_CERRITO_CERCA = 17.5
 
 private const val TAG = "MapaViewModel"
 
@@ -154,9 +154,9 @@ class MapaViewModel(application: Application) : AndroidViewModel(application) {
                             gpsLat = lat,
                             gpsLon = lon,
                             tieneUbicacionReal = true,
-                            mapCenterLat = if (enCerrito) lat else it.mapCenterLat,
-                            mapCenterLon = if (enCerrito) lon else it.mapCenterLon,
-                            zoomMapa = if (enCerrito) ZOOM_CERRITO_CERCA else it.zoomMapa
+                            mapCenterLat = if (enCerrito) lat else CERRITO_LAT,
+                            mapCenterLon = if (enCerrito) lon else CERRITO_LON,
+                            zoomMapa = if (enCerrito) ZOOM_CERRITO_CERCA else ZOOM_DEFAULT
                         )
                     }
                     aplicarCalleInferida(lat, lon)
@@ -168,14 +168,14 @@ class MapaViewModel(application: Application) : AndroidViewModel(application) {
                 val enCerrito = CerritoGeo.enZonaCerrito(refLat, refLon)
                 val comercios = try {
                     val desdeApi = repo.listarComerciosInicial(refLat, refLon)
-                    val merged = CerritoGeo.mergeComerciosCerrito(desdeApi)
-                    val lista = if (enCerrito) {
-                        CerritoGeo.filtrarCercaDeUsuario(refLat, refLon, merged)
-                            .ifEmpty { CerritoGeo.conDistanciaDesde(refLat, refLon, merged) }
+                    val catalogo = CerritoGeo.listaMapaCerrito(desdeApi)
+                    val conDistancia = CerritoGeo.conDistanciaDesde(refLat, refLon, catalogo)
+                    if (enCerrito) {
+                        CerritoGeo.filtrarCercaDeUsuario(refLat, refLon, catalogo)
+                            .ifEmpty { conDistancia }
                     } else {
-                        merged.ifEmpty { ComerciosCerritoDemo.lista }
+                        conDistancia
                     }
-                    if (lista.isEmpty()) ComerciosCerritoDemo.lista else lista
                 } catch (e: Exception) {
                     Log.w(TAG, "Error API comercios; usando demo Cerrito", e)
                     CerritoGeo.conDistanciaDesde(refLat, refLon, ComerciosCerritoDemo.lista)
@@ -211,22 +211,18 @@ class MapaViewModel(application: Application) : AndroidViewModel(application) {
         ultimoViewport = vp
         viewportJob?.cancel()
         viewportJob = viewModelScope.launch {
-            delay(400)
-            _uiState.update { it.copy(cargandoViewport = true) }
+            delay(800)
             try {
                 val s = _uiState.value
-                val lista = repo.listarComerciosEnViewport(
-                    s.refLat, s.refLon, minLat, maxLat, minLon, maxLon
+                val desdeApi = repo.listarComerciosInicial(s.refLat, s.refLon)
+                val actualizado = CerritoGeo.conDistanciaDesde(
+                    s.refLat,
+                    s.refLon,
+                    CerritoGeo.listaMapaCerrito(desdeApi)
                 )
-                val merged = (s.comercios + lista).associateBy { it.id }.values.toList()
-                _uiState.update {
-                    it.copy(
-                        comercios = if (merged.isEmpty()) s.comercios else merged,
-                        cargandoViewport = false
-                    )
-                }
+                _uiState.update { it.copy(comercios = actualizado) }
             } catch (_: Exception) {
-                _uiState.update { it.copy(cargandoViewport = false) }
+                // mantener catálogo actual
             }
         }
     }

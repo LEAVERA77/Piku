@@ -57,7 +57,9 @@ fun OsmdroidMapView(
             setTileSource(TileSourceFactory.MAPNIK)
             setMultiTouchControls(true)
             zoomController.setVisibility(CustomZoomButtonsController.Visibility.NEVER)
-            controller.setZoom(15.0)
+            minZoomLevel = 14.0
+            maxZoomLevel = 20.0
+            controller.setZoom(16.5)
             controller.setCenter(GeoPoint(centerLat, centerLon))
         }
     }
@@ -124,11 +126,19 @@ fun OsmdroidMapView(
                         ofertasNuevas = comercio.ofertasNuevas,
                         realizaEnvios = comercio.realizaEnvios
                     ),
-                    anchorY = MapPinBitmap.anchorY(comercio.nombre),
-                    snippet = if (comercio.cantidadOfertas > 0) {
-                        "${comercio.cantidadOfertas} oferta(s) activa(s)"
-                    } else {
-                        comercio.direccion ?: ""
+                    anchorY = MapPinBitmap.anchorY(
+                        comercio.nombre,
+                        comercio.ofertasNuevas,
+                        comercio.cantidadOfertas
+                    ),
+                    snippet = when {
+                        comercio.ofertasNuevas > 0 && comercio.cantidadOfertas > 0 ->
+                            "${comercio.ofertasNuevas} nueva(s) · ${comercio.cantidadOfertas} oferta(s)"
+                        comercio.ofertasNuevas > 0 ->
+                            "${comercio.ofertasNuevas} oferta(s) nueva(s)"
+                        comercio.cantidadOfertas > 0 ->
+                            "${comercio.cantidadOfertas} oferta(s) activa(s)"
+                        else -> comercio.direccion ?: ""
                     }
                 )
             }
