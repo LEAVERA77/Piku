@@ -33,5 +33,8 @@ data class ValidarQrResponse(
     @SerializedName("puntosGanados") val puntosGanados: Int,
     @SerializedName("saldoActual") val saldoActual: Int,
     val comercio: String? = null,
-    @SerializedName("distanciaMetros") val distanciaMetros: Int? = null
+    @SerializedName("distanciaMetros") val distanciaMetros: Int? = null,
+    @SerializedName("valorCanjeArs") val valorCanjeArs: Int? = null,
+    @SerializedName("pesosPorDolar") val pesosPorDolar: Double? = null,
+    @SerializedName("valorPuntoUsd") val valorPuntoUsd: Double? = null
 )

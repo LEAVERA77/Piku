@@ -1,13 +1,13 @@
 const { query, withTransaction } = require('../services/neon.service');
 const { calcularDistancia } = require('../services/nominatim.service');
 const { generarCodigoUnico, responderError } = require('../utils/helpers');
-const { calcularPuntosCompra, saldoSeguro } = require('../services/puntos.service');
+const { calcularPuntosCompra, saldoSeguro, resumenPuntosGanados } = require('../services/puntos.service');
 
 const MINUTOS_EXPIRACION_QR = parseInt(process.env.QR_EXPIRACION_MINUTOS, 10) || 15;
 
 /** @deprecated use calcularPuntosCompra */
-function calcularPuntos(reglas, montoTransaccion) {
-  return calcularPuntosCompra(reglas, montoTransaccion);
+async function calcularPuntos(reglas, montoTransaccion) {
+  return calcularPuntosCompra(montoTransaccion, reglas);
 }
 
 /**
@@ -90,15 +90,15 @@ async function validarEscaneo(req, res) {
         [comercio.id]
       );
       const reglas = reglasRes.rows[0] || {
-        puntos_por_peso: 1,
         monto_minimo: 0,
-        puntos_fijos: 10,
         max_puntos_por_dia: 500,
       };
 
       let puntos = qr.puntos_calculados;
       if (puntos == null) {
-        puntos = calcularPuntosCompra(reglas, qr.monto_transaccion);
+        puntos = await calcularPuntosCompra(qr.monto_transaccion, reglas);
+      } else {
+        puntos = parseInt(puntos, 10) || 0;
       }
 
       // Límite diario por comercio
@@ -149,12 +149,17 @@ async function validarEscaneo(req, res) {
       return { puntos, nuevoSaldo, comercio, distancia: gps.distancia };
     });
 
+    const resumen = await resumenPuntosGanados(resultado.puntos);
+
     return res.json({
-      mensaje: `¡Sumaste ${resultado.puntos} puntos!`,
+      mensaje: `¡Ganaste ${resultado.puntos} PP! Valen $${resumen.valorCanjeArs.toLocaleString('es-AR')} ARS en tu próxima compra`,
       puntosGanados: resultado.puntos,
       saldoActual: resultado.nuevoSaldo,
       comercio: resultado.comercio.nombre,
       distanciaMetros: resultado.distancia,
+      valorCanjeArs: resumen.valorCanjeArs,
+      pesosPorDolar: resumen.pesosPorDolar,
+      valorPuntoUsd: resumen.valorPuntoUsd,
     });
   } catch (error) {
     console.error('validarEscaneo:', error);
@@ -179,12 +184,8 @@ async function generarQR(req, res) {
       'SELECT * FROM piku_reglas_puntos WHERE comercio_id = $1',
       [comercioId]
     );
-    const reglas = reglasRes.rows[0] || {
-      puntos_por_peso: 1,
-      monto_minimo: 0,
-      puntos_fijos: 10,
-    };
-    const puntosCalculados = calcularPuntosCompra(reglas, monto);
+    const reglas = reglasRes.rows[0] || { monto_minimo: 0 };
+    const puntosCalculados = await calcularPuntosCompra(monto, reglas);
     const codigo = generarCodigoUnico('QR');
     const expiraAt = new Date(Date.now() + MINUTOS_EXPIRACION_QR * 60 * 1000);
 

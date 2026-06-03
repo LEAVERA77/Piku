@@ -10,9 +10,16 @@ import java.util.Locale
 data class SaldoApiResponse(
     val puntos: Int = 0,
     val equivalenciaDescuento: Int? = null,
+    @SerializedName("equivalenciaDescuentoArs") val equivalenciaDescuentoArs: Int? = null,
+    @SerializedName("descuentoUsd") val descuentoUsd: Double? = null,
+    @SerializedName("pesosPorDolar") val pesosPorDolar: Double? = null,
+    @SerializedName("valorPuntoUsd") val valorPuntoUsd: Double? = null,
+    @SerializedName("tasaReintegro") val tasaReintegro: Double? = null,
     val mensaje: String? = null
 ) {
-    fun equivalencia(): Int = equivalenciaDescuento ?: (puntos / 10)
+    fun equivalenciaArs(): Int = equivalenciaDescuentoArs
+        ?: equivalenciaDescuento
+        ?: com.piku.app.utils.PikuPoints.descuentoArs(puntos, pesosPorDolar ?: com.piku.app.utils.PikuPoints.PESOS_POR_DOLAR_DEFAULT)
 }
 
 data class TransaccionApi(

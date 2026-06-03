@@ -23,6 +23,7 @@ data class EscanerUiState(
     val escaneoExitoso: Boolean = false,
     val validando: Boolean = false,
     val puntosGanados: Int? = null,
+    val valorCanjeArs: Int? = null,
     val saldoActual: Int? = null,
     val comercioNombre: String? = null,
     val mensaje: String = "Apunta al código QR del comercio",
@@ -53,6 +54,7 @@ class EscanerViewModel(application: Application) : AndroidViewModel(application)
                 escaneoExitoso = false,
                 error = null,
                 puntosGanados = null,
+                valorCanjeArs = null,
                 saldoActual = null,
                 comercioNombre = null,
                 mensaje = "Validando compra…"
@@ -63,11 +65,17 @@ class EscanerViewModel(application: Application) : AndroidViewModel(application)
             try {
                 val (lat, lon) = obtenerUbicacion()
                 val res = repo.validarEscaneo(codigo, lat, lon)
+                val valorArs = res.valorCanjeArs
+                    ?: com.piku.app.utils.PikuPoints.descuentoArs(
+                        res.puntosGanados,
+                        res.pesosPorDolar ?: com.piku.app.utils.PikuPoints.PESOS_POR_DOLAR_DEFAULT
+                    )
                 _uiState.update {
                     it.copy(
                         validando = false,
                         escaneoExitoso = true,
                         puntosGanados = res.puntosGanados,
+                        valorCanjeArs = valorArs,
                         saldoActual = res.saldoActual,
                         comercioNombre = res.comercio,
                         mensaje = res.mensaje

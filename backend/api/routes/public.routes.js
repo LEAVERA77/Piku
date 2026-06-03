@@ -10,5 +10,6 @@ router.get('/comercios/:id/ofertas', publicController.ofertasComercio);
 router.get('/comercios/:id', publicController.detalleComercio);
 router.get('/recompensas', publicController.listarRecompensasPublicas);
 router.get('/recompensas/:id', publicController.detalleRecompensa);
+router.get('/cotizacion', publicController.getCotizacionPikuPoints);
 
 module.exports = router;

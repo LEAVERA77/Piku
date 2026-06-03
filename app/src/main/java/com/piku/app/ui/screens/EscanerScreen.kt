@@ -54,6 +54,8 @@ import com.piku.app.ui.theme.AcentoVerdeClaro
 import com.piku.app.ui.theme.PikuTheme
 import com.piku.app.ui.theme.VerdePiku
 import com.piku.app.ui.viewmodel.EscanerViewModel
+import java.text.NumberFormat
+import java.util.Locale
 
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
@@ -62,6 +64,7 @@ fun EscanerScreen(
     viewModel: EscanerViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val formatoArs = NumberFormat.getNumberInstance(Locale("es", "AR"))
     val permisoCamara = rememberPermissionState(Manifest.permission.CAMERA)
     val permisosUbicacion = rememberMultiplePermissionsState(
         listOf(
@@ -172,16 +175,25 @@ fun EscanerScreen(
                         uiState.puntosGanados?.let { pts ->
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
-                                text = "+$pts puntos",
+                                text = "+$pts PP",
                                 style = MaterialTheme.typography.headlineSmall,
                                 color = VerdePiku,
                                 textAlign = TextAlign.Center,
                                 modifier = Modifier.fillMaxWidth()
                             )
+                            uiState.valorCanjeArs?.let { ars ->
+                                Text(
+                                    text = "Valen \$${formatoArs.format(ars)} ARS en tu próxima compra",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    textAlign = TextAlign.Center,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                            }
                         }
                         uiState.saldoActual?.let { saldo ->
                             Text(
-                                text = "Saldo: $saldo pts",
+                                text = "Saldo: $saldo PP",
                                 style = MaterialTheme.typography.bodyMedium,
                                 textAlign = TextAlign.Center,
                                 modifier = Modifier.fillMaxWidth()

@@ -118,7 +118,7 @@ fun AdminGenerarQrScreen(
                 )
                 qr.puntosCalculados?.let { pts ->
                     Text(
-                        "Puntos a acreditar: $pts",
+                        "Piku Points a acreditar: $pts PP",
                         style = MaterialTheme.typography.bodyLarge,
                         textAlign = TextAlign.Center,
                         modifier = Modifier.fillMaxWidth(),

@@ -105,7 +105,7 @@ fun SaldoScreen(
             AnimatedVisibility(visible = true, enter = fadeIn()) {
                 TarjetaSaldo(
                     puntos = uiState.puntos,
-                    equivalenciaDescuento = uiState.equivalenciaDescuento
+                    equivalenciaDescuentoArs = uiState.equivalenciaDescuentoArs
                 )
             }
             uiState.mensajeSaldo?.let { msg ->
@@ -135,17 +135,17 @@ fun SaldoScreen(
                 )
             ) {
                 Column(Modifier.padding(16.dp)) {
-                    Text("💰 Desglose de puntos", fontWeight = FontWeight.Bold)
+                    Text("💰 Desglose de Piku Points", fontWeight = FontWeight.Bold)
                     Spacer(Modifier.height(8.dp))
                     Row(Modifier.fillMaxWidth()) {
-                        Text("Compras: +${uiState.puntosCompras} pts")
+                        Text("Compras: +${uiState.puntosCompras} PP")
                         Spacer(Modifier.weight(1f))
-                        Text("Canjes: -${uiState.puntosCanjes} pts")
+                        Text("Canjes: -${uiState.puntosCanjes} PP")
                     }
                     Row(Modifier.fillMaxWidth()) {
-                        Text("Bonos: +${uiState.puntosBonos} pts")
+                        Text("Bonos: +${uiState.puntosBonos} PP")
                         Spacer(Modifier.weight(1f))
-                        Text("Saldo: ${uiState.puntos} pts")
+                        Text("Saldo: ${uiState.puntos} PP")
                     }
                 }
             }
@@ -254,7 +254,7 @@ private fun ItemTransaccion(transaccion: Transaccion) {
                 )
             }
             Text(
-                text = "$signo${transaccion.puntos} pts",
+                text = "$signo${transaccion.puntos} PP",
                 style = MaterialTheme.typography.titleMedium,
                 color = colorPuntos
             )

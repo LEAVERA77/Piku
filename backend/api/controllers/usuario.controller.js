@@ -8,6 +8,7 @@ const {
   debitarPuntos,
   asegurarCodigoReferido,
   saldoSeguro,
+  resumenSaldoPuntos,
 } = require('../services/puntos.service');
 
 async function asegurarBonoInicial(usuarioId) {
@@ -35,12 +36,17 @@ async function getSaldoPuntos(req, res) {
       [usuarioId]
     );
     const puntos = saldoSeguro(result.rows[0]?.puntos_saldo);
-    const equivalenciaDescuento = Math.floor(puntos / 10);
+    const resumen = await resumenSaldoPuntos(puntos);
 
     return res.json({
       puntos,
-      equivalenciaDescuento,
-      mensaje: `≈ $${equivalenciaDescuento} en descuentos`,
+      equivalenciaDescuento: resumen.equivalenciaDescuentoArs,
+      equivalenciaDescuentoArs: resumen.equivalenciaDescuentoArs,
+      descuentoUsd: resumen.descuentoUsd,
+      pesosPorDolar: resumen.pesosPorDolar,
+      valorPuntoUsd: resumen.valorPuntoUsd,
+      tasaReintegro: resumen.tasaReintegro,
+      mensaje: `Tus ${puntos} PP valen $${resumen.equivalenciaDescuentoArs.toLocaleString('es-AR')} ARS`,
     });
   } catch (error) {
     console.error('getSaldoPuntos:', error);

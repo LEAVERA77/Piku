@@ -1,12 +1,20 @@
 const { query } = require('./neon.service');
 const { columnasTabla, tiene } = require('../utils/schema.util');
 const crypto = require('crypto');
-
-const UNIDAD_MONEDA_DEFAULT = 10;
-const BONO_BIENVENIDA = 100;
-const BONO_CUMPLEANOS = 50;
-const BONO_COMPARTIR = 20;
-const BONO_INVITACION = 50;
+const {
+  BONO_BIENVENIDA,
+  BONO_CUMPLEANOS,
+  BONO_COMPARTIR,
+  BONO_REFERIDO_INVITADOR,
+  BONO_REFERIDO_INVITADO,
+} = require('../constants/puntos.constants');
+const { obtenerPesosPorDolar } = require('./dolar.service');
+const {
+  calcularPuntosDesdePesos,
+  calcularDescuentoArs,
+  resumenPikuPoints,
+  VALOR_DE_1_PUNTO_USD,
+} = require('../utils/pikuPoints.util');
 
 function saldoSeguro(valor) {
   const n = parseInt(valor, 10);
@@ -19,18 +27,31 @@ function generarCodigoReferido() {
 }
 
 /**
- * Puntos por compra: 1 punto por cada $10 (configurable con unidad_moneda / puntos_por_peso).
+ * Piku Points: 1 PP por cada 1 USD gastado (según cotización blue del día).
  */
-function calcularPuntosCompra(reglas, montoTransaccion) {
+async function calcularPuntosCompra(montoTransaccion, reglas = null) {
   const monto = parseFloat(montoTransaccion) || 0;
   const minimo = parseFloat(reglas?.monto_minimo) || 0;
-  const fijos = parseInt(reglas?.puntos_fijos, 10) || 0;
-  if (monto < minimo) return fijos;
+  if (monto < minimo) return 0;
 
-  const unidad = parseFloat(reglas?.unidad_moneda) || UNIDAD_MONEDA_DEFAULT;
-  const puntosPorUnidad = parseFloat(reglas?.puntos_por_peso) || 1;
-  const desdeMonto = Math.floor(monto / unidad) * puntosPorUnidad;
-  return Math.max(Math.floor(desdeMonto), fijos);
+  const pesosPorDolar = await obtenerPesosPorDolar();
+  return calcularPuntosDesdePesos(monto, pesosPorDolar);
+}
+
+async function resumenSaldoPuntos(puntos) {
+  const pesosPorDolar = await obtenerPesosPorDolar();
+  return resumenPikuPoints(puntos, pesosPorDolar);
+}
+
+async function resumenPuntosGanados(puntosGanados) {
+  const pesosPorDolar = await obtenerPesosPorDolar();
+  const valorCanjeArs = calcularDescuentoArs(puntosGanados, pesosPorDolar);
+  return {
+    puntos: puntosGanados,
+    pesosPorDolar,
+    valorPuntoUsd: VALOR_DE_1_PUNTO_USD,
+    valorCanjeArs,
+  };
 }
 
 async function ejecutarQuery(clientOrPool, text, params) {
@@ -184,7 +205,7 @@ async function otorgarBonoBienvenida(client, usuarioId) {
     usuarioId,
     comercioId: null,
     puntos: BONO_BIENVENIDA,
-    descripcion: 'Bono de bienvenida — 100 pts 🎉',
+    descripcion: `Bono de bienvenida — ${BONO_BIENVENIDA} PP 🎉`,
   });
 
   if (tiene(cols, 'bono_bienvenida_otorgado')) {
@@ -215,7 +236,7 @@ async function otorgarBonoCompartir(usuarioId) {
       usuarioId,
       comercioId: null,
       puntos: BONO_COMPARTIR,
-      descripcion: 'Compartir Piku — 20 pts 📱',
+      descripcion: `Compartir Piku — ${BONO_COMPARTIR} PP 📱`,
     })
   );
 
@@ -223,7 +244,7 @@ async function otorgarBonoCompartir(usuarioId) {
     otorgado: true,
     puntos: resultado.puntos,
     saldo: resultado.saldo,
-    mensaje: `¡Sumaste ${resultado.puntos} puntos por compartir!`,
+    mensaje: `¡Sumaste ${resultado.puntos} PP por compartir!`,
   };
 }
 
@@ -231,14 +252,14 @@ async function otorgarBonoInvitacion(client, invitadorId, invitadoId) {
   const invitador = await acreditarPuntos(client, {
     usuarioId: invitadorId,
     comercioId: null,
-    puntos: BONO_INVITACION,
-    descripcion: 'Invitaste a un amigo — 50 pts 👥',
+    puntos: BONO_REFERIDO_INVITADOR,
+    descripcion: `Invitaste a un amigo — ${BONO_REFERIDO_INVITADOR} PP 👥`,
   });
   const invitado = await acreditarPuntos(client, {
     usuarioId: invitadoId,
     comercioId: null,
-    puntos: BONO_INVITACION,
-    descripcion: 'Te invitaron a Piku — 50 pts 👥',
+    puntos: BONO_REFERIDO_INVITADO,
+    descripcion: `Te invitaron a Piku — ${BONO_REFERIDO_INVITADO} PP 👥`,
   });
   return { invitador, invitado };
 }
@@ -279,7 +300,7 @@ async function otorgarBonosCumpleanos() {
           usuarioId: user.id,
           comercioId: null,
           puntos: BONO_CUMPLEANOS,
-          descripcion: '🎂 ¡Feliz cumpleaños! Te regalamos 50 puntos',
+          descripcion: `🎂 ¡Feliz cumpleaños! Te regalamos ${BONO_CUMPLEANOS} PP`,
         });
       });
       otorgados += 1;
@@ -332,13 +353,15 @@ async function procesarInvitacionAmigo(client, invitadoId, codigoAmigo) {
 }
 
 module.exports = {
-  UNIDAD_MONEDA_DEFAULT,
   BONO_BIENVENIDA,
   BONO_CUMPLEANOS,
   BONO_COMPARTIR,
-  BONO_INVITACION,
+  BONO_REFERIDO_INVITADOR,
+  BONO_REFERIDO_INVITADO,
   saldoSeguro,
   calcularPuntosCompra,
+  resumenSaldoPuntos,
+  resumenPuntosGanados,
   acreditarPuntos,
   debitarPuntos,
   asegurarCodigoReferido,

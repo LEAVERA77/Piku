@@ -27,10 +27,10 @@ import java.util.Locale
 @Composable
 fun TarjetaSaldo(
     puntos: Int,
-    equivalenciaDescuento: Int,
+    equivalenciaDescuentoArs: Int,
     modifier: Modifier = Modifier
 ) {
-    val formato = NumberFormat.getNumberInstance(Locale("es", "MX"))
+    val formato = NumberFormat.getNumberInstance(Locale("es", "AR"))
 
     Card(
         modifier = modifier.fillMaxWidth(),
@@ -41,7 +41,7 @@ fun TarjetaSaldo(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(160.dp)
+                .height(168.dp)
                 .clip(RoundedCornerShape(24.dp))
         ) {
             PikuPhotoOverlay(
@@ -55,13 +55,13 @@ fun TarjetaSaldo(
                     .padding(24.dp)
             ) {
                 Text(
-                    text = "Tu saldo",
+                    text = "Piku Points",
                     style = MaterialTheme.typography.titleMedium,
                     color = Color.White.copy(alpha = 0.9f)
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "${formato.format(puntos)} pts",
+                    text = "${formato.format(puntos)} PP",
                     style = MaterialTheme.typography.displayLarge.copy(
                         fontWeight = FontWeight.Bold,
                         color = Color.White
@@ -69,7 +69,7 @@ fun TarjetaSaldo(
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "≈ \$${formato.format(equivalenciaDescuento)} en descuentos",
+                    text = "Valen \$${formato.format(equivalenciaDescuentoArs)} ARS en descuentos",
                     style = MaterialTheme.typography.bodyLarge,
                     color = Color.White.copy(alpha = 0.85f)
                 )
@@ -82,6 +82,6 @@ fun TarjetaSaldo(
 @Composable
 fun PreviewTarjetaSaldo() {
     PikuTheme {
-        TarjetaSaldo(puntos = 1250, equivalenciaDescuento = 125)
+        TarjetaSaldo(puntos = 20, equivalenciaDescuentoArs = 4200)
     }
 }

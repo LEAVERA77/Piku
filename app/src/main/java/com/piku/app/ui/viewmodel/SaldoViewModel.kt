@@ -13,7 +13,7 @@ import kotlinx.coroutines.launch
 
 data class SaldoUiState(
     val puntos: Int = 0,
-    val equivalenciaDescuento: Int = 0,
+    val equivalenciaDescuentoArs: Int = 0,
     val mensajeSaldo: String? = null,
     val puntosCompras: Int = 0,
     val puntosBonos: Int = 0,
@@ -40,7 +40,7 @@ class SaldoViewModel(application: Application) : AndroidViewModel(application) {
                 _uiState.update {
                     it.copy(
                         puntos = saldo.puntos,
-                        equivalenciaDescuento = saldo.equivalencia(),
+                        equivalenciaDescuentoArs = saldo.equivalenciaArs(),
                         mensajeSaldo = saldo.mensaje,
                         puntosCompras = desglose?.compras ?: 0,
                         puntosBonos = desglose?.bonos ?: 0,

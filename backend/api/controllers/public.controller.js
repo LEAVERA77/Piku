@@ -217,6 +217,33 @@ async function listarRecompensasPublicas(req, res) {
   }
 }
 
+/**
+ * Cotización USD blue y reglas Piku Points (público).
+ */
+async function getCotizacionPikuPoints(req, res) {
+  try {
+    const { obtenerPesosPorDolar, getCotizacionCacheada } = require('../services/dolar.service');
+    const {
+      VALOR_DE_1_PUNTO_USD,
+      TASA_DE_REINTEGRO,
+      GASTO_PARA_1_PUNTO_USD,
+    } = require('../constants/puntos.constants');
+    const pesosPorDolar = await obtenerPesosPorDolar();
+    const cache = getCotizacionCacheada();
+    return res.json({
+      pesosPorDolar,
+      valorPuntoUsd: VALOR_DE_1_PUNTO_USD,
+      tasaReintegro: TASA_DE_REINTEGRO,
+      gastoPara1PuntoUsd: GASTO_PARA_1_PUNTO_USD,
+      fuente: cache.fuente,
+      actualizadoEn: cache.actualizadoEn,
+    });
+  } catch (error) {
+    console.error('getCotizacionPikuPoints:', error);
+    return responderError(res, 500, 'Error al obtener cotización');
+  }
+}
+
 module.exports = {
   listarComercios,
   comerciosCercanos,
@@ -225,4 +252,5 @@ module.exports = {
   detalleRecompensa,
   listarRecompensasPublicas,
   listarRubros,
+  getCotizacionPikuPoints,
 };

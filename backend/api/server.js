@@ -17,6 +17,7 @@ const { attachWebSocketServer } = require('./services/websocket.service');
 const { wireNotificationHandlers } = require('./services/notificationBridge.service');
 const { initFcm } = require('./services/fcm.service');
 const { startBirthdayPointsJob } = require('./services/birthdayPoints.job');
+const { refrescarCotizacion } = require('./services/dolar.service');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -86,6 +87,10 @@ async function start() {
 
   startNotificationRetentionJob();
   startBirthdayPointsJob();
+
+  refrescarCotizacion()
+    .then((valor) => console.log(`💵 Cotización USD blue: $${valor} ARS`))
+    .catch((err) => console.warn('⚠️ Cotización inicial:', err.message));
 }
 
 start();

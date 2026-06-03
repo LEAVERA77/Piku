@@ -59,11 +59,13 @@ async function getReglasPuntos(req, res) {
       return res.json({
         reglas: {
           comercio_id: comercioId,
-          puntos_por_peso: 1,
           monto_minimo: 0,
-          puntos_fijos: 10,
+          puntos_fijos: 0,
           max_puntos_por_dia: 500,
           activo: true,
+        },
+        sistemaPikuPoints: {
+          regla: '1 PP por cada 1 USD gastado; 1 PP = 0.15 USD de descuento (15% reintegro)',
         },
       });
     }
@@ -82,9 +84,8 @@ async function updateReglasPuntos(req, res) {
     const comercioId = getComercioId(req);
     if (!comercioId) return responderError(res, 403, 'Sin comercio asociado');
 
-    const puntosPorPeso = req.body.puntosPorPeso ?? req.body.puntos_por_peso ?? 1;
     const montoMinimo = req.body.montoMinimo ?? req.body.monto_minimo ?? 0;
-    const puntosFijos = req.body.puntosFijos ?? req.body.puntos_fijos ?? 10;
+    const puntosFijos = req.body.puntosFijos ?? req.body.puntos_fijos ?? 0;
     const maxDia = req.body.maxPuntosPorDia ?? req.body.max_puntos_por_dia ?? 500;
     const activo = req.body.activo !== false;
 
@@ -100,7 +101,7 @@ async function updateReglasPuntos(req, res) {
          activo = EXCLUDED.activo,
          updated_at = NOW()
        RETURNING *`,
-      [comercioId, puntosPorPeso, montoMinimo, puntosFijos, maxDia, activo]
+      [comercioId, 1, montoMinimo, puntosFijos, maxDia, activo]
     );
 
     return res.json({ mensaje: 'Reglas actualizadas', reglas: result.rows[0] });
