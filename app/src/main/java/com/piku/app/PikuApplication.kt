@@ -16,6 +16,7 @@ class PikuApplication : Application() {
         super.onCreate()
         CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
             InstallSessionGuard.apply(this@PikuApplication)
+            AuthDataStore.warmCache(this@PikuApplication)
         }
         val osmdroidBase = File(cacheDir, "osmdroid").apply { mkdirs() }
         Configuration.getInstance().apply {

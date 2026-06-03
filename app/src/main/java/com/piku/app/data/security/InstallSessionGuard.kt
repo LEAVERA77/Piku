@@ -4,7 +4,6 @@ import android.content.Context
 import android.os.Build
 import com.piku.app.data.datastore.AppPreferences
 import com.piku.app.data.datastore.AuthDataStore
-import kotlinx.coroutines.runBlocking
 import java.io.File
 
 /**
@@ -16,20 +15,18 @@ object InstallSessionGuard {
     private const val MARKER_DIR = "no_backup"
     private const val MARKER_FILE = "install_id.txt"
 
-    fun apply(context: Context) {
-        runBlocking {
-            val installId = obtenerInstallId(context)
-            val marcadorGuardado = leerMarcador(context)
-            val tieneSesion = AuthDataStore.hasSession(context)
+    suspend fun apply(context: Context) {
+        val installId = obtenerInstallId(context)
+        val marcadorGuardado = leerMarcador(context)
+        val tieneSesion = AuthDataStore.hasSession(context)
 
-            if (tieneSesion && marcadorGuardado != installId) {
-                AuthDataStore.clear(context)
-            }
-            if (marcadorGuardado != installId) {
-                guardarMarcador(context, installId)
-                AppPreferences.reiniciarPromptUbicacion(context)
-                AppPreferences.reiniciarOnboarding(context)
-            }
+        if (tieneSesion && marcadorGuardado != installId) {
+            AuthDataStore.clear(context)
+        }
+        if (marcadorGuardado != installId) {
+            guardarMarcador(context, installId)
+            AppPreferences.reiniciarPromptUbicacion(context)
+            AppPreferences.reiniciarOnboarding(context)
         }
     }
 

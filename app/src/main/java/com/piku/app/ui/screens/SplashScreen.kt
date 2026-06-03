@@ -83,24 +83,25 @@ fun SplashScreen(
     }
 
     LaunchedEffect(Unit) {
-        if (!AuthDataStore.hasSession(context)) {
+        val hasSession = withContext(Dispatchers.IO) { AuthDataStore.hasSession(context) }
+        if (!hasSession) {
             val elegirTipo = withContext(Dispatchers.IO) {
                 AppPreferences.necesitaElegirTipoUsuario(context)
             }
             if (elegirTipo) onIrElegirTipo() else onIrLogin()
             return@LaunchedEffect
         }
-        val sesionValida = repo.validarSesionRemota()
-        if (!sesionValida) {
-            onIrLogin()
-            return@LaunchedEffect
-        }
-        rolGuardado = AuthDataStore.rol(context)
-        val biometrico = AuthDataStore.isBiometricEnabled(context)
+        rolGuardado = withContext(Dispatchers.IO) { AuthDataStore.rol(context) }
+        val biometrico = withContext(Dispatchers.IO) { AuthDataStore.isBiometricEnabled(context) }
         if (biometrico) {
             pedirHuella()
         } else {
             entrarSegunRol()
+        }
+        launch(Dispatchers.IO) {
+            if (!repo.validarSesionRemota()) {
+                withContext(Dispatchers.Main) { onIrLogin() }
+            }
         }
     }
 

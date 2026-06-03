@@ -3,6 +3,7 @@ package com.piku.app.ui.screens
 import android.app.Activity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -15,17 +16,14 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Fingerprint
-import androidx.compose.material3.FilterChip
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -43,7 +41,10 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import com.piku.app.R
 import com.piku.app.ui.theme.PikuTheme
 import androidx.fragment.app.FragmentActivity
 import com.piku.app.data.config.ConfigLoader
@@ -60,8 +61,8 @@ import com.piku.app.ui.components.CampoContrasena
 import com.piku.app.ui.components.DireccionFormState
 import com.piku.app.ui.components.EstiloBotonPiku
 import com.piku.app.ui.components.FormularioDireccionRegistro
-import com.piku.app.ui.components.PikuLogo
 import com.piku.app.ui.components.SelectorUbicacionMapa
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
@@ -129,7 +130,7 @@ fun AuthScreen(
     val context = LocalContext.current
     val activity = context as? FragmentActivity
     val scope = rememberCoroutineScope()
-    val tagline = remember { ConfigLoader.appTagline(context) }
+    var tagline by remember { mutableStateOf("Tus puntos, tus descuentos") }
     val fieldShape = RoundedCornerShape(14.dp)
     val fieldColors = OutlinedTextFieldDefaults.colors(
         focusedBorderColor = MaterialTheme.colorScheme.primary,
@@ -158,17 +159,22 @@ fun AuthScreen(
     var puedeHuella by remember { mutableStateOf(false) }
 
     androidx.compose.runtime.LaunchedEffect(Unit) {
-        val repo = AuthRepository(context)
-        puedeHuella = AuthDataStore.hasSession(context) &&
-            AuthDataStore.isBiometricEnabled(context) &&
-            repo.validarSesionRemota() &&
-            activity != null &&
-            BiometricHelper.puedeUsarBiometrico(activity)
-        val rolPref = withContext(Dispatchers.IO) { AppPreferences.rolPreferidoInicio(context) }
-        if (rolPref == AppPreferences.ROL_COMERCIO) {
-            rolRegistro = RolRegistro.COMERCIO
-        } else if (rolPref == AppPreferences.ROL_CLIENTE) {
-            rolRegistro = RolRegistro.CLIENTE
+        withContext(Dispatchers.IO) {
+            val hasSession = AuthDataStore.hasSession(context)
+            val biometric = AuthDataStore.isBiometricEnabled(context)
+            val rolPref = AppPreferences.rolPreferidoInicio(context)
+            tagline = ConfigLoader.appTagline(context)
+            withContext(Dispatchers.Main) {
+                puedeHuella = hasSession &&
+                    biometric &&
+                    activity != null &&
+                    BiometricHelper.puedeUsarBiometrico(activity)
+                if (rolPref == AppPreferences.ROL_COMERCIO) {
+                    rolRegistro = RolRegistro.COMERCIO
+                } else if (rolPref == AppPreferences.ROL_CLIENTE) {
+                    rolRegistro = RolRegistro.CLIENTE
+                }
+            }
         }
     }
 
@@ -327,10 +333,13 @@ fun AuthScreen(
             contentAlignment = Alignment.Center
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                PikuLogo(
-                    showTagline = false,
-                    onGradient = true,
-                    modifier = Modifier.padding(bottom = 4.dp)
+                Image(
+                    painter = painterResource(R.drawable.piku_logo_brand),
+                    contentDescription = "Piku",
+                    modifier = Modifier
+                        .size(width = 180.dp, height = 72.dp)
+                        .padding(bottom = 4.dp),
+                    contentScale = ContentScale.Fit
                 )
                 Text(
                     tagline,
@@ -713,13 +722,21 @@ fun AuthScreen(
                 OutlinedButton(
                     onClick = {
                         scope.launch {
+                            val repo = AuthRepository(context)
+                            if (!withContext(Dispatchers.IO) { repo.validarSesionRemota() }) {
+                                error = "Sesión expirada. Ingresá de nuevo con email o Google."
+                                puedeHuella = false
+                                return@launch
+                            }
                             BiometricHelper.autenticar(
                                 activity = activity,
                                 titulo = "Huella digital",
                                 subtitulo = "Confirmá tu identidad",
                                 onExito = {
                                     scope.launch {
-                                        val rol = AuthDataStore.rol(context)
+                                        val rol = withContext(Dispatchers.IO) {
+                                            AuthDataStore.rol(context)
+                                        }
                                         if (rol == "comercio") onLoginComercio() else onLoginCliente()
                                     }
                                 },
@@ -730,12 +747,6 @@ fun AuthScreen(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(16.dp)
                 ) {
-                    Icon(
-                        Icons.Default.Fingerprint,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
                     Text("Ingresar con huella digital")
                 }
                 TextButton(

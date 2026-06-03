@@ -9,6 +9,7 @@ import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.Typeface
 import android.graphics.drawable.BitmapDrawable
+import android.util.LruCache
 
 /**
  * Marcador tipo “gota” (estilo [ic_map_pin]): cuerpo de color, círculo blanco con emoji y badges.
@@ -18,6 +19,8 @@ object MapPinBitmap {
     private const val PIN_W = 76
     private const val PIN_H = 96
     private const val LABEL_H = 20
+
+    private val bitmapCache = LruCache<String, Bitmap>(96)
 
     /** Path del vector ic_map_pin (viewport 32×40). */
     private val TEARDROP = Path().apply {
@@ -37,6 +40,38 @@ object MapPinBitmap {
         ofertasNuevas: Int = 0,
         realizaEnvios: Boolean = false
     ): BitmapDrawable {
+        val key = cacheKey(emoji, nombre, cantidadOfertas, ofertasNuevas, realizaEnvios)
+        val bitmap = bitmapCache.get(key) ?: renderBitmap(
+            emoji, nombre, cantidadOfertas, ofertasNuevas, realizaEnvios
+        ).also { bitmapCache.put(key, it) }
+        return BitmapDrawable(context.resources, bitmap)
+    }
+
+    private fun cacheKey(
+        emoji: String,
+        nombre: String?,
+        cantidadOfertas: Int,
+        ofertasNuevas: Int,
+        realizaEnvios: Boolean
+    ): String = buildString {
+        append(emoji)
+        append('|')
+        append(nombre.orEmpty())
+        append('|')
+        append(cantidadOfertas)
+        append('|')
+        append(ofertasNuevas)
+        append('|')
+        append(realizaEnvios)
+    }
+
+    private fun renderBitmap(
+        emoji: String,
+        nombre: String?,
+        cantidadOfertas: Int,
+        ofertasNuevas: Int,
+        realizaEnvios: Boolean
+    ): Bitmap {
         val emojiPin = if (realizaEnvios) "$emoji🚲" else emoji
         val mostrarNombre = !nombre.isNullOrBlank()
         val altoTotal = PIN_H + if (mostrarNombre) LABEL_H else 0
@@ -130,7 +165,7 @@ object MapPinBitmap {
             canvas.drawText(corto, cx, PIN_H + LABEL_H - 6f, nombrePaint)
         }
 
-        return BitmapDrawable(context.resources, bitmap)
+        return bitmap
     }
 
     fun anchorY(nombre: String?): Float {

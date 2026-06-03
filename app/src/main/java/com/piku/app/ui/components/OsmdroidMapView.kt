@@ -18,6 +18,8 @@ import com.piku.app.R
 import com.piku.app.data.TipoComercio
 import com.piku.app.data.model.Comercio
 import com.piku.app.utils.MapPinBitmap
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.osmdroid.events.MapListener
 import org.osmdroid.events.ScrollEvent
 import org.osmdroid.events.ZoomEvent
@@ -99,6 +101,38 @@ fun OsmdroidMapView(
     }
 
     LaunchedEffect(comercios, userLat, userLon, userIcon) {
+        data class PinOverlay(
+            val comercio: Comercio,
+            val icon: BitmapDrawable,
+            val anchorY: Float,
+            val snippet: String
+        )
+
+        val pins = withContext(Dispatchers.Default) {
+            comercios.mapNotNull { comercio ->
+                val lat = comercio.lat ?: return@mapNotNull null
+                val lon = comercio.lon ?: return@mapNotNull null
+                val emoji = TipoComercio.emojiPara(comercio)
+                PinOverlay(
+                    comercio = comercio,
+                    icon = MapPinBitmap.crear(
+                        context = context,
+                        emoji = emoji,
+                        nombre = comercio.nombre,
+                        cantidadOfertas = comercio.cantidadOfertas,
+                        ofertasNuevas = comercio.ofertasNuevas,
+                        realizaEnvios = comercio.realizaEnvios
+                    ),
+                    anchorY = MapPinBitmap.anchorY(comercio.nombre),
+                    snippet = if (comercio.cantidadOfertas > 0) {
+                        "${comercio.cantidadOfertas} oferta(s) activa(s)"
+                    } else {
+                        comercio.direccion ?: ""
+                    }
+                )
+            }
+        }
+
         mapView.overlays.clear()
         if (userLat != null && userLon != null) {
             val userPoint = GeoPoint(userLat, userLon)
@@ -117,30 +151,17 @@ fun OsmdroidMapView(
             }
             mapView.overlays.add(userMarker)
         }
-        comercios.forEach { comercio ->
-            val lat = comercio.lat ?: return@forEach
-            val lon = comercio.lon ?: return@forEach
-            val emoji = TipoComercio.emojiPara(comercio)
-            val markerIcon = MapPinBitmap.crear(
-                context = context,
-                emoji = emoji,
-                nombre = comercio.nombre,
-                cantidadOfertas = comercio.cantidadOfertas,
-                ofertasNuevas = comercio.ofertasNuevas,
-                realizaEnvios = comercio.realizaEnvios
-            )
+        pins.forEach { pin ->
+            val lat = pin.comercio.lat ?: return@forEach
+            val lon = pin.comercio.lon ?: return@forEach
             val marker = Marker(mapView).apply {
                 position = GeoPoint(lat, lon)
-                title = comercio.nombre
-                snippet = if (comercio.cantidadOfertas > 0) {
-                    "${comercio.cantidadOfertas} oferta(s) activa(s)"
-                } else {
-                    comercio.direccion ?: ""
-                }
-                setAnchor(Marker.ANCHOR_CENTER, MapPinBitmap.anchorY(comercio.nombre))
-                icon = markerIcon
+                title = pin.comercio.nombre
+                snippet = pin.snippet
+                setAnchor(Marker.ANCHOR_CENTER, pin.anchorY)
+                icon = pin.icon
                 setOnMarkerClickListener { _, _ ->
-                    onComercioClick(comercio)
+                    onComercioClick(pin.comercio)
                     InfoWindow.closeAllInfoWindowsOn(mapView)
                     true
                 }
