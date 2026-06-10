@@ -63,7 +63,7 @@ fun TarjetaRecompensa(
                     modifier = Modifier.padding(vertical = 4.dp)
                 )
                 Text(
-                    text = "${recompensa.puntosRequeridos} pts",
+                    text = "${recompensa.puntosRequeridos} PP",
                     style = MaterialTheme.typography.labelLarge,
                     color = NaranjaPiku
                 )

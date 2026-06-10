@@ -72,7 +72,7 @@ fun ArticuloCatalogoRow(
                 )
             }
             Text(
-                "${articulo.puntosRequeridos} pts para canjear",
+                "${articulo.puntosRequeridos} PP para canjear",
                 style = MaterialTheme.typography.bodySmall,
                 color = VerdePiku
             )

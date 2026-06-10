@@ -155,7 +155,7 @@ fun DetalleOfertaScreen(
             text = {
                 Text(
                     "¿Canjear \"${oferta.nombre}\" por ${oferta.puntosRequeridos} puntos? " +
-                        "Te quedarán ${puntosSaldo - oferta.puntosRequeridos} pts."
+                        "Te quedarán ${puntosSaldo - oferta.puntosRequeridos} PP."
                 )
             },
             confirmButton = {
@@ -263,7 +263,7 @@ internal fun DetalleOfertaContenido(
         }
         if (esCliente) {
             Text(
-                "Tu saldo: $puntosSaldo pts",
+                "Tu saldo: $puntosSaldo PP",
                 style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier.padding(top = 6.dp)
             )

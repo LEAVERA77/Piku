@@ -244,7 +244,7 @@ fun SaldoScreen(
 
         item {
             BotonPiku(
-                texto = "COMPARTIR PIKU (+20 PTS)",
+                texto = "COMPARTIR PIKU (+20 PP)",
                 onClick = {
                     viewModel.compartirPiku {
                         CompartirLogro.compartirLogro(

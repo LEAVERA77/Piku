@@ -1,8 +1,11 @@
 package com.piku.app.ui.screens.comercio
 
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -16,6 +19,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -78,17 +82,26 @@ fun HistorialCanjesScreen(
             uiState = uiState,
             onBuscarChange = viewModel::onBuscarChange,
             onAplicarBusqueda = viewModel::aplicarBusqueda,
+            onEstadoFiltro = viewModel::setEstadoFiltro,
             listState = listState,
             modifier = Modifier.padding(padding)
         )
     }
 }
 
+private val FILTROS_ESTADO = listOf(
+    null to "Todos",
+    "confirmado" to "Confirmados",
+    "pendiente" to "Pendientes",
+    "cancelado" to "Cancelados"
+)
+
 @Composable
 internal fun HistorialCanjesContent(
     uiState: HistorialCanjesUiState,
     onBuscarChange: (String) -> Unit,
     onAplicarBusqueda: () -> Unit,
+    onEstadoFiltro: (String?) -> Unit = {},
     listState: LazyListState,
     modifier: Modifier = Modifier
 ) {
@@ -105,6 +118,21 @@ internal fun HistorialCanjesContent(
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 8.dp)
         )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState())
+                .padding(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            FILTROS_ESTADO.forEach { (estado, label) ->
+                FilterChip(
+                    selected = uiState.estadoFiltro == estado,
+                    onClick = { onEstadoFiltro(estado) },
+                    label = { Text(label) }
+                )
+            }
+        }
         BotonPiku(
             texto = "Buscar",
             onClick = onAplicarBusqueda,
@@ -175,7 +203,7 @@ private fun TarjetaCanjeComercio(canje: CanjeComercioItem) {
                 style = MaterialTheme.typography.bodyMedium
             )
             Text(
-                "${canje.puntosUsados} pts · ${canje.estado}",
+                "${canje.puntosUsados} PP · ${canje.estado}",
                 style = MaterialTheme.typography.bodySmall,
                 color = VerdePiku
             )

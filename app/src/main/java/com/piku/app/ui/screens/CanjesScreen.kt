@@ -86,7 +86,7 @@ fun CanjesScreen(
             style = MaterialTheme.typography.headlineMedium
         )
         Text(
-            text = "Tienes ${uiState.puntosDisponibles} pts disponibles",
+            text = "Tienes ${uiState.puntosDisponibles} PP disponibles",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
