@@ -179,7 +179,9 @@ async function validarEscaneo(req, res) {
     });
   } catch (error) {
     console.error('validarEscaneo:', error);
-    const status = /QR|ubicación|límite|Comercio|Suscripción|mensual|pausado/i.test(error.message) ? 400 : 500;
+    const status = /QR|ubicación|límite|Comercio|Suscripción|mensual|pausado|estás a/i.test(error.message)
+      ? 400
+      : 500;
     if (/mensual/i.test(error.message)) {
       return responderError(res, 403, error.message);
     }

@@ -203,6 +203,27 @@ async function runStartupMigrations() {
   const client = await pool.connect();
 
   try {
+    // Base de datos nueva: aplicar el esquema base antes de las migraciones,
+    // si no, todos los ALTER fallan con "relation does not exist".
+    const base = await client.query(
+      `SELECT 1 FROM information_schema.tables
+       WHERE table_schema = 'public' AND table_name = 'piku_usuarios'`
+    );
+    if (!base.rows.length) {
+      const schemaPath = path.join(sqlDir, 'schema.sql');
+      if (fs.existsSync(schemaPath)) {
+        console.log('🆕 BD vacía: aplicando schema.sql');
+        const statements = splitSqlStatements(fs.readFileSync(schemaPath, 'utf8'));
+        for (const statement of statements) {
+          try {
+            await client.query(statement);
+          } catch (error) {
+            console.error('❌ schema.sql:', error.message);
+          }
+        }
+      }
+    }
+
     for (const stmt of CRITICAL_ALTERS) {
       try {
         await client.query(stmt);
