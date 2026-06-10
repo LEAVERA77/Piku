@@ -33,6 +33,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.piku.app.ui.components.PikuPhotoImage
 import com.piku.app.ui.components.TarjetaRecompensa
@@ -50,8 +51,10 @@ fun CanjesScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
-    LaunchedEffect(Unit) {
+    // Recarga al volver a la pestaña para que el saldo y las ofertas estén al día.
+    LifecycleResumeEffect(Unit) {
         viewModel.cargar()
+        onPauseOrDispose { }
     }
 
     LaunchedEffect(uiState.mensajeExito) {
@@ -83,7 +86,7 @@ fun CanjesScreen(
             style = MaterialTheme.typography.headlineMedium
         )
         Text(
-            text = "Tienes ${uiState.puntosDisponibles} pts disponibles",
+            text = "Tienes ${uiState.puntosDisponibles} PP disponibles",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -98,7 +101,11 @@ fun CanjesScreen(
         uiState.mensajeExito?.let { mensaje ->
             Snackbar(
                 modifier = Modifier.fillMaxWidth(),
-                action = {}
+                action = {
+                    TextButton(onClick = { viewModel.limpiarMensaje() }) {
+                        Text("OK")
+                    }
+                }
             ) {
                 Text(mensaje)
             }

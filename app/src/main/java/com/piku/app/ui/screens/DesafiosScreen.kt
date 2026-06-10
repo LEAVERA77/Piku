@@ -125,6 +125,8 @@ internal fun DesafiosContent(
                 items(uiState.desafios, key = { it.id }) { desafio ->
                     DesafioCard(
                         desafio = desafio,
+                        reclamando = uiState.reclamandoId == desafio.id,
+                        habilitado = uiState.reclamandoId == null,
                         onCompletar = { onCompletar(desafio.id) }
                     )
                 }
@@ -135,7 +137,12 @@ internal fun DesafiosContent(
 }
 
 @Composable
-private fun DesafioCard(desafio: DesafioItem, onCompletar: () -> Unit) {
+private fun DesafioCard(
+    desafio: DesafioItem,
+    onCompletar: () -> Unit,
+    reclamando: Boolean = false,
+    habilitado: Boolean = true
+) {
     val progresoFrac = if (desafio.objetivo > 0) {
         (desafio.progreso.toFloat() / desafio.objetivo).coerceIn(0f, 1f)
     } else 0f
@@ -171,9 +178,10 @@ private fun DesafioCard(desafio: DesafioItem, onCompletar: () -> Unit) {
                 }
                 desafio.listoParaCompletar -> {
                     BotonPiku(
-                        texto = "RECLAMAR RECOMPENSA",
+                        texto = if (reclamando) "RECLAMANDO…" else "RECLAMAR RECOMPENSA",
                         onClick = onCompletar,
                         modifier = Modifier.fillMaxWidth(),
+                        habilitado = habilitado && !reclamando,
                         estilo = EstiloBotonPiku.PRIMARIO
                     )
                 }

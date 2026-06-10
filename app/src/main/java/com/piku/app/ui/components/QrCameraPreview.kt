@@ -40,6 +40,7 @@ fun QrCameraPreview(
     linternaActiva: Boolean,
     escaneoHabilitado: Boolean,
     onCodigoDetectado: (String) -> Unit,
+    onErrorCamara: (String) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -118,6 +119,7 @@ fun QrCameraPreview(
                 bound.cameraControl.enableTorch(linternaActiva)
             } catch (e: Exception) {
                 Log.e(TAG, "Error al iniciar cámara", e)
+                onErrorCamara("No pudimos iniciar la cámara. Cerrá otras apps que la usen y reintentá.")
             }
         }, ContextCompat.getMainExecutor(context))
 

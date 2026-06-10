@@ -38,6 +38,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.piku.app.ui.preview.PreviewMocks
 import com.piku.app.ui.theme.PikuTheme
 import com.piku.app.data.model.ComercioInsightsResponse
+import com.piku.app.ui.components.BotonPiku
+import com.piku.app.ui.components.EstiloBotonPiku
 import com.piku.app.ui.theme.NaranjaPiku
 import com.piku.app.ui.theme.VerdePiku
 import com.piku.app.ui.viewmodel.InsightsViewModel
@@ -84,8 +86,18 @@ fun InsightsScreen(
                 }
             }
             uiState.error != null -> {
-                Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
+                Column(
+                    Modifier.fillMaxSize().padding(padding),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
                     Text(uiState.error ?: "", color = MaterialTheme.colorScheme.error)
+                    Spacer(Modifier.height(12.dp))
+                    BotonPiku(
+                        texto = "Reintentar",
+                        onClick = { viewModel.refrescar() },
+                        estilo = EstiloBotonPiku.PRIMARIO
+                    )
                 }
             }
             uiState.insights != null -> {

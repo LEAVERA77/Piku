@@ -60,22 +60,27 @@ fun ReglasPuntosScreen(onBack: () -> Unit) {
     var montoMinimo by remember { mutableStateOf("0") }
     var puntosFijos by remember { mutableStateOf("10") }
     var maxPorDia by remember { mutableStateOf("500") }
+    var multiplicador by remember { mutableStateOf("1") }
     var activo by remember { mutableStateOf(true) }
+    var cargaFallo by remember { mutableStateOf(false) }
 
     fun recargar() {
         scope.launch {
             cargando = true
             error = null
+            cargaFallo = false
             try {
                 val res = withContext(Dispatchers.IO) { repo.obtenerReglasPuntos() }
                 val r = res.reglas
                 montoMinimo = (r.montoMinimo ?: 0.0).let { if (it % 1.0 == 0.0) it.toInt().toString() else it.toString() }
                 puntosFijos = (r.puntosFijos ?: 0).toString()
                 maxPorDia = (r.maxPuntosPorDia ?: 500).toString()
+                multiplicador = (r.puntosPorPeso ?: 1.0).let { if (it % 1.0 == 0.0) it.toInt().toString() else it.toString() }
                 activo = r.activo != false
                 infoSistema = res.sistemaPikuPoints?.get("regla")
             } catch (e: Exception) {
                 error = e.message
+                cargaFallo = true
             } finally {
                 cargando = false
             }
@@ -98,6 +103,25 @@ fun ReglasPuntosScreen(onBack: () -> Unit) {
     ) { padding ->
         when {
             cargando -> CircularProgressIndicator(Modifier.padding(padding).padding(24.dp))
+            cargaFallo -> Column(
+                Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+                    .padding(24.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    error ?: "No pudimos cargar tu política de puntos",
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                BotonPiku(
+                    texto = "Reintentar",
+                    onClick = { recargar() },
+                    estilo = EstiloBotonPiku.PRIMARIO
+                )
+            }
             else -> ReglasPuntosFormContent(
                 montoMinimo = montoMinimo,
                 onMontoMinimoChange = { montoMinimo = it.filter { c -> c.isDigit() || c == '.' } },
@@ -105,6 +129,8 @@ fun ReglasPuntosScreen(onBack: () -> Unit) {
                 onPuntosFijosChange = { puntosFijos = it.filter { c -> c.isDigit() } },
                 maxPorDia = maxPorDia,
                 onMaxPorDiaChange = { maxPorDia = it.filter { c -> c.isDigit() } },
+                multiplicador = multiplicador,
+                onMultiplicadorChange = { multiplicador = it.filter { c -> c.isDigit() || c == '.' } },
                 activo = activo,
                 onActivoChange = { activo = it },
                 infoSistema = infoSistema,
@@ -120,7 +146,9 @@ fun ReglasPuntosScreen(onBack: () -> Unit) {
                                     montoMinimo = montoMinimo.toDoubleOrNull() ?: 0.0,
                                     puntosFijos = puntosFijos.toIntOrNull() ?: 0,
                                     maxPuntosPorDia = maxPorDia.toIntOrNull() ?: 500,
-                                    activo = activo
+                                    activo = activo,
+                                    puntosPorPeso = multiplicador.toDoubleOrNull()
+                                        ?.takeIf { it > 0 } ?: 1.0
                                 )
                             }
                             Toast.makeText(context, "Política actualizada", Toast.LENGTH_SHORT).show()
@@ -145,6 +173,8 @@ internal fun ReglasPuntosFormContent(
     onPuntosFijosChange: (String) -> Unit,
     maxPorDia: String,
     onMaxPorDiaChange: (String) -> Unit,
+    multiplicador: String = "1",
+    onMultiplicadorChange: (String) -> Unit = {},
     activo: Boolean,
     onActivoChange: (Boolean) -> Unit,
     infoSistema: String?,
@@ -192,6 +222,15 @@ internal fun ReglasPuntosFormContent(
             value = puntosFijos,
             onValueChange = onPuntosFijosChange,
             label = { Text("Puntos fijos por visita (opcional)") },
+            supportingText = { Text("Bono extra que se suma en cada compra que califica") },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true
+        )
+        OutlinedTextField(
+            value = multiplicador,
+            onValueChange = onMultiplicadorChange,
+            label = { Text("Multiplicador de puntos (1 = normal)") },
+            supportingText = { Text("Ej.: 2 = puntos dobles por compra. Máximo 10.") },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true
         )

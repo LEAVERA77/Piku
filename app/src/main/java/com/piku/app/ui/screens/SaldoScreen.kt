@@ -29,7 +29,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -40,6 +39,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.piku.app.R
 import com.piku.app.data.model.TipoTransaccion
@@ -68,8 +68,11 @@ fun SaldoScreen(
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
 
-    LaunchedEffect(Unit) {
+    // Refresca cada vez que se vuelve a esta pestaña (no solo al primer montaje),
+    // así el saldo queda al día después de escanear o canjear.
+    LifecycleResumeEffect(Unit) {
         viewModel.refrescar()
+        onPauseOrDispose { }
     }
 
     uiState.hitoParaCompartir?.let { hito ->
@@ -155,26 +158,28 @@ fun SaldoScreen(
             }
         }
 
-        item {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                )
-            ) {
-                Column(Modifier.padding(16.dp)) {
-                    Text("💰 Desglose de Piku Points", fontWeight = FontWeight.Bold)
-                    Spacer(Modifier.height(8.dp))
-                    Row(Modifier.fillMaxWidth()) {
-                        Text("Compras: +${uiState.puntosCompras} PP")
-                        Spacer(Modifier.weight(1f))
-                        Text("Canjes: -${uiState.puntosCanjes} PP")
-                    }
-                    Row(Modifier.fillMaxWidth()) {
-                        Text("Bonos: +${uiState.puntosBonos} PP")
-                        Spacer(Modifier.weight(1f))
-                        Text("Saldo: ${uiState.puntos} PP")
+        if (uiState.desgloseDisponible) {
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                    )
+                ) {
+                    Column(Modifier.padding(16.dp)) {
+                        Text("💰 Desglose de Piku Points", fontWeight = FontWeight.Bold)
+                        Spacer(Modifier.height(8.dp))
+                        Row(Modifier.fillMaxWidth()) {
+                            Text("Compras: +${uiState.puntosCompras} PP")
+                            Spacer(Modifier.weight(1f))
+                            Text("Canjes: -${uiState.puntosCanjes} PP")
+                        }
+                        Row(Modifier.fillMaxWidth()) {
+                            Text("Bonos: +${uiState.puntosBonos} PP")
+                            Spacer(Modifier.weight(1f))
+                            Text("Saldo: ${uiState.puntos} PP")
+                        }
                     }
                 }
             }
@@ -239,7 +244,7 @@ fun SaldoScreen(
 
         item {
             BotonPiku(
-                texto = "COMPARTIR PIKU (+20 PTS)",
+                texto = "COMPARTIR PIKU (+20 PP)",
                 onClick = {
                     viewModel.compartirPiku {
                         CompartirLogro.compartirLogro(

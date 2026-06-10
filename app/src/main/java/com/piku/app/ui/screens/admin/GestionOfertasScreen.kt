@@ -29,6 +29,7 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
@@ -219,7 +220,14 @@ fun GestionOfertasScreen(
                 modifier = Modifier.padding(bottom = 8.dp)
             )
             if (cargando) {
-                Text("Cargando catálogo…", modifier = Modifier.padding(16.dp))
+                Row(
+                    Modifier.padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    CircularProgressIndicator(color = VerdePiku)
+                    Text("Cargando catálogo…")
+                }
             } else {
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     item {
@@ -328,9 +336,10 @@ private fun OfertaAdminCard(
     onEliminar: () -> Unit
 ) {
     val tipoLabel = when (oferta.tipo) {
-        "descuento_porcentaje" -> "Descuento ${oferta.porcentajeDescuento ?: 0}%"
+        "descuento", "descuento_porcentaje" -> "Descuento ${oferta.porcentajeDescuento ?: 0}%"
         "producto_gratis" -> "Producto gratis"
         "2x1" -> "2×1"
+        "envio_gratis" -> "Envío gratis"
         else -> oferta.tipo?.replace('_', ' ')?.replaceFirstChar { it.uppercase() } ?: "Oferta"
     }
     val estadoColor = if (oferta.activo) VerdePiku else MaterialTheme.colorScheme.onSurfaceVariant

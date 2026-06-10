@@ -81,8 +81,6 @@ data class MapaUiState(
     val refLon: Double get() = gpsLon ?: mapCenterLon
 }
 
-private const val CERRITO_LAT = CerritoGeo.CENTRO_LAT
-private const val CERRITO_LON = CerritoGeo.CENTRO_LON
 private const val ZOOM_UBICACION = 17.0
 private const val ZOOM_DEFAULT = 16.0
 private const val ZOOM_CERRITO_CERCA = 17.0
@@ -147,13 +145,15 @@ class MapaViewModel(application: Application) : AndroidViewModel(application) {
                     val lat = location.latitude
                     val lon = location.longitude
                     val enCerrito = CerritoGeo.enZonaCerrito(lat, lon)
+                    // Siempre centramos en la ubicación real del usuario:
+                    // antes el mapa saltaba a Cerrito aunque estuvieras en otra ciudad.
                     _uiState.update {
                         it.copy(
                             gpsLat = lat,
                             gpsLon = lon,
                             tieneUbicacionReal = true,
-                            mapCenterLat = if (enCerrito) lat else CERRITO_LAT,
-                            mapCenterLon = if (enCerrito) lon else CERRITO_LON,
+                            mapCenterLat = lat,
+                            mapCenterLon = lon,
                             zoomMapa = if (enCerrito) ZOOM_CERRITO_CERCA else ZOOM_DEFAULT
                         )
                     }
@@ -163,23 +163,16 @@ class MapaViewModel(application: Application) : AndroidViewModel(application) {
                 val s = _uiState.value
                 val refLat = s.refLat
                 val refLon = s.refLon
-                val enCerrito = CerritoGeo.enZonaCerrito(refLat, refLon)
                 val comercios = try {
                     val desdeApi = repo.listarComerciosInicial(refLat, refLon)
                     val catalogo = CerritoGeo.listaMapaCerrito(desdeApi)
-                    val conDistancia = CerritoGeo.conDistanciaDesde(refLat, refLon, catalogo)
-                    if (enCerrito) {
-                        CerritoGeo.filtrarCercaDeUsuario(refLat, refLon, catalogo)
-                            .ifEmpty { conDistancia }
-                    } else {
-                        conDistancia
-                    }
+                    CerritoGeo.conDistanciaDesde(refLat, refLon, catalogo)
                 } catch (e: Exception) {
                     Log.w(TAG, "Error API comercios; usando demo Cerrito", e)
-                    CerritoGeo.conDistanciaDesde(refLat, refLon, ComerciosCerritoDemo.lista)
-                }
-                comercios.forEach { c ->
-                    Log.d(TAG, "Comercio: ${c.nombre} en (${c.lat}, ${c.lon}) emoji=${c.iconoEmoji}")
+                    // Solo usamos el demo si no hay nada cargado: nunca pisar datos reales.
+                    _uiState.value.comercios.ifEmpty {
+                        CerritoGeo.conDistanciaDesde(refLat, refLon, ComerciosCerritoDemo.lista)
+                    }
                 }
                 Log.d(TAG, "Total comercios en mapa: ${comercios.size}")
                 _uiState.update {
@@ -191,7 +184,7 @@ class MapaViewModel(application: Application) : AndroidViewModel(application) {
                 _uiState.update {
                     it.copy(
                         cargando = false,
-                        comercios = ComerciosCerritoDemo.lista,
+                        comercios = it.comercios.ifEmpty { ComerciosCerritoDemo.lista },
                         error = null
                     )
                 }
@@ -212,12 +205,21 @@ class MapaViewModel(application: Application) : AndroidViewModel(application) {
             delay(800)
             try {
                 val s = _uiState.value
-                val desdeApi = repo.listarComerciosInicial(s.refLat, s.refLon)
-                val actualizado = CerritoGeo.conDistanciaDesde(
+                // Carga solo lo visible en el mapa (bbox) y lo une con lo ya cargado,
+                // así los pines no desaparecen al mover el mapa.
+                val margenLat = (maxLat - minLat) * 0.25
+                val margenLon = (maxLon - minLon) * 0.25
+                val desdeApi = repo.listarComerciosEnViewport(
                     s.refLat,
                     s.refLon,
-                    CerritoGeo.listaMapaCerrito(desdeApi)
+                    minLat - margenLat,
+                    maxLat + margenLat,
+                    minLon - margenLon,
+                    maxLon + margenLon
                 )
+                val nuevos = CerritoGeo.listaMapaCerrito(desdeApi)
+                val combinado = (nuevos + s.comercios).distinctBy { it.id }
+                val actualizado = CerritoGeo.conDistanciaDesde(s.refLat, s.refLon, combinado)
                 _uiState.update { it.copy(comercios = actualizado) }
             } catch (_: Exception) {
                 // mantener catálogo actual

@@ -2,6 +2,7 @@ package com.piku.app.data.network
 
 import com.piku.app.data.model.ComercioInsightsResponse
 import com.piku.app.data.model.CompletarDesafioResponse
+import com.piku.app.data.model.EstadisticasComercioResponse
 import com.piku.app.data.model.DesafiosResponse
 import com.piku.app.data.model.RankingComerciosResponse
 import com.piku.app.data.model.ActualizarPerfilRequest
@@ -205,7 +206,7 @@ interface PikuApiService {
     suspend fun generarQr(@Body body: GenerarQrRequest): GenerarQrResponse
 
     @GET("api/comercio/estadisticas")
-    suspend fun estadisticasComercio(): Map<String, Any>
+    suspend fun estadisticasComercio(): EstadisticasComercioResponse
 
     @GET("api/comercio/insights")
     suspend fun insightsComercio(): ComercioInsightsResponse

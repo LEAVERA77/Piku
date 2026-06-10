@@ -27,15 +27,33 @@ function generarCodigoReferido() {
 }
 
 /**
- * Piku Points: 1 PP por cada 1 USD gastado (según cotización blue del día).
+ * Piku Points: 1 PP por cada 1 USD gastado (según cotización blue del día),
+ * ajustado por las reglas del comercio:
+ * - activo=false  → el programa está pausado, no se otorgan puntos.
+ * - monto_minimo  → compras menores no suman.
+ * - puntos_por_peso → multiplicador sobre los PP base (ej. 2 = puntos dobles).
+ * - puntos_fijos  → bono fijo por visita/compra que califica.
  */
 async function calcularPuntosCompra(montoTransaccion, reglas = null) {
+  if (reglas && reglas.activo === false) return 0;
+
   const monto = parseFloat(montoTransaccion) || 0;
   const minimo = parseFloat(reglas?.monto_minimo) || 0;
   if (monto < minimo) return 0;
 
   const pesosPorDolar = await obtenerPesosPorDolar();
-  return calcularPuntosDesdePesos(monto, pesosPorDolar);
+  const base = calcularPuntosDesdePesos(monto, pesosPorDolar);
+
+  const multiplicador = parseFloat(reglas?.puntos_por_peso);
+  const conMultiplicador =
+    Number.isFinite(multiplicador) && multiplicador > 0
+      ? Math.floor(base * multiplicador)
+      : base;
+
+  const fijos = parseInt(reglas?.puntos_fijos, 10);
+  const bonoFijo = Number.isFinite(fijos) && fijos > 0 ? fijos : 0;
+
+  return conMultiplicador + bonoFijo;
 }
 
 async function resumenSaldoPuntos(puntos) {

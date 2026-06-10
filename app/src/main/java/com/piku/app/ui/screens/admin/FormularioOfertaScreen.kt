@@ -1,6 +1,7 @@
 package com.piku.app.ui.screens.admin
 
 import android.net.Uri
+import android.widget.Toast
 import com.piku.app.ui.media.PikuImages
 import com.piku.app.utils.rememberImagePicker
 import androidx.compose.foundation.layout.Arrangement
@@ -88,7 +89,8 @@ fun FormularioOfertaScreen(
     var cargando by remember { mutableStateOf(false) }
     var idArticulo by remember { mutableStateOf(ofertaId?.takeIf { it != "new" }) }
     var ofertaActual by remember { mutableStateOf<OfertaComercio?>(null) }
-    var listoParaSalir by remember { mutableStateOf(esEdicion) }
+    // Recién se habilita "Volver al catálogo" después de un guardado exitoso.
+    var listoParaSalir by remember { mutableStateOf(false) }
     var confirmEliminar by remember { mutableStateOf(false) }
 
     val elegirPortada = rememberImagePicker { uri -> imagenLocal = uri }
@@ -154,6 +156,7 @@ fun FormularioOfertaScreen(
                 }
                 ofertaActual = repo.obtener(id)
                 listoParaSalir = true
+                Toast.makeText(context, "Artículo guardado", Toast.LENGTH_SHORT).show()
             } catch (e: Exception) {
                 error = e.message
             } finally {

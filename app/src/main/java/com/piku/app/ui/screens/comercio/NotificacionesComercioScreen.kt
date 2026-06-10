@@ -31,6 +31,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.piku.app.ui.preview.PreviewMocks
 import com.piku.app.ui.theme.PikuTheme
 import com.piku.app.ui.viewmodel.NotificacionesComercioUiState
+import com.piku.app.ui.components.BotonPiku
 import com.piku.app.ui.theme.VerdePiku
 import com.piku.app.ui.viewmodel.NotificacionesComercioViewModel
 
@@ -57,6 +58,7 @@ fun NotificacionesComercioScreen(
         NotificacionesComercioContent(
             uiState = uiState,
             onMarcarLeida = viewModel::marcarLeida,
+            onReintentar = viewModel::refrescar,
             modifier = Modifier.padding(padding)
         )
     }
@@ -66,6 +68,7 @@ fun NotificacionesComercioScreen(
 internal fun NotificacionesComercioContent(
     uiState: NotificacionesComercioUiState,
     onMarcarLeida: (String) -> Unit,
+    onReintentar: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     when {
@@ -78,11 +81,17 @@ internal fun NotificacionesComercioContent(
             )
         }
         uiState.error != null -> {
-            Text(
-                uiState.error!!,
-                color = MaterialTheme.colorScheme.error,
-                modifier = modifier.padding(16.dp)
-            )
+            Column(modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(
+                    uiState.error!!,
+                    color = MaterialTheme.colorScheme.error
+                )
+                BotonPiku(
+                    texto = "Reintentar",
+                    onClick = onReintentar,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
         }
         uiState.notificaciones.isEmpty() -> {
             Text(

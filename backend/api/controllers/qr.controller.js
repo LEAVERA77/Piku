@@ -90,13 +90,16 @@ async function validarEscaneo(req, res) {
       if (!gps.ok) throw new Error(gps.motivo);
 
       const reglasRes = await client.query(
-        'SELECT * FROM piku_reglas_puntos WHERE comercio_id = $1 AND activo = TRUE',
+        'SELECT * FROM piku_reglas_puntos WHERE comercio_id = $1',
         [comercio.id]
       );
       const reglas = reglasRes.rows[0] || {
         monto_minimo: 0,
         max_puntos_por_dia: 500,
       };
+      if (reglas.activo === false) {
+        throw new Error('El programa de puntos de este comercio está pausado');
+      }
 
       let puntos = qr.puntos_calculados;
       if (puntos == null) {
@@ -176,7 +179,9 @@ async function validarEscaneo(req, res) {
     });
   } catch (error) {
     console.error('validarEscaneo:', error);
-    const status = /QR|ubicación|límite|Comercio|Suscripción|mensual/i.test(error.message) ? 400 : 500;
+    const status = /QR|ubicación|límite|Comercio|Suscripción|mensual|pausado|estás a/i.test(error.message)
+      ? 400
+      : 500;
     if (/mensual/i.test(error.message)) {
       return responderError(res, 403, error.message);
     }
@@ -201,6 +206,13 @@ async function generarQR(req, res) {
       [comercioId]
     );
     const reglas = reglasRes.rows[0] || { monto_minimo: 0 };
+    if (reglas.activo === false) {
+      return responderError(
+        res,
+        400,
+        'Tu programa de puntos está pausado. Activalo en Más → Reglas de puntos'
+      );
+    }
     const puntosCalculados = await calcularPuntosCompra(monto, reglas);
 
     const limitePlan = await verificarLimitePuntos(comercioId, puntosCalculados);

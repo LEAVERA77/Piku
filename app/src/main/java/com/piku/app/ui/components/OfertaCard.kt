@@ -61,7 +61,7 @@ fun OfertaCard(
                         )
                     }
                     Text(
-                        "${oferta.puntosRequeridos} pts para canjear",
+                        "${oferta.puntosRequeridos} PP para canjear",
                         style = MaterialTheme.typography.bodySmall,
                         color = VerdePiku
                     )

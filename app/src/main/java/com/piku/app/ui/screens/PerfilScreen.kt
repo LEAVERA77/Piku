@@ -45,6 +45,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.piku.app.ui.theme.PikuTheme
 import com.piku.app.ui.components.AvatarDisplay
@@ -68,6 +69,12 @@ fun PerfilScreen(
         contract = ActivityResultContracts.PickVisualMedia()
     ) { uri: Uri? ->
         if (uri != null) viewModel.subirFotoAvatar(uri)
+    }
+
+    // Refresca el perfil (y el saldo mostrado) cada vez que se vuelve a esta pestaña.
+    LifecycleResumeEffect(Unit) {
+        if (!uiState.cargando && !uiState.editando) viewModel.cargarPerfil()
+        onPauseOrDispose { }
     }
 
     Column(
@@ -105,120 +112,131 @@ fun PerfilScreen(
             Text(it, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(8.dp))
         }
 
-        val perfil = uiState.perfil ?: return@Column
-
-        Box(modifier = Modifier.align(Alignment.CenterHorizontally)) {
-            AvatarDisplay(
-                avatarUrl = uiState.avatarUrl,
-                modifier = Modifier.size(96.dp)
-            )
-            if (uiState.editando) {
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.BottomEnd)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.primary)
-                        .clickable {
-                            pickerFoto.launch(
-                                androidx.activity.result.PickVisualMediaRequest(
-                                    ActivityResultContracts.PickVisualMedia.ImageOnly
-                                )
-                            )
-                        }
-                        .padding(8.dp)
-                ) {
-                    Icon(
-                        Icons.Default.PhotoCamera,
-                        contentDescription = "Foto",
-                        tint = MaterialTheme.colorScheme.onPrimary,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-            }
-        }
-
-        if (uiState.editando) {
-            Text(
-                "Elegí un avatar",
-                style = MaterialTheme.typography.labelLarge,
-                modifier = Modifier.padding(top = 12.dp)
-            )
-            Row(
+        val perfil = uiState.perfil
+        if (perfil == null) {
+            // Falló la carga: ofrecemos reintentar sin bloquear Configuración / Cerrar sesión.
+            BotonPiku(
+                texto = "Reintentar",
+                onClick = { viewModel.cargarPerfil() },
+                estilo = EstiloBotonPiku.PRIMARIO,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .horizontalScroll(rememberScrollState())
-                    .padding(vertical = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                viewModel.avataresEmoji.forEach { emoji ->
-                    FilterChip(
-                        selected = uiState.avatarUrl == "emoji:$emoji",
-                        onClick = { viewModel.seleccionarAvatarEmoji(emoji) },
-                        label = { Text(emoji, fontSize = 20.sp) }
-                    )
+                    .padding(vertical = 8.dp)
+            )
+        } else {
+            Box(modifier = Modifier.align(Alignment.CenterHorizontally)) {
+                AvatarDisplay(
+                    avatarUrl = uiState.avatarUrl,
+                    modifier = Modifier.size(96.dp)
+                )
+                if (uiState.editando) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.primary)
+                            .clickable {
+                                pickerFoto.launch(
+                                    androidx.activity.result.PickVisualMediaRequest(
+                                        ActivityResultContracts.PickVisualMedia.ImageOnly
+                                    )
+                                )
+                            }
+                            .padding(8.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.PhotoCamera,
+                            contentDescription = "Foto",
+                            tint = MaterialTheme.colorScheme.onPrimary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
                 }
             }
-        }
 
-        Spacer(modifier = Modifier.height(12.dp))
-
-        if (uiState.editando) {
-            CampoPerfil("Nombre", uiState.nombre, viewModel::onNombreChange, fieldColors)
-            CampoPerfil("Teléfono", uiState.telefono, viewModel::onTelefonoChange, fieldColors)
-            CampoPerfil("Dirección de envío", uiState.direccionEntrega, viewModel::onDireccionChange, fieldColors)
-            CampoPerfil("Ciudad", uiState.ciudad, viewModel::onCiudadChange, fieldColors)
-            CampoPerfil("Provincia", uiState.provincia, viewModel::onProvinciaChange, fieldColors)
-            CampoPerfil("Código postal", uiState.codigoPostal, viewModel::onCodigoPostalChange, fieldColors)
-            CampoPerfil("Notas para el reparto", uiState.notasEntrega, viewModel::onNotasChange, fieldColors, singleLine = false)
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(
-                    onClick = { viewModel.setEditando(false) },
-                    modifier = Modifier.weight(1f)
-                ) { Text("Cancelar") }
-                BotonPiku(
-                    texto = if (uiState.guardando) "Guardando…" else "Guardar",
-                    onClick = { viewModel.guardarPerfil() },
-                    habilitado = !uiState.guardando,
-                    estilo = EstiloBotonPiku.PRIMARIO,
-                    modifier = Modifier.weight(1f)
+            if (uiState.editando) {
+                Text(
+                    "Elegí un avatar",
+                    style = MaterialTheme.typography.labelLarge,
+                    modifier = Modifier.padding(top = 12.dp)
                 )
-            }
-        } else {
-            Text(perfil.nombre, style = MaterialTheme.typography.titleLarge)
-            Text(
-                perfil.email,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Text(
-                "${perfil.puntosSaldo} puntos · Nivel ${viewModel.nivelActual().etiqueta}",
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(top = 4.dp)
-            )
-            if (!perfil.telefono.isNullOrBlank()) {
-                Text("Tel: ${perfil.telefono}", style = MaterialTheme.typography.bodySmall)
-            }
-            if (!perfil.direccionEntrega.isNullOrBlank()) {
-                Card(
+                Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = 12.dp),
-                    shape = RoundedCornerShape(14.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                    )
+                        .horizontalScroll(rememberScrollState())
+                        .padding(vertical = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Column(Modifier.padding(14.dp)) {
-                        Text("Envío a domicilio", style = MaterialTheme.typography.labelLarge)
-                        Text(perfil.direccionEntrega, style = MaterialTheme.typography.bodyMedium)
-                        listOfNotNull(perfil.ciudad, perfil.provincia, perfil.codigoPostal)
-                            .filter { !it.isNullOrBlank() }
-                            .joinToString(", ")
-                            .takeIf { it.isNotEmpty() }
-                            ?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
-                        perfil.notasEntrega?.let {
-                            Text("Notas: $it", style = MaterialTheme.typography.bodySmall)
+                    viewModel.avataresEmoji.forEach { emoji ->
+                        FilterChip(
+                            selected = uiState.avatarUrl == "emoji:$emoji",
+                            onClick = { viewModel.seleccionarAvatarEmoji(emoji) },
+                            label = { Text(emoji, fontSize = 20.sp) }
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            if (uiState.editando) {
+                CampoPerfil("Nombre", uiState.nombre, viewModel::onNombreChange, fieldColors)
+                CampoPerfil("Teléfono", uiState.telefono, viewModel::onTelefonoChange, fieldColors)
+                CampoPerfil("Dirección de envío", uiState.direccionEntrega, viewModel::onDireccionChange, fieldColors)
+                CampoPerfil("Ciudad", uiState.ciudad, viewModel::onCiudadChange, fieldColors)
+                CampoPerfil("Provincia", uiState.provincia, viewModel::onProvinciaChange, fieldColors)
+                CampoPerfil("Código postal", uiState.codigoPostal, viewModel::onCodigoPostalChange, fieldColors)
+                CampoPerfil("Notas para el reparto", uiState.notasEntrega, viewModel::onNotasChange, fieldColors, singleLine = false)
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(
+                        onClick = { viewModel.setEditando(false) },
+                        modifier = Modifier.weight(1f)
+                    ) { Text("Cancelar") }
+                    BotonPiku(
+                        texto = if (uiState.guardando) "Guardando…" else "Guardar",
+                        onClick = { viewModel.guardarPerfil() },
+                        habilitado = !uiState.guardando,
+                        estilo = EstiloBotonPiku.PRIMARIO,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            } else {
+                Text(perfil.nombre, style = MaterialTheme.typography.titleLarge)
+                Text(
+                    perfil.email,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    "${perfil.puntosSaldo} puntos · Nivel ${viewModel.nivelActual().etiqueta}",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(top = 4.dp)
+                )
+                if (!perfil.telefono.isNullOrBlank()) {
+                    Text("Tel: ${perfil.telefono}", style = MaterialTheme.typography.bodySmall)
+                }
+                if (!perfil.direccionEntrega.isNullOrBlank()) {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 12.dp),
+                        shape = RoundedCornerShape(14.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                        )
+                    ) {
+                        Column(Modifier.padding(14.dp)) {
+                            Text("Envío a domicilio", style = MaterialTheme.typography.labelLarge)
+                            Text(perfil.direccionEntrega, style = MaterialTheme.typography.bodyMedium)
+                            listOfNotNull(perfil.ciudad, perfil.provincia, perfil.codigoPostal)
+                                .filter { !it.isNullOrBlank() }
+                                .joinToString(", ")
+                                .takeIf { it.isNotEmpty() }
+                                ?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
+                            perfil.notasEntrega?.let {
+                                Text("Notas: $it", style = MaterialTheme.typography.bodySmall)
+                            }
                         }
                     }
                 }

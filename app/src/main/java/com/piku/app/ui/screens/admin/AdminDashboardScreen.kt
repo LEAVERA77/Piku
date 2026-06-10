@@ -1,8 +1,10 @@
 package com.piku.app.ui.screens.admin
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -35,8 +37,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import android.widget.Toast
+import com.piku.app.data.model.EstadisticasComercioResponse
 import com.piku.app.data.network.ComercioRealtimeClient
-import com.piku.app.data.network.RetrofitInstance
 import com.piku.app.data.repository.ComercioRepository
 import com.piku.app.ui.components.PikuPhotoImage
 import com.piku.app.ui.media.PikuImages
@@ -59,7 +61,8 @@ fun AdminDashboardScreen(
     onInsights: () -> Unit = {}
 ) {
     val context = LocalContext.current
-    var stats by remember { mutableStateOf<Map<String, Any>?>(null) }
+    var stats by remember { mutableStateOf<EstadisticasComercioResponse?>(null) }
+    var errorPanel by remember { mutableStateOf<String?>(null) }
     var notificacionesNoLeidas by remember { mutableIntStateOf(0) }
     var logoUrl by remember { mutableStateOf<String?>(null) }
     var nombreComercio by remember { mutableStateOf<String?>(null) }
@@ -95,26 +98,32 @@ fun AdminDashboardScreen(
         }
     }
 
-    LaunchedEffect(Unit) {
-        try {
-            stats = RetrofitInstance.api.estadisticasComercio()
-        } catch (_: Exception) {
-            stats = null
+    fun cargarPanel() {
+        scope.launch {
+            errorPanel = null
+            try {
+                stats = withContext(Dispatchers.IO) { repo.obtenerEstadisticas() }
+            } catch (e: Exception) {
+                stats = null
+                errorPanel = e.message ?: "No pudimos cargar las estadísticas"
+            }
+            try {
+                val perfil = withContext(Dispatchers.IO) { repo.obtenerPerfil() }
+                logoUrl = perfil.comercio?.logoUrl
+                nombreComercio = perfil.comercio?.nombre
+            } catch (e: Exception) {
+                if (errorPanel == null) errorPanel = e.message
+            }
+            try {
+                suscripcion = withContext(Dispatchers.IO) { repo.obtenerEstadoSuscripcion() }
+            } catch (_: Exception) {
+                suscripcion = null
+            }
+            refrescarBadge()
         }
-        try {
-            val perfil = withContext(Dispatchers.IO) { repo.obtenerPerfil() }
-            logoUrl = perfil.comercio?.logoUrl
-            nombreComercio = perfil.comercio?.nombre
-        } catch (_: Exception) {
-            // sin perfil comercio
-        }
-        try {
-            suscripcion = withContext(Dispatchers.IO) { repo.obtenerEstadoSuscripcion() }
-        } catch (_: Exception) {
-            suscripcion = null
-        }
-        refrescarBadge()
     }
+
+    LaunchedEffect(Unit) { cargarPanel() }
 
     DisposableEffect(Unit) {
         val realtime = ComercioRealtimeClient(context) { refrescarBadge() }
@@ -192,16 +201,27 @@ fun AdminDashboardScreen(
                 Column(Modifier.padding(16.dp)) {
                     Text("Resumen", style = MaterialTheme.typography.titleMedium, color = VerdePiku)
                     Spacer(Modifier.height(8.dp))
-                    stats?.let { s ->
-                        val data = s["estadisticas"] as? Map<*, *>
-                        if (data.isNullOrEmpty()) {
-                            Text("Sin datos aún", style = MaterialTheme.typography.bodyMedium)
-                        } else {
-                            data.forEach { (k, v) ->
-                                Text("$k: $v", style = MaterialTheme.typography.bodyLarge)
+                    val data = stats?.estadisticas
+                    when {
+                        data != null -> {
+                            FilaEstadistica("📲 QR escaneados", data.qrUsados)
+                            FilaEstadistica("⭐ Puntos otorgados", data.puntosOtorgados)
+                            FilaEstadistica("🎁 Canjes realizados", data.canjesRealizados)
+                            FilaEstadistica("👥 Clientes únicos", data.clientesUnicos)
+                        }
+                        errorPanel != null -> {
+                            Text(
+                                errorPanel ?: "",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.error
+                            )
+                            Spacer(Modifier.height(8.dp))
+                            OutlinedButton(onClick = { cargarPanel() }) {
+                                Text("Reintentar")
                             }
                         }
-                    } ?: Text("Sin estadísticas (verificá sesión)", style = MaterialTheme.typography.bodyMedium)
+                        else -> Text("Sin datos aún", style = MaterialTheme.typography.bodyMedium)
+                    }
                     if (notificacionesNoLeidas > 0) {
                         Spacer(Modifier.height(8.dp))
                         Text(
@@ -209,6 +229,34 @@ fun AdminDashboardScreen(
                             style = MaterialTheme.typography.labelLarge,
                             color = NaranjaPiku
                         )
+                    }
+                }
+            }
+            val ultimas = stats?.ultimasTransacciones.orEmpty()
+            if (ultimas.isNotEmpty()) {
+                Spacer(Modifier.height(12.dp))
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
+                    )
+                ) {
+                    Column(Modifier.padding(16.dp)) {
+                        Text(
+                            "Última actividad",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = VerdePiku
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        ultimas.take(5).forEach { t ->
+                            val signo = if (t.puntos >= 0) "+" else ""
+                            Text(
+                                "${t.cliente ?: "Cliente"} · $signo${t.puntos} PP — ${t.descripcion ?: t.tipo.orEmpty()}",
+                                style = MaterialTheme.typography.bodySmall,
+                                modifier = Modifier.padding(vertical = 2.dp)
+                            )
+                        }
                     }
                 }
             }
@@ -222,6 +270,23 @@ fun AdminDashboardScreen(
             }
             Spacer(Modifier.height(72.dp))
         }
+    }
+}
+
+@Composable
+private fun FilaEstadistica(etiqueta: String, valor: Int) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 2.dp),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(etiqueta, style = MaterialTheme.typography.bodyLarge)
+        Text(
+            valor.toString(),
+            style = MaterialTheme.typography.bodyLarge,
+            color = NaranjaPiku
+        )
     }
 }
 

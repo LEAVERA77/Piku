@@ -91,11 +91,17 @@ fun SuscripcionScreen(onBack: () -> Unit) {
     ) { padding ->
         when {
             cargando -> CircularProgressIndicator(Modifier.padding(padding).padding(24.dp))
-            error != null -> Text(
-                error ?: "",
-                color = MaterialTheme.colorScheme.error,
-                modifier = Modifier.padding(padding).padding(16.dp)
-            )
+            error != null -> Column(
+                Modifier.padding(padding).padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text(error ?: "", color = MaterialTheme.colorScheme.error)
+                BotonPiku(
+                    texto = "Reintentar",
+                    onClick = { recargar() },
+                    estilo = EstiloBotonPiku.PRIMARIO
+                )
+            }
             else -> {
                 val e = estado ?: return@Scaffold
                 SuscripcionContent(
