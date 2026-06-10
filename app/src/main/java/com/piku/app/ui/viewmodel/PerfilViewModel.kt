@@ -74,7 +74,27 @@ class PerfilViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun setEditando(valor: Boolean) {
-        _uiState.update { it.copy(editando = valor, mensajeExito = null, error = null) }
+        _uiState.update { state ->
+            if (!valor && state.perfil != null) {
+                // Cancelar edición: revertir campos a los valores guardados.
+                val p = state.perfil
+                state.copy(
+                    editando = false,
+                    mensajeExito = null,
+                    error = null,
+                    nombre = p.nombre,
+                    telefono = p.telefono.orEmpty(),
+                    direccionEntrega = p.direccionEntrega.orEmpty(),
+                    ciudad = p.ciudad.orEmpty(),
+                    provincia = p.provincia.orEmpty(),
+                    codigoPostal = p.codigoPostal.orEmpty(),
+                    notasEntrega = p.notasEntrega.orEmpty(),
+                    avatarUrl = p.avatarUrl
+                )
+            } else {
+                state.copy(editando = valor, mensajeExito = null, error = null)
+            }
+        }
     }
 
     fun onNombreChange(v: String) = _uiState.update { it.copy(nombre = v) }

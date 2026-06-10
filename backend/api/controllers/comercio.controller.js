@@ -72,22 +72,25 @@ async function getReglasPuntos(req, res) {
     const comercioId = getComercioId(req);
     if (!comercioId) return responderError(res, 403, 'Sin comercio asociado a tu cuenta');
 
+    const sistemaPikuPoints = {
+      regla: '1 PP por cada 1 USD gastado; 1 PP = 0.15 USD de descuento (15% reintegro)',
+    };
+
     const result = await query('SELECT * FROM piku_reglas_puntos WHERE comercio_id = $1', [comercioId]);
     if (!result.rows.length) {
       return res.json({
         reglas: {
           comercio_id: comercioId,
+          puntos_por_peso: 1,
           monto_minimo: 0,
           puntos_fijos: 0,
           max_puntos_por_dia: 500,
           activo: true,
         },
-        sistemaPikuPoints: {
-          regla: '1 PP por cada 1 USD gastado; 1 PP = 0.15 USD de descuento (15% reintegro)',
-        },
+        sistemaPikuPoints,
       });
     }
-    return res.json({ reglas: result.rows[0] });
+    return res.json({ reglas: result.rows[0], sistemaPikuPoints });
   } catch (error) {
     console.error('getReglasPuntos:', error);
     return responderError(res, 500, 'Error al obtener reglas');
@@ -106,6 +109,13 @@ async function updateReglasPuntos(req, res) {
     const puntosFijos = req.body.puntosFijos ?? req.body.puntos_fijos ?? 0;
     const maxDia = req.body.maxPuntosPorDia ?? req.body.max_puntos_por_dia ?? 500;
     const activo = req.body.activo !== false;
+    const puntosPorPesoRaw = parseFloat(
+      req.body.puntosPorPeso ?? req.body.puntos_por_peso
+    );
+    const puntosPorPeso =
+      Number.isFinite(puntosPorPesoRaw) && puntosPorPesoRaw > 0 && puntosPorPesoRaw <= 10
+        ? puntosPorPesoRaw
+        : 1;
 
     const cols = await columnasTabla('piku_reglas_puntos');
     const sets = [
@@ -124,7 +134,7 @@ async function updateReglasPuntos(req, res) {
        ON CONFLICT (comercio_id) DO UPDATE SET
          ${sets.join(', ')}
        RETURNING *`,
-      [comercioId, 1, montoMinimo, puntosFijos, maxDia, activo]
+      [comercioId, puntosPorPeso, montoMinimo, puntosFijos, maxDia, activo]
     );
 
     return res.json({ mensaje: 'Reglas actualizadas', reglas: result.rows[0] });

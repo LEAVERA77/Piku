@@ -37,6 +37,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.piku.app.ui.components.BotonPiku
+import com.piku.app.ui.components.EstiloBotonPiku
 import com.piku.app.ui.preview.PreviewMocks
 import com.piku.app.ui.theme.PikuTheme
 import com.piku.app.ui.viewmodel.RankingUiState
@@ -83,13 +85,18 @@ fun RankingComerciosScreen(
             )
         }
     ) { padding ->
-        RankingComerciosContent(uiState = uiState, modifier = Modifier.padding(padding))
+        RankingComerciosContent(
+            uiState = uiState,
+            onReintentar = { viewModel.refrescar() },
+            modifier = Modifier.padding(padding)
+        )
     }
 }
 
 @Composable
 internal fun RankingComerciosContent(
     uiState: RankingUiState,
+    onReintentar: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     when {
@@ -99,8 +106,18 @@ internal fun RankingComerciosContent(
             }
         }
         uiState.error != null -> {
-            Box(Modifier.fillMaxSize().then(modifier), contentAlignment = Alignment.Center) {
+            Column(
+                Modifier.fillMaxSize().then(modifier),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
                 Text(uiState.error ?: "", color = MaterialTheme.colorScheme.error)
+                Spacer(Modifier.height(12.dp))
+                BotonPiku(
+                    texto = "Reintentar",
+                    onClick = onReintentar,
+                    estilo = EstiloBotonPiku.PRIMARIO
+                )
             }
         }
         else -> {

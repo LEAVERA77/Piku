@@ -30,6 +30,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -73,6 +76,7 @@ fun EscanerScreen(
         )
     )
     val puedeEscanear = permisoCamara.status.isGranted && permisosUbicacion.allPermissionsGranted
+    var errorCamara by remember { mutableStateOf<String?>(null) }
 
     Column(
         modifier = modifier
@@ -97,8 +101,28 @@ fun EscanerScreen(
                     QrCameraPreview(
                         linternaActiva = uiState.linternaActiva,
                         escaneoHabilitado = uiState.escaneando && !uiState.validando,
-                        onCodigoDetectado = viewModel::onCodigoEscaneado
+                        onCodigoDetectado = viewModel::onCodigoEscaneado,
+                        onErrorCamara = { errorCamara = it }
                     )
+
+                    errorCamara?.let { msg ->
+                        Card(
+                            modifier = Modifier
+                                .align(Alignment.Center)
+                                .padding(24.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.errorContainer
+                            ),
+                            shape = RoundedCornerShape(16.dp)
+                        ) {
+                            Text(
+                                text = msg,
+                                color = MaterialTheme.colorScheme.onErrorContainer,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.padding(16.dp)
+                            )
+                        }
+                    }
 
                     // Marco cuadrado para encuadrar el QR
                     Box(

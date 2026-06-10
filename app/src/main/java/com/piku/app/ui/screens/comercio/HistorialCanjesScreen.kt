@@ -125,6 +125,13 @@ internal fun HistorialCanjesContent(
                     color = MaterialTheme.colorScheme.error,
                     modifier = Modifier.padding(16.dp)
                 )
+                BotonPiku(
+                    texto = "Reintentar",
+                    onClick = onAplicarBusqueda,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp)
+                )
             }
             uiState.canjes.isEmpty() -> {
                 Text(

@@ -12,6 +12,7 @@ import com.piku.app.data.model.ComercioDetalleResponse
 import com.piku.app.data.model.ComercioInsightsResponse
 import com.piku.app.data.model.ConfiguracionEnvios
 import com.piku.app.data.model.ConfiguracionEnviosRequest
+import com.piku.app.data.model.EstadisticasComercioResponse
 import com.piku.app.data.model.CambiarPlanRequest
 import com.piku.app.data.model.CambiarPlanResponse
 import com.piku.app.data.model.CanjeComercioItem
@@ -47,8 +48,21 @@ class ComercioRepository(private val context: Context) {
         }.sortedBy { it.distanciaMetros ?: Int.MAX_VALUE }
     }
 
-    suspend fun detalleComercio(id: String): ComercioDetalleResponse =
-        api.detalleComercio(id)
+    suspend fun detalleComercio(id: String): ComercioDetalleResponse {
+        try {
+            return api.detalleComercio(id)
+        } catch (e: HttpException) {
+            throw Exception(ApiErrorParser.mensaje(e), e)
+        }
+    }
+
+    suspend fun obtenerEstadisticas(): EstadisticasComercioResponse {
+        try {
+            return api.estadisticasComercio()
+        } catch (e: HttpException) {
+            throw Exception(ApiErrorParser.mensaje(e), e)
+        }
+    }
 
     suspend fun obtenerPerfil(): PerfilResponse {
         try {
@@ -212,14 +226,16 @@ class ComercioRepository(private val context: Context) {
         montoMinimo: Double,
         puntosFijos: Int,
         maxPuntosPorDia: Int,
-        activo: Boolean
+        activo: Boolean,
+        puntosPorPeso: Double = 1.0
     ): ReglasPuntos {
         try {
             val body = mapOf(
                 "montoMinimo" to montoMinimo,
                 "puntosFijos" to puntosFijos,
                 "maxPuntosPorDia" to maxPuntosPorDia,
-                "activo" to activo
+                "activo" to activo,
+                "puntosPorPeso" to puntosPorPeso
             )
             return api.actualizarReglasPuntos(body).reglas
                 ?: throw Exception("Respuesta inválida del servidor")

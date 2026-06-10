@@ -92,16 +92,19 @@ fun SplashScreen(
             return@LaunchedEffect
         }
         rolGuardado = withContext(Dispatchers.IO) { AuthDataStore.rol(context) }
+        // Validamos el token en el servidor ANTES de entrar (máx. ~2,5 s, tolerante
+        // a estar offline). Antes se validaba en paralelo y la corrutina se cancelaba
+        // al navegar, así que un token vencido nunca expulsaba al login.
+        val sesionValida = withContext(Dispatchers.IO) { repo.validarSesionRemota() }
+        if (!sesionValida) {
+            onIrLogin()
+            return@LaunchedEffect
+        }
         val biometrico = withContext(Dispatchers.IO) { AuthDataStore.isBiometricEnabled(context) }
         if (biometrico) {
             pedirHuella()
         } else {
             entrarSegunRol()
-        }
-        launch(Dispatchers.IO) {
-            if (!repo.validarSesionRemota()) {
-                withContext(Dispatchers.Main) { onIrLogin() }
-            }
         }
     }
 

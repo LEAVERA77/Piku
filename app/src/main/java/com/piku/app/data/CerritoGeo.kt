@@ -12,7 +12,6 @@ object CerritoGeo {
     const val CENTRO_LON = -60.0667
 
     private const val RADIO_ZONA_M = 8_000
-    private const val RADIO_CERCA_USUARIO_M = 3_000
 
     fun enZonaCerrito(lat: Double, lon: Double): Boolean =
         DistanceCalculator.metros(CENTRO_LAT, CENTRO_LON, lat, lon) <= RADIO_ZONA_M
@@ -32,35 +31,33 @@ object CerritoGeo {
     }
 
     /**
-     * Catálogo fijo en Cerrito con datos vivos de la API (ofertas, ids reales).
-     * Garantiza coordenadas correctas en el mapa.
+     * Combina los comercios reales de la API con el catálogo demo de Cerrito.
+     * Los datos reales SIEMPRE tienen prioridad: el demo solo completa
+     * comercios que la API todavía no devuelve (y corrige lat/lon invertidos).
      */
-    fun listaMapaCerrito(desdeApi: List<Comercio>): List<Comercio> =
-        ComerciosCerritoDemo.lista.map { demo ->
-            val api = desdeApi.find { it.nombre.equals(demo.nombre, ignoreCase = true) }
-            if (api == null) {
-                demo
-            } else {
-                demo.copy(
-                    id = api.id,
-                    lat = demo.lat,
-                    lon = demo.lon,
-                    direccion = demo.direccion,
-                    cantidadOfertas = api.cantidadOfertas,
-                    ofertasNuevas = api.ofertasNuevas,
-                    logoUrl = api.logoUrl,
-                    realizaEnvios = api.realizaEnvios,
-                    tipoComercio = api.tipoComercio ?: demo.tipoComercio,
-                    categoria = api.categoria
-                        ?: demo.categoria
-                        ?: TipoComercio.desdeId(demo.tipoComercio).categoria,
-                    iconoEmoji = api.iconoEmoji ?: demo.iconoEmoji,
-                    puntosMinCanje = api.puntosMinCanje,
-                    plan = api.plan ?: demo.plan,
-                    destacado = api.destacado || demo.destacado
-                )
-            }
+    fun listaMapaCerrito(desdeApi: List<Comercio>): List<Comercio> {
+        val reales = desdeApi.mapNotNull { api ->
+            val (lat, lon) = corregirLatLon(api.lat, api.lon)
+            val demo = ComerciosCerritoDemo.lista
+                .find { it.nombre.equals(api.nombre, ignoreCase = true) }
+            val latFinal = lat ?: demo?.lat ?: return@mapNotNull null
+            val lonFinal = lon ?: demo?.lon ?: return@mapNotNull null
+            api.copy(
+                lat = latFinal,
+                lon = lonFinal,
+                direccion = api.direccion ?: demo?.direccion,
+                tipoComercio = api.tipoComercio ?: demo?.tipoComercio,
+                categoria = api.categoria
+                    ?: demo?.categoria
+                    ?: demo?.let { TipoComercio.desdeId(it.tipoComercio).categoria },
+                iconoEmoji = api.iconoEmoji ?: demo?.iconoEmoji
+            )
         }
+        val nombresReales = reales.map { it.nombre.trim().lowercase() }.toSet()
+        val demoFaltantes = ComerciosCerritoDemo.lista
+            .filter { it.nombre.trim().lowercase() !in nombresReales }
+        return reales + demoFaltantes
+    }
 
     fun conDistanciaDesde(
         userLat: Double,
@@ -72,9 +69,4 @@ object CerritoGeo {
         val dist = DistanceCalculator.metros(userLat, userLon, lat, lon)
         c.copy(distanciaMetros = dist)
     }.sortedBy { it.distanciaMetros }
-
-    fun filtrarCercaDeUsuario(userLat: Double, userLon: Double, lista: List<Comercio>): List<Comercio> =
-        conDistanciaDesde(userLat, userLon, lista).filter {
-            (it.distanciaMetros ?: Int.MAX_VALUE) <= RADIO_CERCA_USUARIO_M
-        }
 }
